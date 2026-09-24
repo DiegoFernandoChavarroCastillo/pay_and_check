@@ -1,0 +1,35 @@
+# --- Etapa 1: build de dependencias ---
+FROM python:3.12-slim AS builder
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+
+# Solo los manifiestos primero: cachea la capa de dependencias entre builds
+# mientras no cambien pyproject.toml / uv.lock.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
+
+COPY . .
+RUN uv sync --frozen --no-dev
+
+
+# --- Etapa 2: imagen final liviana ---
+FROM python:3.12-slim
+
+RUN useradd --create-home --uid 1000 appuser
+WORKDIR /app
+
+# Solo el venv ya resuelto y el código — nada de uv, caché de pip, ni
+# archivos de build que no hacen falta en producción.
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appuser /app/app /app/app
+COPY --from=builder --chown=appuser:appuser /app/alembic /app/alembic
+COPY --from=builder --chown=appuser:appuser /app/alembic.ini /app/alembic.ini
+
+ENV PATH="/app/.venv/bin:$PATH"
+USER appuser
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

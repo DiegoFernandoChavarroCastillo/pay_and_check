@@ -1,0 +1,49 @@
+[project]
+name = "pay-and-check-backend"
+version = "0.1.0"
+authors = [
+    { name = "Diego Chavarro", email = "diego.chavarro-c@mail.escuelaing.edu.co" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.0",
+    "bcrypt==4.0.1",
+    "email-validator>=2.3.0",
+    "fastapi>=0.141.1",
+    "google-auth>=2.58.0",
+    "groq>=1.7.0",
+    "passlib[bcrypt]>=1.7.4",
+    "psycopg2-binary>=2.9.13",
+    "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.2.3",
+    "python-jose>=3.5.0",
+    "requests>=2.34.2",
+    "sqlmodel>=0.0.42",
+    "uvicorn[standard]>=0.52.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.16.8",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: Depends(...)/Query(...) como valor por defecto de un parámetro es el
+# patrón idiomático de FastAPI, no un bug real.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # Ruido de librerías de terceros, no accionable desde este proyecto.
+    "ignore::DeprecationWarning:starlette.testclient",
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:DeprecationWarning",
+    "ignore:'crypt' is deprecated:DeprecationWarning:passlib.utils",
+]
