@@ -248,11 +248,17 @@ def test_sugerencias_de_retos_y_abandonar(client, auth_headers, categorias, pres
     fijar_hoy(LUNES)
 
     sugerencias = client.get("/challenges/suggestions", headers=auth_headers).json()
-    assert [s["plantilla"] for s in sugerencias] == ["dias_sin_gasto", "checkins"]
+    # Con presupuesto pero sin metas: el reto de aportar a una meta no se ofrece.
+    generales = ["dias_sin_gasto", "checkins", "registro_diario", "semana_en_ritmo"]
+    assert [s["plantilla"] for s in sugerencias] == generales
 
     reto = client.post("/challenges", json={"plantilla": "checkins"}, headers=auth_headers).json()
     sugerencias = client.get("/challenges/suggestions", headers=auth_headers).json()
-    assert [s["plantilla"] for s in sugerencias] == ["dias_sin_gasto"]
+    assert [s["plantilla"] for s in sugerencias] == [p for p in generales if p != "checkins"]
+
+    client.post("/goals", json={"nombre": "Viaje", "monto_objetivo": "50000"}, headers=auth_headers)
+    sugerencias = client.get("/challenges/suggestions", headers=auth_headers).json()
+    assert sugerencias[-1]["plantilla"] == "aportar_meta"
 
     assert client.delete(f"/challenges/{reto['id']}", headers=auth_headers).status_code == 204
     assert client.get("/challenges", headers=auth_headers).json() == []
@@ -335,4 +341,97 @@ def test_wrapped_no_compara_con_un_mes_que_se_empezo_a_medias(
 
     w = client.get("/reports/monthly-wrapped?mes=2026-03", headers=auth_headers).json()
     assert w["variacion_vs_mes_anterior_pct"] is None
+
+
+def test_retos_de_registro_diario_aporte_a_meta_y_semana_en_ritmo(
+    client, auth_headers, categorias, presupuesto, gastar, fijar_hoy
+):
+    presupuesto(date(2026, 3, 2), date(2026, 3, 29), monto="400000.00")  # 4 semanas: ritmo de 100.000
+    fijar_hoy(LUNES)
+
+    def crear(plantilla):
+        return client.post("/challenges", json={"plantilla": plantilla}, headers=auth_headers)
+
+    # Sin una meta no hay a qué aportar.
+    assert crear("aportar_meta").status_code == 400
+    meta = client.post("/goals", json={"nombre": "Viaje", "monto_objetivo": "50000"}, headers=auth_headers).json()
+    for plantilla in ("registro_diario", "aportar_meta", "semana_en_ritmo"):
+        assert crear(plantilla).status_code == 201, plantilla
+
+    def retos():
+        return {r["tipo"]: r for r in client.get("/challenges", headers=auth_headers).json()}
+
+    assert Decimal(retos()["semana_en_ritmo"]["objetivo"]) == Decimal("100000.00")
+
+    # Registra de lunes a jueves: 4 de 5 días, todavía activo.
+    for dia in range(9, 13):
+        fijar_hoy(date(2026, 3, dia))
+        gastar(10000, date(2026, 3, dia))
+    assert (retos()["registro_diario"]["estado"], Decimal(retos()["registro_diario"]["valor_actual"])) == (
+        "activo", Decimal("4"),
+    )
+    assert retos()["aportar_meta"]["estado"] == "activo"
+
+    # Viernes: quinto día con registro y un aporte a la meta. Los dos se cumplen en el acto.
+    fijar_hoy(date(2026, 3, 13))
+    gastar(10000, date(2026, 3, 13))
+    client.post(f"/goals/{meta['id']}/contributions", json={"monto": "5000"}, headers=auth_headers)
+    estado = retos()
+    assert (estado["registro_diario"]["estado"], estado["aportar_meta"]["estado"]) == ("cumplido", "cumplido")
+    # El de no pasarse del ritmo no se decide hasta que termina la semana, aunque vaya bien.
+    assert (estado["semana_en_ritmo"]["estado"], Decimal(estado["semana_en_ritmo"]["valor_actual"])) == (
+        "activo", Decimal("50000.00"),
+    )
+
+    fijar_hoy(date(2026, 3, 16))
+    assert retos()["semana_en_ritmo"]["estado"] == "cumplido"
+    assert _perfil(client, auth_headers)["puntos"] >= 35 + 30 + 50
+
+
+def test_semana_en_ritmo_no_se_cumple_si_se_pasa_del_ritmo(
+    client, auth_headers, categorias, presupuesto, gastar, fijar_hoy
+):
+    presupuesto(date(2026, 3, 2), date(2026, 3, 29), monto="400000.00")
+    fijar_hoy(LUNES)
+    client.post("/challenges", json={"plantilla": "semana_en_ritmo"}, headers=auth_headers)
+    gastar(120000, LUNES)
+
+    fijar_hoy(date(2026, 3, 16))
+    reto = client.get("/challenges", headers=auth_headers).json()[0]
+    assert reto["estado"] == "fallido"
+
+
+def test_insignias_por_usar_la_app_de_verdad(client, auth_headers, categorias, presupuesto, gastar, fijar_hoy):
+    def obtenidas():
+        return {i["codigo"] for i in _perfil(client, auth_headers)["insignias"] if i["desbloqueada"]}
+
+    presupuesto(date(2026, 3, 2), date(2026, 3, 15), monto="400000.00")
+    fijar_hoy(LUNES)
+    gastar(10000, LUNES, source="voz")
+    assert {"primer_registro", "voz"} <= obtenidas()
+    nuevas = {"sms", "primer_ingreso", "primer_limite", "previsor", "primer_aporte", "fin_de_periodo"}
+    assert not nuevas & obtenidas()
+
+    gastar(8000, LUNES, source="sms")
+    client.post("/incomes", json={"monto": "50000", "descripcion": "mesada", "fecha": LUNES.isoformat()},
+                headers=auth_headers)  # fmt: skip
+    client.patch("/categories/1", json={"limite": "200000"}, headers=auth_headers)
+    client.post("/recurring-expenses", json={"monto": "5000", "descripcion": "bus", "category_id": 2, "dia_semana": 0},
+                headers=auth_headers)  # fmt: skip
+    meta = client.post("/goals", json={"nombre": "Viaje", "monto_objetivo": "50000"}, headers=auth_headers).json()
+    client.post(f"/goals/{meta['id']}/contributions", json={"monto": "5000"}, headers=auth_headers)
+    assert nuevas - {"fin_de_periodo"} <= obtenidas()
+    # El presupuesto sigue en curso: "Llegué al final" todavía no.
+    assert "fin_de_periodo" not in obtenidas()
+
+    # Terminó el periodo sin gastar más de lo que había.
+    fijar_hoy(date(2026, 3, 16))
+    assert "fin_de_periodo" in obtenidas()
+
+
+def test_el_catalogo_de_insignias_esta_completo_en_ambos_idiomas():
+    assert len(gamification_service.INSIGNIAS) == 23
+    for codigo, textos in gamification_service.INSIGNIAS.items():
+        assert set(textos) == {"es", "en"}, codigo
+        assert all(len(parte) > 3 for idioma in textos.values() for parte in idioma), codigo
 

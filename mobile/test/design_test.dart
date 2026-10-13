@@ -121,6 +121,7 @@ void main() {
       ),
     );
 
+    // 'Primer paso' no es un código conocido aquí: lleva la medalla genérica.
     expect(find.byIcon(Icons.military_tech), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Por desbloquear')), findsOneWidget);

@@ -293,7 +293,8 @@ class Challenge {
 
   /// En "reducir" el objetivo es un tope (cuanto menos, mejor); en los demás
   /// es una cantidad a acumular.
-  bool get esTope => tipo == 'reducir_categoria';
+  /// Retos de "no pasarse de un monto": se muestran como gasto acumulado frente al tope.
+  bool get esTope => tipo == 'reducir_categoria' || tipo == 'semana_en_ritmo';
 
   double get progreso => objetivo <= 0 ? 0 : (valorActual / objetivo).clamp(0, 1).toDouble();
 }

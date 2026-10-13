@@ -16,11 +16,14 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, or_, select
 
-from app.models.category import Category
+from app.models.budget import Budget
+from app.models.category import Category, CategoryLimit
 from app.models.coach import EmotionalCheckin
 from app.models.expense import Expense
 from app.models.gamification import Achievement, Challenge, PointEvent
 from app.models.goal import Goal, GoalContribution
+from app.models.income import Income
+from app.models.recurring_expense import RecurringExpense
 from app.models.user import User
 from app.services.budget_lookup import find_budget_for_date
 from app.services.budget_totals import gasto_entre, ratio_ahorro
@@ -60,6 +63,10 @@ INSIGNIAS = {
         "es": ("Semana perfecta", "Siete días seguidos con registro."),
         "en": ("Perfect week", "Seven days in a row with activity."),
     },
+    "racha_14": {
+        "es": ("Dos semanas firmes", "Catorce días seguidos con registro."),
+        "en": ("Two steady weeks", "Fourteen days in a row with activity."),
+    },
     "racha_30": {
         "es": ("Racha de 30 días", "Un mes entero sin soltar el hábito."),
         "en": ("30-day streak", "A whole month keeping the habit."),
@@ -72,9 +79,17 @@ INSIGNIAS = {
         "es": ("Autoconocimiento", "Siete check-ins emocionales."),
         "en": ("Self-awareness", "Seven emotional check-ins."),
     },
+    "checkins_30": {
+        "es": ("Diario emocional", "Treinta check-ins emocionales."),
+        "en": ("Emotional journal", "Thirty emotional check-ins."),
+    },
     "primera_meta": {
         "es": ("Con rumbo", "Creaste tu primera meta de ahorro."),
         "en": ("On course", "You created your first savings goal."),
+    },
+    "primer_aporte": {
+        "es": ("Primer ahorro", "Apartaste dinero para una meta por primera vez."),
+        "en": ("First savings", "You set money aside for a goal for the first time."),
     },
     "meta_cumplida": {
         "es": ("Meta cumplida", "Completaste una meta de ahorro con dinero realmente apartado."),
@@ -88,13 +103,45 @@ INSIGNIAS = {
         "es": ("Imparable", "Tres retos cumplidos."),
         "en": ("Unstoppable", "Three challenges completed."),
     },
+    "retos_10": {
+        "es": ("Coleccionista de retos", "Diez retos cumplidos."),
+        "en": ("Challenge collector", "Ten challenges completed."),
+    },
     "equilibrio": {
         "es": ("Equilibrio", "Cerraste una semana por debajo de tu ritmo de gasto."),
         "en": ("Balance", "You closed a week below your spending pace."),
     },
+    "mes_equilibrio": {
+        "es": ("Mes en equilibrio", "Cuatro semanas cerradas por debajo de tu ritmo de gasto."),
+        "en": ("A balanced month", "Four weeks closed below your spending pace."),
+    },
+    "fin_de_periodo": {
+        "es": ("Llegué al final", "Terminaste un presupuesto sin gastar más de lo que tenías."),
+        "en": ("Made it to the end", "You finished a budget without spending more than you had."),
+    },
     "escaner": {
         "es": ("Ojo de escáner", "Registraste un gasto desde la foto de un recibo."),
         "en": ("Scanner eye", "You logged an expense from a receipt photo."),
+    },
+    "voz": {
+        "es": ("Dicho y hecho", "Registraste un gasto dictándolo."),
+        "en": ("Said and done", "You logged an expense by voice."),
+    },
+    "sms": {
+        "es": ("Piloto automático", "Registraste un movimiento desde un SMS de tu banco."),
+        "en": ("Autopilot", "You logged a transaction from a bank SMS."),
+    },
+    "primer_ingreso": {
+        "es": ("Todo cuenta", "Registraste tu primer ingreso."),
+        "en": ("It all counts", "You logged your first income."),
+    },
+    "primer_limite": {
+        "es": ("Límites claros", "Le pusiste un límite de gasto a una categoría."),
+        "en": ("Clear limits", "You set a spending limit on a category."),
+    },
+    "previsor": {
+        "es": ("Previsor", "Programaste un gasto fijo semanal."),
+        "en": ("Planner", "You scheduled a weekly fixed expense."),
     },
 }
 
@@ -104,23 +151,45 @@ _TEXTOS_RETO = {
         "referencia semanal de {base}).",
         "dias_sin_gasto": "Acumula {n} días sin gastos opcionales en los próximos 7 días.",
         "checkins": "Haz {n} check-ins emocionales en los próximos 7 días.",
+        "registro_diario": "Registra al menos un gasto en {n} de los próximos 7 días.",
+        "aportar_meta": "Aparta dinero para una de tus metas en los próximos 7 días.",
+        "semana_en_ritmo": "Gasta máximo {objetivo} en los próximos 7 días: es tu ritmo semanal.",
         "titulo_reducir_categoria": "{pct}% menos en {categoria}",
         "titulo_dias_sin_gasto": "{n} días sin gasto opcional",
         "titulo_checkins": "{n} check-ins esta semana",
+        "titulo_registro_diario": "{n} días registrando",
+        "titulo_aportar_meta": "Un aporte a tu meta",
+        "titulo_semana_en_ritmo": "Una semana a tu ritmo",
     },
     "en": {
         "reducir_categoria": "Spend at most {objetivo} on {categoria} over 7 days ({pct}% less than your "
         "weekly baseline of {base}).",
         "dias_sin_gasto": "Reach {n} days without optional spending over the next 7 days.",
         "checkins": "Do {n} emotional check-ins over the next 7 days.",
+        "registro_diario": "Log at least one expense on {n} of the next 7 days.",
+        "aportar_meta": "Set money aside for one of your goals over the next 7 days.",
+        "semana_en_ritmo": "Spend at most {objetivo} over the next 7 days: that is your weekly pace.",
         "titulo_reducir_categoria": "{pct}% less on {categoria}",
         "titulo_dias_sin_gasto": "{n} days without optional spending",
         "titulo_checkins": "{n} check-ins this week",
+        "titulo_registro_diario": "{n} days logging",
+        "titulo_aportar_meta": "One contribution to your goal",
+        "titulo_semana_en_ritmo": "A week at your pace",
     },
 }
 
 # plantilla -> (puntos, objetivo por defecto)
-PLANTILLAS = {"reducir_categoria": (50, None), "dias_sin_gasto": (40, 3), "checkins": (30, 5)}
+PLANTILLAS = {
+    "reducir_categoria": (50, None),
+    "dias_sin_gasto": (40, 3),
+    "checkins": (30, 5),
+    "registro_diario": (35, 5),
+    "aportar_meta": (30, 1),
+    "semana_en_ritmo": (50, None),
+}
+# Retos de "no pasarse de un tope": solo se sabe si se cumplieron cuando termina la ventana. Los demás
+# son de acumular y se cumplen en cuanto se llega al objetivo.
+RETOS_DE_TOPE = ("reducir_categoria", "semana_en_ritmo")
 
 
 class ChallengeError(ValueError):
@@ -253,7 +322,15 @@ def crear_reto(
             pct=porcentaje,
             base=fmt(base),
         )
+    elif plantilla == "semana_en_ritmo":
+        budget = find_budget_for_date(session, user.id, today)
+        if budget is None:
+            raise ChallengeError("Necesitas un presupuesto activo para este reto.")
+        reto.objetivo = _ritmo_semanal(budget)
+        reto.descripcion = _t(user.idioma, plantilla, objetivo=fmt(reto.objetivo))
     else:
+        if plantilla == "aportar_meta" and not _tiene_meta_activa(session, user.id):
+            raise ChallengeError("Crea primero una meta de ahorro.")
         reto.descripcion = _t(user.idioma, plantilla, n=objetivo_defecto)
 
     session.add(reto)
@@ -262,20 +339,31 @@ def crear_reto(
     return reto
 
 
+def _ritmo_semanal(budget) -> Decimal:
+    """Lo que toca gastar por semana para que el presupuesto alcance todo el periodo."""
+    semanas_del_periodo = Decimal((budget.fecha_fin - budget.fecha_inicio).days + 1) / 7
+    return (budget.monto_total / semanas_del_periodo).quantize(Decimal("0.01"))
+
+
+def _tiene_meta_activa(session: Session, user_id: int) -> bool:
+    activa = select(Goal.id).where(Goal.user_id == user_id, Goal.estado == "activa").limit(1)
+    return session.exec(activa).first() is not None
+
+
 def progreso_reto(session: Session, reto: Challenge, today: date) -> tuple[Decimal, str]:
     """(valor actual, estado) de un reto según los datos reales a `today`."""
     if reto.estado != "activo":
         valor = _valor_reto(session, reto, reto.fecha_fin + timedelta(days=1))
         # Un reto de acumular se cierra al llegar al objetivo: lo que pase
         # después dentro de la ventana ya no cambia su resultado.
-        if reto.estado == "cumplido" and reto.tipo != "reducir_categoria":
+        if reto.estado == "cumplido" and reto.tipo not in RETOS_DE_TOPE:
             valor = min(valor, reto.objetivo)
         return valor, reto.estado
 
     terminado = today > reto.fecha_fin
     valor = _valor_reto(session, reto, today)
 
-    if reto.tipo == "reducir_categoria":
+    if reto.tipo in RETOS_DE_TOPE:
         # Solo se sabe si se cumplió cuando la ventana termina.
         if not terminado:
             return valor, "activo"
@@ -290,6 +378,23 @@ def _valor_reto(session: Session, reto: Challenge, today: date) -> Decimal:
     hasta = min(today, reto.fecha_fin)
     if reto.tipo == "reducir_categoria":
         return gasto_entre(session, reto.user_id, reto.fecha_inicio, hasta, reto.category_id)
+
+    if reto.tipo == "semana_en_ritmo":
+        return gasto_entre(session, reto.user_id, reto.fecha_inicio, hasta)
+
+    if reto.tipo == "registro_diario":
+        return Decimal(sum(1 for dia in dias_con_gasto(session, reto.user_id, hasta) if dia >= reto.fecha_inicio))
+
+    if reto.tipo == "aportar_meta":
+        return Decimal(
+            session.exec(
+                select(func.count())
+                .select_from(GoalContribution)
+                .where(GoalContribution.user_id == reto.user_id)
+                .where(GoalContribution.fecha >= reto.fecha_inicio)
+                .where(GoalContribution.fecha <= hasta)
+            ).one()
+        )
 
     if reto.tipo == "checkins":
         return Decimal(
@@ -357,17 +462,26 @@ def sugerencias_de_retos(session: Session, user: User, today: date) -> list[dict
             }
         )
 
-    for plantilla in ("dias_sin_gasto", "checkins"):
+    budget = find_budget_for_date(session, user.id, today)
+    generales = ["dias_sin_gasto", "checkins", "registro_diario"]
+    # Estos dos solo tienen sentido si hay con qué medirlos.
+    if budget is not None:
+        generales.append("semana_en_ritmo")
+    if _tiene_meta_activa(session, user.id):
+        generales.append("aportar_meta")
+
+    for plantilla in generales:
         if plantilla in tipos_activos:
             continue
         puntos, objetivo = PLANTILLAS[plantilla]
+        valores = {"n": objetivo, "objetivo": fmt(_ritmo_semanal(budget)) if budget is not None else ""}
         sugerencias.append(
             {
                 "plantilla": plantilla,
                 "category_id": None,
                 "porcentaje": None,
-                "titulo": _t(user.idioma, f"titulo_{plantilla}", n=objetivo),
-                "motivo": _t(user.idioma, plantilla, n=objetivo),
+                "titulo": _t(user.idioma, f"titulo_{plantilla}", **valores),
+                "motivo": _t(user.idioma, plantilla, **valores),
                 "puntos": puntos,
             }
         )
@@ -440,7 +554,7 @@ def _sync_gamification(session: Session, user: User, today: date) -> SyncResult:
     _otorgar_mejora_mensual(session, user, today, otorgar)
 
     resultado.insignias = _desbloquear_insignias(
-        session, user, gastos, checkins, todas_las_rachas, retos, metas, claves
+        session, user, gastos, checkins, todas_las_rachas, retos, metas, claves, today
     )
     session.commit()
     for evento in resultado.eventos:
@@ -460,9 +574,7 @@ def _otorgar_semanas_en_ritmo(session: Session, user: User, today: date, activid
             continue
         if not any(lunes <= dia <= domingo for dia in actividad):
             continue
-        semanas_del_periodo = Decimal((budget.fecha_fin - budget.fecha_inicio).days + 1) / 7
-        ritmo = budget.monto_total / semanas_del_periodo
-        if gasto_entre(session, user.id, lunes, domingo) <= ritmo:
+        if gasto_entre(session, user.id, lunes, domingo) <= _ritmo_semanal(budget):
             otorgar(f"semana_en_ritmo:{lunes.isoformat()}", "semana_en_ritmo", PUNTOS_SEMANA_EN_RITMO, domingo)
 
 
@@ -480,28 +592,64 @@ def _otorgar_mejora_mensual(session: Session, user: User, today: date, otorgar) 
         otorgar(f"mejora_mensual:{inicio_1:%Y-%m}", "mejora_mensual", PUNTOS_MEJORA_MENSUAL, fin_1)
 
 
+def _termino_un_presupuesto(session: Session, user_id: int, today: date) -> bool:
+    """Hay un presupuesto ya terminado, con gastos registrados, en el que no se gastó más de lo que había
+    (el monto del presupuesto más los ingresos de ese periodo)."""
+    terminados = session.exec(select(Budget).where(Budget.owner_id == user_id, Budget.fecha_fin < today)).all()
+    for budget in terminados:
+        gastado = gasto_entre(session, user_id, budget.fecha_inicio, budget.fecha_fin)
+        ingresos = Decimal(
+            session.exec(
+                select(func.coalesce(func.sum(Income.monto), 0))
+                .where(Income.user_id == user_id)
+                .where(Income.fecha >= budget.fecha_inicio)
+                .where(Income.fecha <= budget.fecha_fin)
+            ).one()
+        )
+        if 0 < gastado <= budget.monto_total + ingresos:
+            return True
+    return False
+
+
 def _desbloquear_insignias(
-    session: Session, user: User, gastos, checkins, todas_las_rachas, retos, metas, claves
+    session: Session, user: User, gastos, checkins, todas_las_rachas, retos, metas, claves, today: date
 ) -> list[str]:
     mejor_racha = max((longitud for _, longitud in todas_las_rachas), default=0)
     retos_cumplidos = sum(1 for r in retos if r.estado == "cumplido")
-    uso_ocr = session.exec(
-        select(Expense.id).where(Expense.user_id == user.id).where(Expense.source == "ocr").limit(1)
-    ).first()
+    origenes = set(session.exec(select(Expense.source).where(Expense.user_id == user.id).distinct()).all())
+
+    def existe(consulta) -> bool:
+        return session.exec(consulta.limit(1)).first() is not None
+
+    semanas_en_ritmo = sum(1 for clave in claves if clave.startswith("semana_en_ritmo:"))
+    con_limite = existe(select(CategoryLimit.id).where(CategoryLimit.user_id == user.id)) or existe(
+        select(Category.id).where(Category.owner_id == user.id, Category.limite.is_not(None))
+    )
 
     condiciones = {
         "primer_registro": bool(gastos),
         "racha_3": mejor_racha >= 3,
         "racha_7": mejor_racha >= 7,
+        "racha_14": mejor_racha >= 14,
         "racha_30": mejor_racha >= 30,
         "primer_checkin": bool(checkins),
         "checkins_7": len(checkins) >= 7,
+        "checkins_30": len(checkins) >= 30,
         "primera_meta": bool(metas),
+        "primer_aporte": existe(select(GoalContribution.id).where(GoalContribution.user_id == user.id)),
         "meta_cumplida": any(m.estado == "cumplida" for m in metas),
         "primer_reto": retos_cumplidos >= 1,
         "retos_3": retos_cumplidos >= 3,
-        "equilibrio": any(clave.startswith("semana_en_ritmo:") for clave in claves),
-        "escaner": uso_ocr is not None,
+        "retos_10": retos_cumplidos >= 10,
+        "equilibrio": semanas_en_ritmo >= 1,
+        "mes_equilibrio": semanas_en_ritmo >= 4,
+        "fin_de_periodo": _termino_un_presupuesto(session, user.id, today),
+        "escaner": "ocr" in origenes,
+        "voz": "voz" in origenes,
+        "sms": "sms" in origenes,
+        "primer_ingreso": existe(select(Income.id).where(Income.user_id == user.id)),
+        "primer_limite": con_limite,
+        "previsor": existe(select(RecurringExpense.id).where(RecurringExpense.user_id == user.id)),
     }
 
     ya = set(session.exec(select(Achievement.codigo).where(Achievement.user_id == user.id)).all())

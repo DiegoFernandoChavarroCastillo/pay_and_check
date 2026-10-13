@@ -538,6 +538,23 @@ class _Badges extends ConsumerWidget {
   }
 }
 
+/// Cada familia de insignias tiene su dibujo: se reconocen de un vistazo.
+IconData badgeIcon(String codigo) => switch (codigo) {
+      'primer_registro' => Icons.flag_outlined,
+      'racha_3' || 'racha_7' || 'racha_14' || 'racha_30' => Icons.local_fire_department,
+      'primer_checkin' || 'checkins_7' || 'checkins_30' => Icons.favorite_outline,
+      'primera_meta' || 'primer_aporte' || 'meta_cumplida' => Icons.savings_outlined,
+      'primer_reto' || 'retos_3' || 'retos_10' => Icons.emoji_events_outlined,
+      'equilibrio' || 'mes_equilibrio' || 'fin_de_periodo' => Icons.balance,
+      'escaner' => Icons.photo_camera_outlined,
+      'voz' => Icons.mic_none,
+      'sms' => Icons.sms_outlined,
+      'primer_ingreso' => Icons.south_west,
+      'primer_limite' => Icons.tune,
+      'previsor' => Icons.autorenew,
+      _ => Icons.military_tech,
+    };
+
 /// Una insignia como tarjeta: medallón, nombre y cómo se consigue.
 class BadgeTile extends StatelessWidget {
   const BadgeTile({super.key, required this.insignia});
@@ -566,7 +583,7 @@ class BadgeTile extends StatelessWidget {
                   color: lista ? acento.color : scheme.surfaceContainerHighest,
                 ),
                 child: Icon(
-                  lista ? Icons.military_tech : Icons.lock_outline,
+                  lista ? badgeIcon(insignia.codigo) : Icons.lock_outline,
                   size: 34,
                   color: lista ? acento.container : scheme.outline,
                 ),

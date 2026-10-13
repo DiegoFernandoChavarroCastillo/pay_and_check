@@ -15,12 +15,17 @@ class Challenge(SQLModel, table=True):
       (`linea_base` = lo gastado en los 7 días previos).
     - "dias_sin_gasto": acumular `objetivo` días sin gasto opcional.
     - "checkins": hacer `objetivo` check-ins emocionales.
+    - "registro_diario": registrar algún gasto en `objetivo` días distintos.
+    - "aportar_meta": hacer `objetivo` aportes a metas de ahorro.
+    - "semana_en_ritmo": gastar como máximo `objetivo` (el ritmo semanal del presupuesto) en total.
     """
 
     __tablename__ = "challenges"
     __table_args__ = (
         CheckConstraint(
-            "tipo IN ('reducir_categoria', 'dias_sin_gasto', 'checkins')", name="ck_challenges_tipo_valido"
+            "tipo IN ('reducir_categoria', 'dias_sin_gasto', 'checkins', 'registro_diario', 'aportar_meta', "
+            "'semana_en_ritmo')",
+            name="ck_challenges_tipo_valido",
         ),
         CheckConstraint("estado IN ('activo', 'cumplido', 'fallido')", name="ck_challenges_estado_valido"),
     )
