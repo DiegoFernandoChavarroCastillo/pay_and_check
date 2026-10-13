@@ -314,8 +314,8 @@
   "newRecurring": "Nuevo gasto fijo",
   "weekday": "Día de la semana",
   "frequency": "Se repite",
-  "freqWeekly": "Cada semana",
-  "freqMonthly": "Cada mes",
+  "freqWeekly": "Semanal",
+  "freqMonthly": "Mensual",
   "dayOfMonth": "Día del mes",
   "everyMonthDay": "el {n} de cada mes",
   "@everyMonthDay": {
