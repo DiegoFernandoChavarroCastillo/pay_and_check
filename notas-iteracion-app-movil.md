@@ -16,10 +16,10 @@ clave de Groq). Se conservan como historia; donde algo cambió después, se indi
 | App Flutter | Hecha y **probada en un teléfono** | `flutter analyze` sin avisos y 42 tests. Recorrida en un Moto G6 (Android 9) en modo depuración con `flutter run`, contra el backend local |
 | Coach e IA reales | Probados | Con una `GROQ_API_KEY` del plan gratuito: registro por texto y voz, SMS, consejos, chat, reacción y reporte semanal |
 | Historia de usuario completa | Hecha | Cuenta de prueba "Juan" (universitario, presupuesto de 1.000.000): registro, tres semanas de movimientos, retos, metas, SMS y gastos fijos. Detalle en la sección 9 |
-| APK de release firmado | **No generado** | Nunca se ha completado un build de release. En este PC además no está el keystore (quedó en el PC anterior) |
+| APK de release | Generado, **con la llave de depuración** | `flutter build apk --release` terminó (5 minutos, 94 MB) e instalado en el Moto G6 funciona contra el backend desplegado. No lleva la firma definitiva: el keystore quedó en el PC anterior |
 | Login con Google | **Sin probar** | Falta crear el Client ID (requiere tu cuenta de Google) |
-| Backend desplegado | **Pendiente** | Requiere tus cuentas de Render y Neon; `render.yaml` está listo |
-| Código en el repositorio remoto | **Pendiente** | Todo lo de esta iteración está en la rama local `feature/bento-ui`, sin push ni PR hacia `develop` |
+| Backend desplegado | Hecho (plan gratuito) | Render en `https://pay-and-check-api.onrender.com` con la base en Neon, a la que se copiaron todos los datos locales. Se duerme tras unos 15 minutos sin uso y la primera petición tarda cerca de un minuto |
+| Código en el repositorio remoto | En la rama `feature/bento-ui` | Subida a GitHub; falta el PR hacia `develop`. Render despliega desde esa rama |
 
 Lo que **no** se ha visto en el teléfono: la foto de un recibo, el login con Google, una notificación llegando
 (las alarmas quedan programadas en Android, pero todas caen a las 9:00 de días futuros), el modo oscuro, la app
@@ -29,7 +29,8 @@ en inglés y el borrado de cuenta. El modo oscuro y la letra grande sí están r
 
 **Para dejar el trabajo a salvo**
 
-1. **Subir la rama.** `git push -u origin feature/bento-ui` y abrir el PR hacia `develop`.
+1. **Abrir el PR** de `feature/bento-ui` hacia `develop`. Ojo: Render despliega desde `feature/bento-ui`; si
+   la rama se borra tras el merge, hay que cambiar la rama del servicio en Render.
 2. **Recuperar el keystore** del PC anterior: `mobile/android/upload-keystore.jks` y
    `mobile/android/key.properties`. Están fuera de git a propósito. Sin ellos un APK se firma con la llave de
    depuración, que solo sirve para pruebas propias; y si se pierden, quien ya tenga la app instalada no podrá
@@ -38,10 +39,13 @@ en inglés y el borrado de cuenta. El modo oscuro y la letra grande sí están r
 
 **Para una beta con otras personas**
 
-3. **Desplegar el backend** con `render.yaml` (Render + Neon) y compilar la app con esa URL.
+3. ~~Desplegar el backend~~ Hecho el 13 de octubre, en los planes gratuitos de Render y Neon. Para una beta
+   conviene un plan que no se duerma.
 4. **Plan de pago de Groq**, o al menos uno con más cuota: el gratuito limita a 8.000 tokens por minuto y un
    puñado de usuarios a la vez lo agota.
-5. **Generar el APK de release**, en un equipo con más memoria o con el workflow `mobile-release.yml`.
+5. **Firmar el APK con el keystore definitivo.** El build de release ya funciona en este PC (con `flutter run`
+   cerrado), pero sale con la llave de depuración; quien lo instale tendrá que desinstalarlo antes de pasar
+   a una versión con la firma definitiva.
 6. **Client ID de Google** (web + Android) si se quiere el login con Google. Pasos en `mobile/README.md`.
 7. **Una bienvenida** que explique el coach y pida el primer registro, y medir retención (cuántos siguen a los
    7 y 30 días). Es lo que decide si el producto es viable.
@@ -55,7 +59,8 @@ en inglés y el borrado de cuenta. El modo oscuro y la letra grande sí están r
 
 **Datos de prueba que quedaron**
 
-- En la base local: la cuenta `juan.ramirez@example.com` (contraseña `Juan12345`) con su historia completa.
+- En la base local **y en la desplegada**: la cuenta `juan.ramirez@example.com` (contraseña `Juan12345`) con
+  su historia completa.
 - En el teléfono de pruebas: varios SMS falsos de "Bancolombia" y "Nequi" en la app Mensajes.
 
 ## 3. Bugs encontrados y corregidos
