@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/charts.dart';
 import '../../core/format.dart';
+import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
@@ -82,6 +85,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
+                          showCheckmark: false,
                           label: Text(l.allCategories),
                           selected: _categoryId == null,
                           onSelected: (_) => setState(() => _categoryId = null),
@@ -91,6 +95,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: FilterChip(
+                            showCheckmark: false,
                             label: Text(c.nombre),
                             selected: _categoryId == c.id,
                             onSelected: (v) => setState(() => _categoryId = v ? c.id : null),
@@ -132,25 +137,38 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         if (gastos.isEmpty) {
           return ListView(children: [EmptyView(icon: Icons.receipt_long_outlined, text: l.noExpenses)]);
         }
+        // Un bloque por día, del más reciente al más antiguo, con lo gastado ese día.
+        final porDia = <DateTime, List<Expense>>{};
+        for (final g in [...gastos]..sort((a, b) => b.fecha.compareTo(a.fecha))) {
+          porDia.putIfAbsent(DateTime(g.fecha.year, g.fecha.month, g.fecha.day), () => []).add(g);
+        }
+        final dias = porDia.keys.toList();
+        final colores = categoryColors(nombres.values, Theme.of(context).brightness);
         return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 96),
-          itemCount: gastos.length,
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+          itemCount: dias.length,
           itemBuilder: (context, i) {
-            final g = gastos[i];
-            return ListTile(
-              leading: CircleAvatar(
-                child: Icon(sourceIcon(g.source), semanticLabel: sourceLabel(l, g.source)),
-              ),
-              title: Text(g.descripcion, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(
-                [nombres[g.categoryId] ?? '', shortDate(context, g.fecha), ?g.comercio].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: Text(money(g.monto), style: Theme.of(context).textTheme.titleMedium),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(builder: (_) => ExpenseFormScreen(existing: g)),
+            final delDia = porDia[dias[i]]!;
+            return FadeSlideIn(
+              index: i,
+              child: _DayGroup(
+                titulo: _nombreDia(context, dias[i]),
+                total: delDia.fold(0.0, (suma, g) => suma + g.monto),
+                children: [
+                  for (final g in delDia)
+                    _Row(
+                      icon: sourceIcon(g.source),
+                      iconLabel: sourceLabel(l, g.source),
+                      color: colores[nombres[g.categoryId]],
+                      title: g.descripcion,
+                      subtitle: [nombres[g.categoryId] ?? '', ?g.comercio].where((t) => t.isNotEmpty).join(' · '),
+                      amount: g.monto,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => ExpenseFormScreen(existing: g)),
+                      ),
+                    ),
+                ],
               ),
             );
           },
@@ -168,37 +186,139 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         if (ingresos.isEmpty) {
           return ListView(children: [EmptyView(icon: Icons.south_west, text: l.noIncomes)]);
         }
-        return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 96),
-          itemCount: ingresos.length,
-          itemBuilder: (context, i) {
-            final ingreso = ingresos[i];
-            return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.south_west)),
-              title: Text(ingreso.descripcion, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(shortDate(context, ingreso.fecha)),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
+        final acento = context.tokens.income;
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+          children: [
+            BentoTile(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
                 children: [
-                  Text(money(ingreso.monto), style: Theme.of(context).textTheme.titleMedium),
-                  IconButton(
-                    tooltip: l.delete,
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () async {
-                      if (!await confirm(context, title: l.deleteIncomeTitle, body: l.deleteIncomeBody, action: l.delete)) {
-                        return;
-                      }
-                      if (!context.mounted) return;
-                      final ok = await guarded(context, () => ref.read(apiProvider).deleteIncome(ingreso.id));
-                      if (ok) refreshData(ref);
-                    },
-                  ),
+                  for (final ingreso in ingresos)
+                    _Row(
+                      icon: Icons.south_west,
+                      color: acento.color,
+                      title: ingreso.descripcion,
+                      subtitle: shortDate(context, ingreso.fecha),
+                      amount: ingreso.monto,
+                      trailing: IconButton(
+                        tooltip: l.delete,
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () async {
+                          if (!await confirm(
+                            context,
+                            title: l.deleteIncomeTitle,
+                            body: l.deleteIncomeBody,
+                            action: l.delete,
+                          )) {
+                            return;
+                          }
+                          if (!mounted) return;
+                          final ok = await guarded(context, () => ref.read(apiProvider).deleteIncome(ingreso.id));
+                          if (ok) refreshData(ref);
+                        },
+                      ),
+                    ),
                 ],
               ),
-            );
-          },
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+String _nombreDia(BuildContext context, DateTime dia) {
+  final hoy = today();
+  if (dia == hoy) return context.l.dayToday;
+  if (dia == hoy.subtract(const Duration(days: 1))) return context.l.dayYesterday;
+  final texto = longDate(context, dia);
+  return texto[0].toUpperCase() + texto.substring(1);
+}
+
+/// Los movimientos de un día dentro de una tarjeta, con su total arriba.
+class _DayGroup extends StatelessWidget {
+  const _DayGroup({required this.titulo, required this.total, required this.children});
+
+  final String titulo;
+  final double total;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTokens.gap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            child: Row(
+              children: [
+                Expanded(child: Text(titulo, style: theme.textTheme.titleSmall)),
+                Text(
+                  money(total),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontFeatures: kTabular,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          BentoTile(padding: const EdgeInsets.symmetric(vertical: 8), child: Column(children: children)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Un movimiento: ícono con el color de su categoría, descripción y monto.
+class _Row extends StatelessWidget {
+  const _Row({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.amount,
+    this.iconLabel,
+    this.color,
+    this.onTap,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String? iconLabel;
+  final Color? color;
+  final String title;
+  final String subtitle;
+  final double amount;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tono = color ?? theme.colorScheme.primary;
+    return ListTile(
+      contentPadding: EdgeInsets.only(left: 16, right: trailing == null ? 16 : 4),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(color: tono.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
+        child: Icon(icon, size: 22, color: tono, semanticLabel: iconLabel),
+      ),
+      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+      subtitle: subtitle.isEmpty ? null : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(money(amount), style: theme.textTheme.titleSmall?.copyWith(fontFeatures: kTabular)),
+          ?trailing,
+        ],
+      ),
+      onTap: onTap,
     );
   }
 }

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
+import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../home/home_screen.dart' show StreakChip;
 import 'goal_dialogs.dart';
 
 /// Progreso: nivel y puntos, metas de ahorro, retos e insignias.
@@ -18,19 +21,26 @@ class ProgressScreen extends ConsumerWidget {
     final l = context.l;
     return DefaultTabController(
       length: 3,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: AsyncView(
-              value: ref.watch(gamificationProvider),
-              onRetry: () => ref.invalidate(gamificationProvider),
-              builder: (perfil) => _LevelHeader(perfil: perfil),
+      // La cabecera se desplaza con el contenido: con la letra grande no cabría fija.
+      child: NestedScrollView(
+        headerSliverBuilder: (context, _) => [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: AsyncView(
+                    value: ref.watch(gamificationProvider),
+                    onRetry: () => ref.invalidate(gamificationProvider),
+                    builder: (perfil) => _LevelHeader(perfil: perfil),
+                  ),
+                ),
+                PillTabs(labels: [l.goals, l.challenges, l.badges]),
+              ],
             ),
           ),
-          TabBar(tabs: [Tab(text: l.goals), Tab(text: l.challenges), Tab(text: l.badges)]),
-          const Expanded(child: TabBarView(children: [_Goals(), _Challenges(), _Badges()])),
         ],
+        body: const TabBarView(children: [_Goals(), _Challenges(), _Badges()]),
       ),
     );
   }
@@ -47,31 +57,68 @@ class _LevelHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.l;
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final siguiente = perfil.puntosSiguiente;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l.levelTitle(perfil.nivelNumero, perfil.nivelNombre),
-                style: theme.textTheme.headlineSmall,
+        BentoTile(
+          padding: const EdgeInsets.all(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [scheme.primaryContainer, Color.lerp(scheme.primaryContainer, scheme.tertiaryContainer, 0.7)!],
+          ),
+          child: Row(
+            children: [
+              ExcludeSemantics(
+                child: ProgressRing(
+                  size: 84,
+                  stroke: 8,
+                  progress: perfil.progresoNivel,
+                  color: scheme.primary,
+                  track: scheme.onPrimaryContainer.withValues(alpha: 0.12),
+                  child: AnimatedCount(
+                    value: perfil.nivelNumero,
+                    style: theme.textTheme.headlineMedium?.copyWith(color: scheme.onPrimaryContainer),
+                  ),
+                ),
               ),
-            ),
-            Chip(
-              avatar: const Icon(Icons.local_fire_department, size: 18),
-              label: Text(l.streakDays(perfil.rachaActual)),
-            ),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.levelTitle(perfil.nivelNumero, perfil.nivelNombre),
+                      style: theme.textTheme.titleLarge?.copyWith(color: scheme.onPrimaryContainer),
+                    ),
+                    const SizedBox(height: 2),
+                    AnimatedCount(
+                      value: perfil.puntos,
+                      format: l.pointsTotal,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: scheme.onPrimaryContainer,
+                        fontFeatures: kTabular,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      siguiente == null ? l.maxLevel : l.pointsToNext(siguiente - perfil.puntos),
+                      style: theme.textTheme.bodySmall?.copyWith(color: scheme.onPrimaryContainer),
+                    ),
+                    if (perfil.rachaActual > 0) ...[
+                      const SizedBox(height: 8),
+                      StreakChip(dias: perfil.rachaActual),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        LabeledProgress(
-          label: l.pointsTotal(perfil.puntos),
-          value: siguiente == null ? l.maxLevel : l.pointsToNext(siguiente - perfil.puntos),
-          progress: perfil.progresoNivel,
-        ),
-        Row(
+        const SizedBox(height: AppTokens.gap),
+        BentoRow(
           children: [
             _Metric(label: l.metricSavings, value: _pct(perfil.ratioAhorro), tooltip: l.metricSavingsHint),
             _Metric(label: l.metricConsistency, value: _pct(perfil.consistencia), tooltip: l.metricConsistencyHint),
@@ -99,17 +146,26 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Expanded(
-      child: Tooltip(
-        message: tooltip,
-        triggerMode: TooltipTriggerMode.tap,
-        showDuration: const Duration(seconds: 5),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+    return Tooltip(
+      message: tooltip,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 5),
+      child: BentoTile(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        child: SizedBox(
+          width: double.infinity,
           child: Column(
             children: [
-              Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
-              Text(label, style: theme.textTheme.labelSmall, textAlign: TextAlign.center),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(value, style: theme.textTheme.titleLarge?.copyWith(fontFeatures: kTabular)),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -131,7 +187,7 @@ class _Goals extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           if (metas.isEmpty) EmptyView(icon: Icons.flag_outlined, text: l.noGoals),
-          for (final meta in metas) _GoalCard(meta: meta),
+          for (final meta in metas) _GoalCard(key: ValueKey(meta.id), meta: meta),
           OutlinedButton.icon(
             onPressed: () => showGoalDialog(context, ref),
             icon: const Icon(Icons.add),
@@ -143,26 +199,72 @@ class _Goals extends ConsumerWidget {
   }
 }
 
-class _GoalCard extends ConsumerWidget {
-  const _GoalCard({required this.meta});
+class _GoalCard extends ConsumerStatefulWidget {
+  const _GoalCard({super.key, required this.meta});
 
   final Goal meta;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GoalCard> createState() => _GoalCardState();
+}
+
+class _GoalCardState extends ConsumerState<_GoalCard> {
+  bool _celebrar = false;
+
+  @override
+  void didUpdateWidget(_GoalCard old) {
+    super.didUpdateWidget(old);
+    // La meta se acaba de cumplir en esta sesión: se celebra una vez.
+    if (!old.meta.cumplida && widget.meta.cumplida) _celebrar = true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = context.l;
+    final theme = Theme.of(context);
+    final acento = context.tokens.goals;
+    final meta = widget.meta;
     final api = ref.read(apiProvider);
-    return SectionCard(
-      title: meta.nombre,
-      trailing: meta.cumplida ? Chip(avatar: const Icon(Icons.verified, size: 18), label: Text(l.goalReached)) : null,
+    final tarjeta = SectionCard(
+      color: meta.cumplida ? acento.container : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LabeledProgress(
-            label: l.goalVerified,
-            value: '${money(meta.aportado)} / ${money(meta.montoObjetivo)}',
-            progress: meta.progreso,
+          Row(
+            children: [
+              ProgressRing(
+                size: 68,
+                progress: meta.progreso,
+                color: acento.color,
+                track: meta.cumplida ? acento.onContainer.withValues(alpha: 0.12) : null,
+                child: meta.cumplida
+                    ? Icon(Icons.verified, color: acento.color)
+                    : Text(
+                        '${(meta.progreso * 100).round()}%',
+                        style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(meta.nombre, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${money(meta.aportado)} / ${money(meta.montoObjetivo)}',
+                      style: theme.textTheme.bodyLarge?.copyWith(fontFeatures: kTabular, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      meta.cumplida ? l.goalReached : l.goalVerified,
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          if (meta.aportes.isNotEmpty) const SizedBox(height: 8),
           for (final aporte in meta.aportes)
             ListTile(
               dense: true,
@@ -202,6 +304,18 @@ class _GoalCard extends ConsumerWidget {
         ],
       ),
     );
+    if (!_celebrar) return tarjeta;
+    final tokens = context.tokens;
+    return Stack(
+      children: [
+        tarjeta,
+        Positioned.fill(
+          child: ConfettiBurst(
+            colors: [theme.colorScheme.primary, acento.color, tokens.challenges.color, tokens.coach.color],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -212,6 +326,7 @@ class _Challenges extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l;
     final theme = Theme.of(context);
+    final retoAcento = context.tokens.challenges;
     final sugerencias = ref.watch(suggestionsProvider).value ?? const <ChallengeSuggestion>[];
     return AsyncView(
       value: ref.watch(challengesProvider),
@@ -232,14 +347,18 @@ class _Challenges extends ConsumerWidget {
               for (final s in sugerencias)
                 SectionCard(
                   title: s.titulo,
-                  trailing: Text(l.pointsShort(s.puntos), style: theme.textTheme.labelLarge),
+                  color: retoAcento.container,
+                  foreground: retoAcento.onContainer,
+                  trailing: _Points(puntos: s.puntos),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.motivo),
+                      Text(s.motivo, style: theme.textTheme.bodyMedium?.copyWith(color: retoAcento.onContainer)),
+                      const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: FilledButton.tonal(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: retoAcento.color),
                           onPressed: () async {
                             final ok = await guarded(
                               context,
@@ -262,7 +381,11 @@ class _Challenges extends ConsumerWidget {
               for (final reto in pasados)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(reto.estado == 'cumplido' ? Icons.verified : Icons.hourglass_disabled_outlined),
+                  leading: IconBadge(
+                    icon: reto.estado == 'cumplido' ? Icons.verified : Icons.hourglass_disabled_outlined,
+                    color: reto.estado == 'cumplido' ? null : theme.colorScheme.surfaceContainerHighest,
+                    foreground: reto.estado == 'cumplido' ? null : theme.colorScheme.onSurfaceVariant,
+                  ),
                   title: Text(reto.descripcion),
                   subtitle: Text(reto.estado == 'cumplido' ? l.challengeDone(reto.puntos) : l.challengeMissed),
                 ),
@@ -286,21 +409,55 @@ class _ChallengeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l;
+    final acento = context.tokens.challenges;
+    final pasos = reto.objetivo.round();
     return SectionCard(
       title: reto.descripcion,
+      trailing: _Points(puntos: reto.puntos),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LabeledProgress(
-            label: reto.esTope ? l.challengeSpentSoFar : l.challengeProgress,
-            value: _valor(l),
-            progress: reto.progreso,
-          ),
+          // Los retos de pocas veces (3 check-ins, 5 días) se ven como pasos; los de monto, como barra.
+          if (!reto.esTope && pasos >= 2 && pasos <= 10) ...[
+            Row(
+              children: [
+                Expanded(child: Text(l.challengeProgress, style: Theme.of(context).textTheme.bodyMedium)),
+                Text(_valor(l), style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                for (var i = 0; i < pasos; i++)
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: motion(context, Duration(milliseconds: 300 + 80 * i)),
+                      curve: kMotionCurve,
+                      height: 10,
+                      margin: EdgeInsets.only(right: i == pasos - 1 ? 0 : 4),
+                      decoration: BoxDecoration(
+                        color: i < reto.valorActual.round()
+                            ? acento.color
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ] else
+            LabeledProgress(
+              label: reto.esTope ? l.challengeSpentSoFar : l.challengeProgress,
+              value: _valor(l),
+              progress: reto.progreso,
+              color: acento.color,
+            ),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  '${l.endsOn(shortDate(context, reto.fechaFin))} · ${l.pointsShort(reto.puntos)}',
+                  l.endsOn(shortDate(context, reto.fechaFin)),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -321,28 +478,113 @@ class _ChallengeCard extends ConsumerWidget {
   }
 }
 
+/// Puntos que da un reto, como etiqueta.
+class _Points extends StatelessWidget {
+  const _Points({required this.puntos});
+
+  final int puntos;
+
+  @override
+  Widget build(BuildContext context) {
+    final acento = context.tokens.goals;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: acento.container, borderRadius: BorderRadius.circular(12)),
+      child: Text(
+        context.l.pointsShort(puntos),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: acento.onContainer, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
 class _Badges extends ConsumerWidget {
   const _Badges();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l;
     final theme = Theme.of(context);
     final insignias = ref.watch(gamificationProvider).value?.insignias ?? const <BadgeInfo>[];
+    final obtenidas = insignias.where((i) => i.desbloqueada).length;
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(16),
       children: [
-        for (final insignia in insignias)
-          ListTile(
-            leading: Icon(
-              insignia.desbloqueada ? Icons.military_tech : Icons.lock_outline,
-              size: 32,
-              color: insignia.desbloqueada ? theme.colorScheme.primary : theme.colorScheme.outline,
-            ),
-            title: Text(insignia.nombre),
-            subtitle: Text(insignia.descripcion),
-            enabled: insignia.desbloqueada,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            l.badgesCount(obtenidas, '${insignias.length}'),
+            style: theme.textTheme.titleMedium,
           ),
+        ),
+        // Medallones: los obtenidos a color, los pendientes atenuados y con candado.
+        Wrap(
+          spacing: AppTokens.gap,
+          runSpacing: AppTokens.gap,
+          children: [
+            for (final (i, insignia) in insignias.indexed)
+              FractionallySizedBox(
+                widthFactor: BentoRow.stacks(context) ? 1 : 0.5 - 0.02,
+                child: FadeSlideIn(index: i, child: BadgeTile(insignia: insignia)),
+              ),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+/// Una insignia como tarjeta: medallón, nombre y cómo se consigue.
+class BadgeTile extends StatelessWidget {
+  const BadgeTile({super.key, required this.insignia});
+
+  final BadgeInfo insignia;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final acento = context.tokens.goals;
+    final lista = insignia.desbloqueada;
+    return Semantics(
+      label: lista ? null : context.l.badgeLocked,
+      child: BentoTile(
+        color: lista ? acento.container : null,
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: lista ? acento.color : scheme.surfaceContainerHighest,
+                ),
+                child: Icon(
+                  lista ? Icons.military_tech : Icons.lock_outline,
+                  size: 34,
+                  color: lista ? acento.container : scheme.outline,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                insignia.nombre,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleSmall?.copyWith(color: lista ? acento.onContainer : scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                insignia.descripcion,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: (lista ? acento.onContainer : scheme.onSurfaceVariant).withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

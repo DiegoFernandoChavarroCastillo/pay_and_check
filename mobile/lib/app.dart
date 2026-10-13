@@ -7,6 +7,7 @@ import 'core/theme.dart';
 import 'core/widgets.dart';
 import 'data/session.dart';
 import 'features/auth/auth_screens.dart';
+import 'features/coach/coach_widgets.dart';
 import 'features/shell/shell_screen.dart';
 import 'l10n/gen/app_localizations.dart';
 
@@ -68,7 +69,14 @@ class SplashScreen extends ConsumerWidget {
       body: Center(
         child: session.hasError && !session.isLoading
             ? ErrorView(error: session.error!, onRetry: () => ref.invalidate(sessionProvider))
-            : const CircularProgressIndicator(),
+            : const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CoachOrb(size: 104),
+                  SizedBox(height: 24),
+                  SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                ],
+              ),
       ),
     );
   }

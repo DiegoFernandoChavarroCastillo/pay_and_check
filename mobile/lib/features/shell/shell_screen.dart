@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
@@ -84,16 +85,32 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
               label: Text(l.add),
             )
           : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _irA,
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: l.tabHome),
-          NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: l.tabTransactions),
-          NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), selectedIcon: const Icon(Icons.auto_awesome), label: l.tabCoach),
-          NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events), label: l.tabProgress),
-          NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l.tabProfile),
-        ],
+      // Barra flotante: separada de los bordes y con las esquinas del mosaico.
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTokens.radius),
+          child: MediaQuery(
+            // Sin el margen inferior (ya lo da el SafeArea) y con la letra acotada para que quepan las etiquetas.
+            data: MediaQuery.of(context).removePadding(removeBottom: true).copyWith(
+                  textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
+                ),
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) {
+                tapFeedback();
+                _irA(i);
+              },
+              destinations: [
+                NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: l.tabHome),
+                NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: l.tabTransactions),
+                NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), selectedIcon: const Icon(Icons.auto_awesome), label: l.tabCoach),
+                NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events), label: l.tabProgress),
+                NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l.tabProfile),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -110,22 +127,32 @@ class _BadgeDialog extends StatelessWidget {
     final l = context.l;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return AlertDialog(
-      icon: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: motion(context, const Duration(milliseconds: 700)),
-        curve: Curves.elasticOut,
-        builder: (context, t, child) => Transform.scale(scale: t, child: child),
-        child: CircleAvatar(
-          radius: 40,
-          backgroundColor: scheme.primaryContainer,
-          child: Icon(Icons.military_tech, size: 48, color: scheme.onPrimaryContainer),
+    final tokens = context.tokens;
+    return Stack(
+      children: [
+        AlertDialog(
+          icon: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: motion(context, const Duration(milliseconds: 700)),
+            curve: Curves.elasticOut,
+            builder: (context, t, child) => Transform.scale(scale: t, child: child),
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: tokens.goals.container,
+              child: Icon(Icons.military_tech, size: 48, color: tokens.goals.onContainer),
+            ),
+          ),
+          title: Text(l.badgeUnlocked, textAlign: TextAlign.center),
+          content: Text(insignias.join('\n'), textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(l.great))],
         ),
-      ),
-      title: Text(l.badgeUnlocked, textAlign: TextAlign.center),
-      content: Text(insignias.join('\n'), textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(l.great))],
+        Positioned.fill(
+          child: ConfettiBurst(
+            colors: [scheme.primary, tokens.goals.color, tokens.challenges.color, tokens.coach.color, tokens.income.color],
+          ),
+        ),
+      ],
     );
   }
 }

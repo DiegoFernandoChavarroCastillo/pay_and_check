@@ -57,6 +57,9 @@ TEXTOS = {
     "tabCoach": ("Coach", "Coach"),
     "tabProgress": ("Progreso", "Progress"),
     "tabProfile": ("Perfil", "Profile"),
+    "coachTagline": ("Contigo, sin juzgar", "With you, never judging"),
+    "badgesCount": ("{n} de {total} insignias", "{n} of {total} badges"),
+    "badgeLocked": ("Por desbloquear", "Locked"),
     # --- Inicio ---
     "homeGreeting": ("Hola, {name}", "Hi, {name}"),
     "streakDays": ("{n, plural, =1{1 día} other{{n} días}}", "{n, plural, =1{1 day} other{{n} days}}"),
@@ -186,6 +189,8 @@ TEXTOS = {
     "incomes": ("Ingresos", "Income"),
     "search": ("Buscar", "Search"),
     "allCategories": ("Todas", "All"),
+    "dayToday": ("Hoy", "Today"),
+    "dayYesterday": ("Ayer", "Yesterday"),
     "noExpenses": ("Aquí aparecerán tus gastos.", "Your expenses will show up here."),
     "noIncomes": ("Aquí aparecerá el dinero extra que recibas.", "Extra money you receive will show up here."),
     "newExpense": ("Nuevo gasto", "New expense"),
@@ -297,6 +302,7 @@ TEXTOS = {
     # --- Reportes ---
     "weeklyReport": ("Reporte de la semana", "Weekly report"),
     "weekSpent": ("Gasto de la semana", "Spent this week"),
+    "weekPace": ("Ritmo esperado", "Expected pace"),
     "weekUnderPace": ("Vas {amount} por debajo de tu ritmo semanal.", "You are {amount} below your weekly pace."),
     "weekOverPace": ("Vas {amount} por encima de tu ritmo semanal. Aún hay semana para equilibrar.", "You are {amount} above your weekly pace. There's still week left to balance."),
     "wrappedTitle": ("Tu mes en resumen", "Your month in review"),

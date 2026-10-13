@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
 import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
@@ -25,6 +28,148 @@ String moodLabel(AppLocalizations l, String animo) => switch (animo) {
       'confiado' => l.moodConfident,
       _ => l.moodNeutral,
     };
+
+/// Color del coach según el ánimo. Ninguno es rojo: un mal día no es una falta.
+const moodColors = {
+  'ansioso': Color(0xFF8A63D2),
+  'preocupado': Color(0xFF3B7DD8),
+  'neutral': Color(0xFF3BA7B8),
+  'tranquilo': Color(0xFF2E9C82),
+  'confiado': Color(0xFFE0A23B),
+};
+
+/// El coach: una forma orgánica que respira. No es una cara ni un personaje,
+/// es una presencia. Sin animaciones queda quieta.
+class CoachOrb extends StatefulWidget {
+  const CoachOrb({super.key, this.size = 48, this.color});
+
+  final double size;
+  final Color? color;
+
+  @override
+  State<CoachOrb> createState() => _CoachOrbState();
+}
+
+class _CoachOrbState extends State<CoachOrb> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(seconds: 7));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!ambient(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.color ?? moodColors['ansioso']!;
+    return ExcludeSemantics(
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: color),
+        duration: motion(context, const Duration(milliseconds: 600)),
+        builder: (context, c, _) => AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => CustomPaint(
+            size: Size.square(widget.size),
+            painter: _OrbPainter(_c.value * 2 * math.pi, c ?? color),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrbPainter extends CustomPainter {
+  _OrbPainter(this.fase, this.color);
+
+  final double fase;
+  final Color color;
+
+  Path _forma(Offset centro, double radio, double fase) {
+    final path = Path();
+    const pasos = 48;
+    for (var i = 0; i <= pasos; i++) {
+      final a = 2 * math.pi * i / pasos;
+      final r = radio * (1 + 0.07 * math.sin(3 * a + fase) + 0.05 * math.sin(2 * a - fase * 2));
+      final p = centro + Offset(math.cos(a), math.sin(a)) * r;
+      i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
+    }
+    return path..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centro = size.center(Offset.zero);
+    final radio = size.shortestSide / 2 * 0.8 * (1 + 0.03 * math.sin(fase));
+    final area = Rect.fromCircle(center: centro, radius: radio);
+
+    // Halo: la misma forma, más grande y difusa.
+    canvas.drawPath(
+      _forma(centro, radio * 1.08, -fase),
+      Paint()
+        ..color = color.withValues(alpha: 0.28)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.shortestSide * 0.08),
+    );
+    canvas.drawPath(
+      _forma(centro, radio, fase),
+      Paint()
+        ..shader = RadialGradient(
+          center: Alignment(-0.4 + 0.2 * math.cos(fase), -0.5 + 0.2 * math.sin(fase)),
+          radius: 1.1,
+          colors: [Color.lerp(color, Colors.white, 0.65)!, color, Color.lerp(color, Colors.black, 0.18)!],
+          stops: const [0, 0.6, 1],
+        ).createShader(area),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_OrbPainter old) => old.fase != fase || old.color != color;
+}
+
+/// El coach con el color del ánimo de hoy, y un saltito cada vez que se
+/// registra un gasto.
+class CoachAvatar extends ConsumerStatefulWidget {
+  const CoachAvatar({super.key, this.size = 48});
+
+  final double size;
+
+  @override
+  ConsumerState<CoachAvatar> createState() => _CoachAvatarState();
+}
+
+class _CoachAvatarState extends ConsumerState<CoachAvatar> {
+  int _saltos = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(summaryProvider, (antes, ahora) {
+      final a = antes?.value?.gastadoTotal, b = ahora.value?.gastadoTotal;
+      if (a != null && b != null && b > a) setState(() => _saltos++);
+    });
+    final checkins = ref.watch(checkinsProvider).value ?? const <Checkin>[];
+    final hoy = today();
+    final animo = checkins.where((c) => c.fecha == hoy).firstOrNull?.animo;
+    final orbe = CoachOrb(size: widget.size, color: moodColors[animo]);
+    if (_saltos == 0) return orbe;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(_saltos),
+      tween: Tween(begin: 1.25, end: 1),
+      duration: motion(context, const Duration(milliseconds: 600)),
+      curve: kSpring,
+      builder: (context, escala, child) => Transform.scale(scale: escala, child: child),
+      child: orbe,
+    );
+  }
+}
 
 /// Check-in diario: un toque para decir cómo te sientes con tu dinero hoy.
 class CheckinCard extends ConsumerWidget {
@@ -145,35 +290,46 @@ class _InsightCardState extends ConsumerState<InsightCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final coach = context.tokens.coach;
     final insight = widget.insight;
     final accion = insight.accion;
     return SectionCard(
+      color: coach.container,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+              const CoachAvatar(size: 40),
               const SizedBox(width: 12),
-              Expanded(child: Text(insight.mensaje, style: theme.textTheme.bodyLarge)),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    insight.mensaje,
+                    style: theme.textTheme.bodyLarge?.copyWith(color: coach.onContainer, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
             ],
           ),
           // Explicabilidad: el dato en que se basa el consejo, si la IA lo reescribió.
           if (insight.mensaje != insight.descripcion)
             Padding(
-              padding: const EdgeInsets.only(top: 8, left: 36),
+              padding: const EdgeInsets.only(top: 8, left: 52),
               child: Text(
                 '${context.l.whyThis} ${insight.descripcion}',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(color: coach.onContainer.withValues(alpha: 0.75)),
               ),
             ),
           if (accion != null) ...[
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
+              child: FilledButton.icon(
                 onPressed: _busy || _done ? null : () => _ejecutar(accion),
+                style: FilledButton.styleFrom(backgroundColor: coach.color),
                 icon: Icon(_done ? Icons.check : Icons.bolt),
                 label: Text(_done ? context.l.actionDone : accion.etiqueta),
               ),

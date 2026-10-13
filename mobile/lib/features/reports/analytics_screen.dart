@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/charts.dart';
 import '../../core/format.dart';
 import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
@@ -66,9 +67,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       padding: const EdgeInsets.all(16),
       children: staggered([
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            IconButton(
+            IconButton.filledTonal(
               tooltip: l.previousWeek,
               icon: const Icon(Icons.chevron_left),
               onPressed: indice == 0 ? null : () => setState(() => _atras++),
@@ -77,13 +78,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               '${shortDate(context, semana.inicio)} – ${shortDate(context, semana.fin)}',
               style: theme.textTheme.titleMedium,
             ),
-            IconButton(
+            IconButton.filledTonal(
               tooltip: l.nextWeek,
               icon: const Icon(Icons.chevron_right),
               onPressed: _atras == 0 ? null : () => setState(() => _atras--),
             ),
           ],
         ),
+        const SizedBox(height: 4),
         SectionCard(
           title: l.byCategory,
           child: AnimatedSize(
@@ -107,14 +109,19 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ),
         ),
         SectionCard(
+          color: scheme.primaryContainer,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l.weekSpent, style: theme.textTheme.labelLarge),
+              Text(l.weekSpent, style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
-              AnimatedMoney(
-                value: semana.total,
-                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: AnimatedMoney(
+                  value: semana.total,
+                  style: theme.textTheme.displaySmall?.copyWith(fontFeatures: kTabular),
+                ),
               ),
               if (cambio != null) ...[
                 const SizedBox(height: 8),

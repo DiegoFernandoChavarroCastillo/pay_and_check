@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/widgets.dart';
+import '../coach/coach_widgets.dart';
 import '../../data/session.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -136,26 +137,37 @@ class _AuthScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: form,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(Icons.savings_outlined, size: 56, color: theme.colorScheme.primary),
-                    const SizedBox(height: 16),
-                    Text(title, style: theme.textTheme.headlineMedium, textAlign: TextAlign.center),
-                    const SizedBox(height: 8),
-                    Text(subtitle, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
-                    const SizedBox(height: 32),
-                    ...children,
-                  ],
+      body: DecoratedBox(
+        // Un degradado suave del verde de la marca hacia el fondo.
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.center,
+            colors: [scheme.primaryContainer, theme.scaffoldBackgroundColor],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Form(
+                  key: form,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: CoachOrb(size: 104)),
+                      const SizedBox(height: 16),
+                      Text(title, style: theme.textTheme.headlineMedium, textAlign: TextAlign.center),
+                      const SizedBox(height: 8),
+                      Text(subtitle, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
+                      const SizedBox(height: 32),
+                      ...children,
+                    ],
+                  ),
                 ),
               ),
             ),

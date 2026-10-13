@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
+import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
@@ -21,12 +23,28 @@ class CoachScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(l.tabCoach, style: Theme.of(context).textTheme.headlineSmall),
+            child: Row(
+              children: [
+                const CoachAvatar(size: 56),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.tabCoach, style: Theme.of(context).textTheme.headlineSmall),
+                      Text(
+                        l.coachTagline,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          TabBar(tabs: [Tab(text: l.coachTips), Tab(text: l.coachChat)]),
+          PillTabs(labels: [l.coachTips, l.coachChat]),
           const Expanded(child: TabBarView(children: [_Insights(), _Chat()])),
         ],
       ),
@@ -56,7 +74,7 @@ class _Insights extends ConsumerWidget {
             if (insights.isEmpty)
               EmptyView(icon: Icons.auto_awesome_outlined, text: l.noInsights)
             else
-              for (final insight in insights) InsightCard(insight: insight),
+              ...staggered([for (final insight in insights) InsightCard(insight: insight)]),
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
@@ -155,7 +173,22 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
     final l = context.l;
     final mensajes = _mensajes;
     if (_error != null) return Center(child: ErrorView(error: _error!, onRetry: _cargar));
-    if (mensajes == null) return const Center(child: CircularProgressIndicator());
+    if (mensajes == null) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Shimmer(
+          child: Column(
+            children: [
+              Align(alignment: Alignment.centerLeft, child: SkeletonBox(height: 56, width: 240, radius: 20)),
+              SizedBox(height: 8),
+              Align(alignment: Alignment.centerRight, child: SkeletonBox(height: 40, width: 180, radius: 20)),
+              SizedBox(height: 8),
+              Align(alignment: Alignment.centerLeft, child: SkeletonBox(height: 72, width: 260, radius: 20)),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Column(
       children: [
@@ -166,13 +199,16 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
                   controller: _scroll,
                   padding: const EdgeInsets.all(16),
                   itemCount: mensajes.length + (_enviando ? 1 : 0),
-                  itemBuilder: (context, i) => i == mensajes.length
-                      ? const _Bubble(texto: '…', delCoach: true)
-                      : _Bubble(texto: mensajes[i].contenido, delCoach: mensajes[i].esDelCoach),
+                  itemBuilder: (context, i) {
+                    if (i == mensajes.length) return const _Bubble(delCoach: true, child: _Typing());
+                    final burbuja = _Bubble(texto: mensajes[i].contenido, delCoach: mensajes[i].esDelCoach);
+                    // Solo lo recién dicho entra animado; el historial ya estaba ahí.
+                    return i >= mensajes.length - 2 ? FadeSlideIn(key: ValueKey(mensajes[i]), child: burbuja) : burbuja;
+                  },
                 ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 8, 12),
+          padding: const EdgeInsets.fromLTRB(16, 4, 12, 12),
           child: Row(
             children: [
               Expanded(
@@ -186,6 +222,7 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
                   onSubmitted: (_) => _enviar(),
                 ),
               ),
+              const SizedBox(width: 8),
               IconButton.filled(
                 tooltip: l.send,
                 onPressed: _enviando ? null : _enviar,
@@ -200,14 +237,18 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.texto, required this.delCoach});
+  const _Bubble({this.texto, required this.delCoach, this.child});
 
-  final String texto;
+  final String? texto;
   final bool delCoach;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final coach = context.tokens.coach;
+    const redondo = Radius.circular(AppTokens.radiusInner);
+    const pico = Radius.circular(6);
     return Align(
       alignment: delCoach ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -215,12 +256,81 @@ class _Bubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
         decoration: BoxDecoration(
-          color: delCoach ? scheme.surfaceContainerHigh : scheme.primaryContainer,
-          borderRadius: BorderRadius.circular(18),
+          color: delCoach ? coach.container : scheme.primary,
+          // La esquina "de quien habla" es la menos redonda.
+          borderRadius: BorderRadius.only(
+            topLeft: redondo,
+            topRight: redondo,
+            bottomLeft: delCoach ? pico : redondo,
+            bottomRight: delCoach ? redondo : pico,
+          ),
         ),
-        child: Text(
-          texto,
-          style: TextStyle(color: delCoach ? scheme.onSurface : scheme.onPrimaryContainer),
+        child: child ??
+            Text(
+              texto!,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: delCoach ? coach.onContainer : scheme.onPrimary,
+                  ),
+            ),
+      ),
+    );
+  }
+}
+
+/// Tres puntos que saltan mientras el coach escribe.
+class _Typing extends StatefulWidget {
+  const _Typing();
+
+  @override
+  State<_Typing> createState() => _TypingState();
+}
+
+class _TypingState extends State<_Typing> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!ambient(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.tokens.coach.onContainer;
+    return Semantics(
+      label: '…',
+      child: SizedBox(
+        height: 20,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < 3; i++)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Transform.translate(
+                    // Cada punto sube y baja con un pequeño retraso respecto al anterior.
+                    offset: Offset(0, -5 * Curves.easeInOut.transform((1 - ((_c.value - i * 0.18) % 1 * 2 - 1).abs()).clamp(0, 1).toDouble())),
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(color: color.withValues(alpha: 0.7), shape: BoxShape.circle),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

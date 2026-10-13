@@ -46,6 +46,19 @@
   "tabCoach": "Coach",
   "tabProgress": "Progreso",
   "tabProfile": "Perfil",
+  "coachTagline": "Contigo, sin juzgar",
+  "badgesCount": "{n} de {total} insignias",
+  "@badgesCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeLocked": "Por desbloquear",
   "homeGreeting": "Hola, {name}",
   "@homeGreeting": {
     "placeholders": {
@@ -251,6 +264,8 @@
   "incomes": "Ingresos",
   "search": "Buscar",
   "allCategories": "Todas",
+  "dayToday": "Hoy",
+  "dayYesterday": "Ayer",
   "noExpenses": "Aquí aparecerán tus gastos.",
   "noIncomes": "Aquí aparecerá el dinero extra que recibas.",
   "newExpense": "Nuevo gasto",
@@ -341,6 +356,7 @@
   "privacyDeleteBody": "Puedes eliminar tu cuenta y todos tus datos cuando quieras desde Perfil.",
   "weeklyReport": "Reporte de la semana",
   "weekSpent": "Gasto de la semana",
+  "weekPace": "Ritmo esperado",
   "weekUnderPace": "Vas {amount} por debajo de tu ritmo semanal.",
   "@weekUnderPace": {
     "placeholders": {

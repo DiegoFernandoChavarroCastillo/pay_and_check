@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/notifications.dart';
 import '../../core/settings.dart';
+import '../../core/motion.dart';
 import '../../core/widgets.dart';
 import '../../data/providers.dart';
 import '../../data/session.dart';
@@ -72,20 +73,48 @@ class ProfileScreen extends ConsumerWidget {
     final budget = ref.watch(summaryProvider).value?.budget;
     if (user == null) return const SizedBox.shrink();
 
-    Widget titulo(String texto) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-          child: Text(texto, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
-        );
+    Widget titulo(String texto) => _SectionTitle(texto);
+    final perfil = ref.watch(gamificationProvider).value;
+    final scheme = theme.colorScheme;
 
     return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: _agrupar([
+        BentoTile(
+          padding: const EdgeInsets.all(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [scheme.primaryContainer, Color.lerp(scheme.primaryContainer, scheme.tertiaryContainer, 0.7)!],
+          ),
+          child: Row(
             children: [
-              Text(user.nombre, style: theme.textTheme.headlineSmall),
-              Text(user.email, style: theme.textTheme.bodyMedium),
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: scheme.primary,
+                child: Text(
+                  user.nombre.isEmpty ? '?' : user.nombre.characters.first.toUpperCase(),
+                  style: theme.textTheme.headlineSmall?.copyWith(color: scheme.onPrimary),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.nombre, style: theme.textTheme.titleLarge?.copyWith(color: scheme.onPrimaryContainer)),
+                    Text(user.email, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer)),
+                    if (perfil != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '${l.levelTitle(perfil.nivelNumero, perfil.nivelNombre)} · ${l.pointsTotal(perfil.puntos)}',
+                          style: theme.textTheme.labelLarge?.copyWith(color: scheme.onPrimaryContainer),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -212,10 +241,50 @@ class ProfileScreen extends ConsumerWidget {
             if (context.mounted) await guarded(context, session.deleteAccount);
           },
         ),
-        const SizedBox(height: 24),
-      ],
+      ]),
     );
   }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+      child: Text(texto, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+    );
+  }
+}
+
+/// Junta en una tarjeta los ajustes que siguen a cada título de sección.
+List<Widget> _agrupar(List<Widget> items) {
+  final salida = <Widget>[];
+  var grupo = <Widget>[];
+  void cerrar() {
+    if (grupo.isEmpty) return;
+    salida.add(BentoTile(padding: const EdgeInsets.symmetric(vertical: 4), child: Column(children: grupo)));
+    grupo = [];
+  }
+
+  var enSeccion = false;
+  for (final item in items) {
+    if (item is _SectionTitle) {
+      cerrar();
+      enSeccion = true;
+      salida.add(item);
+    } else if (enSeccion) {
+      grupo.add(item);
+    } else {
+      salida.add(item);
+    }
+  }
+  cerrar();
+  return salida;
 }
 
 /// Qué datos usa la app y para qué, en lenguaje claro.
@@ -241,13 +310,28 @@ class PrivacyScreen extends StatelessWidget {
         children: [
           Text(l.privacyIntro, style: theme.textTheme.bodyLarge),
           const SizedBox(height: 16),
-          for (final (icono, titulo, cuerpo) in puntos)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(icono, color: theme.colorScheme.primary),
-              title: Text(titulo),
-              subtitle: Text(cuerpo),
-            ),
+          ...staggered([
+            for (final (icono, titulo, cuerpo) in puntos)
+              SectionCard(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconBadge(icon: icono),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(titulo, style: theme.textTheme.titleSmall),
+                          const SizedBox(height: 2),
+                          Text(cuerpo, style: theme.textTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ]),
         ],
       ),
     );
