@@ -90,7 +90,7 @@ class _CategoryDonutState extends State<CategoryDonut> {
     Color color(Slice p) => colores[p.label] ?? scheme.outlineVariant;
     int pct(Slice p) => (p.value / total * 100).round();
 
-    final lado = widget.compact ? 104.0 : 148.0;
+    final lado = widget.compact ? 104.0 : 164.0;
     final grosor = widget.compact ? 16.0 : 22.0;
     final tocada = _tocada != null && _tocada! < porciones.length ? porciones[_tocada!] : null;
 
@@ -199,14 +199,13 @@ class _CategoryDonutState extends State<CategoryDonut> {
       ],
     );
 
-    return Row(
-      children: [
-        // La leyenda ya dice lo mismo en texto: el dibujo no se lee dos veces.
-        Semantics(label: money(total), excludeSemantics: true, child: dona),
-        const SizedBox(width: 16),
-        Expanded(child: leyenda),
-      ],
-    );
+    // La leyenda ya dice lo mismo en texto: el dibujo no se lee dos veces.
+    final dibujo = Semantics(label: money(total), excludeSemantics: true, child: dona);
+    // La versión completa lleva montos en la leyenda: necesita todo el ancho.
+    if (!widget.compact) {
+      return Column(children: [dibujo, const SizedBox(height: 16), leyenda]);
+    }
+    return Row(children: [dibujo, const SizedBox(width: 16), Expanded(child: leyenda)]);
   }
 }
 
