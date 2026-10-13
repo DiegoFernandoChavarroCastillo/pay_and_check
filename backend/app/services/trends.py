@@ -34,6 +34,16 @@ class Trends:
     variacion_vs_semana_anterior_pct: int | None
 
 
+def _promedio(semanas: list[SemanaTendencia]) -> Decimal:
+    """Promedio desde la primera semana con gasto: las semanas vacías de antes de que la persona
+    empezara a registrar no son semanas "de cero" y bajarían el promedio."""
+    desde = next((i for i, s in enumerate(semanas) if s.total > 0), None)
+    if desde is None:
+        return CERO
+    activas = semanas[desde:]
+    return _redondear(sum((s.total for s in activas), CERO) / len(activas))
+
+
 def build_trends(session: Session, user_id: int, today: date, semanas: int = 8) -> Trends:
     """Gasto de las últimas `semanas` semanas calendario (lunes a domingo), la
     última es la que contiene `today`. Solo agrega, sin IA.
@@ -92,6 +102,6 @@ def build_trends(session: Session, user_id: int, today: date, semanas: int = 8) 
     return Trends(
         semanas=resultado,
         dias=dias,
-        promedio_semanal=_redondear(sum((s.total for s in resultado), CERO) / semanas),
+        promedio_semanal=_promedio(resultado),
         variacion_vs_semana_anterior_pct=variacion,
     )

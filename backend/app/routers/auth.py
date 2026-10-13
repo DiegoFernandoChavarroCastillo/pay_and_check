@@ -92,6 +92,7 @@ def google_login(payload: GoogleAuthRequest, session: Session = Depends(get_sess
     user = session.exec(select(User).where(User.google_id == info["google_id"])).first()
 
     if user is None:
+        info["email"] = info["email"].lower()
         user = session.exec(select(User).where(User.email == info["email"])).first()
         if user is not None:
             # Ya tenía cuenta por password — le asociamos el google_id, mismo usuario.

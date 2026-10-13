@@ -573,10 +573,16 @@ class BadgeTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              Text(
-                insignia.nombre,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleSmall?.copyWith(color: lista ? acento.onContainer : scheme.onSurfaceVariant),
+              // Un nombre largo de una sola palabra ("Autoconocimiento") se encoge en vez de cortarse.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  insignia.nombre,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: lista ? acento.onContainer : scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
               const SizedBox(height: 2),
               Text(

@@ -101,3 +101,15 @@ def test_registro_sobre_cuenta_solo_google_agrega_password(client, monkeypatch):
 
     r = client.post("/auth/login", json={"email": "beto@test.com", "password": "newpass"})
     assert r.status_code == 200
+
+
+def test_el_correo_no_distingue_mayusculas(client):
+    r = client.post("/auth/register", json={"email": "Juan.Ramirez@Test.com", "password": "secret123", "nombre": "J"})
+    assert r.status_code in (200, 201)
+
+    r = client.post("/auth/login", json={"email": "juan.ramirez@test.com", "password": "secret123"})
+    assert r.status_code == 200
+    # Y no se puede registrar "otra" cuenta que solo cambie las mayúsculas.
+    r = client.post("/auth/register", json={"email": "JUAN.RAMIREZ@test.com", "password": "x", "nombre": "Otro"})
+    assert r.status_code == 400
+

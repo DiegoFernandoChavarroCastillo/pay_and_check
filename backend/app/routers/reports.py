@@ -1,3 +1,4 @@
+import re
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -9,10 +10,13 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.report import MonthlyWrappedResponse, TrendsResponse, WeeklyReportResponse
 from app.services.budget_lookup import get_active_budget_for_user
+from app.services.coach import inventa_cifras, rompe_guardrails
 from app.services.groq_client import GroqServiceError, generate_weekly_recommendations
 from app.services.trends import build_trends
-from app.services.weekly_report import build_weekly_summary, summary_to_text
+from app.services.weekly_report import build_weekly_summary, resumen_de_respaldo, summary_to_text
 from app.services.wrapped import build_wrapped
+
+_MENCIONA_INVERSION = re.compile(r"invers|invert|invest", re.IGNORECASE)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -29,11 +33,20 @@ def weekly_report(
 
     summary = build_weekly_summary(session, current_user.id, budget, today)
 
+    resumen = summary_to_text(summary)
     try:
-        recomendaciones = generate_weekly_recommendations(summary_to_text(summary))
+        recomendaciones = generate_weekly_recommendations(resumen)
     except GroqServiceError:
         # Un fallo de Groq no debe tumbar el resumen numérico, que sigue siendo útil.
         recomendaciones = "No se pudieron generar recomendaciones de IA en este momento."
+    else:
+        # Mismas reglas que el resto del coach: sin culpa, sin inversiones y sin cifras inventadas.
+        if (
+            rompe_guardrails(recomendaciones)
+            or _MENCIONA_INVERSION.search(recomendaciones)
+            or inventa_cifras(recomendaciones, resumen)
+        ):
+            recomendaciones = resumen_de_respaldo(summary)
 
     return WeeklyReportResponse(
         semana_inicio=summary.semana_inicio,

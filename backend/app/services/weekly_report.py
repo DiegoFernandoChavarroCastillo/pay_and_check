@@ -80,17 +80,37 @@ def build_weekly_summary(
     )
 
 
+def fmt(valor: Decimal) -> str:
+    """Monto sin decimales y con punto de miles (mismo formato que `patterns.fmt`)."""
+    return f"{int(valor.to_integral_value()):,}".replace(",", ".")
+
+
+def resumen_de_respaldo(summary: WeeklySummary) -> str:
+    """Lo que se muestra si la IA no responde o lo que redacta rompe una regla del coach."""
+    if summary.diferencia_vs_ritmo <= 0:
+        return (
+            f"Esta semana llevas {fmt(summary.gasto_total_semana)}, por debajo de tu ritmo semanal de "
+            f"{fmt(summary.ritmo_esperado_semanal)}. Vas con margen: buen momento para apartar algo a una meta."
+        )
+    return (
+        f"Esta semana llevas {fmt(summary.gasto_total_semana)}, por encima de tu ritmo semanal de "
+        f"{fmt(summary.ritmo_esperado_semanal)}. Aún hay semana para equilibrar: elige un gasto pequeño que "
+        "puedas posponer."
+    )
+
+
 def summary_to_text(summary: WeeklySummary) -> str:
     """Texto compacto y agregado para pasarle a la IA — nunca transacciones individuales."""
+    # Montos sin decimales y con punto de miles: así los repite la IA, igual que el resto de la app.
     lineas = [
         f"Semana: {fmt_fecha(summary.semana_inicio)} a {fmt_fecha(summary.semana_fin)}",
-        f"Gasto total de la semana: {summary.gasto_total_semana}",
-        f"Ritmo esperado semanal del presupuesto: {summary.ritmo_esperado_semanal}",
-        f"Diferencia (gasto de la semana - ritmo esperado): {summary.diferencia_vs_ritmo}",
+        f"Gasto total de la semana: {fmt(summary.gasto_total_semana)}",
+        f"Ritmo esperado semanal del presupuesto: {fmt(summary.ritmo_esperado_semanal)}",
+        f"Diferencia (gasto de la semana - ritmo esperado): {fmt(summary.diferencia_vs_ritmo)}",
         "Gasto por categoría esta semana:",
     ]
     if summary.gasto_por_categoria:
-        lineas.extend(f"  - {c.categoria}: {c.monto}" for c in summary.gasto_por_categoria)
+        lineas.extend(f"  - {c.categoria}: {fmt(c.monto)}" for c in summary.gasto_por_categoria)
     else:
         lineas.append("  (sin gastos esta semana)")
     return "\n".join(lineas)

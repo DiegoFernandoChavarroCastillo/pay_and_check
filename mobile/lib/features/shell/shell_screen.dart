@@ -74,8 +74,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
 
     final tieneBudget = ref.watch(summaryProvider).value != null;
     return Scaffold(
-      // El contenido pasa por detrás de la barra inferior: así flota de verdad.
-      extendBody: true,
+      // El contenido pasa por detrás de la barra inferior: así flota de verdad. Con el teclado abierto la
+      // barra queda tapada, y el contenido (el campo del chat) debe terminar justo encima del teclado.
+      extendBody: MediaQuery.viewInsetsOf(context).bottom == 0,
       body: SafeArea(
         bottom: false,
         child: FadeTransition(

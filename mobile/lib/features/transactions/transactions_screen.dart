@@ -309,7 +309,8 @@ class _Row extends StatelessWidget {
         decoration: BoxDecoration(color: tono.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
         child: Icon(icon, size: 22, color: tono, semanticLabel: iconLabel),
       ),
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+      // Dos renglones: una descripción como "Mesada de mis papás" no debe quedar cortada por el monto.
+      title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
       subtitle: subtitle.isEmpty ? null : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

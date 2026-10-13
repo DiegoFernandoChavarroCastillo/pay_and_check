@@ -194,7 +194,8 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
       children: [
         Expanded(
           child: mensajes.isEmpty
-              ? Center(child: EmptyView(icon: Icons.forum_outlined, text: l.chatEmpty))
+              // Desplazable: con el teclado abierto queda poco alto y no debe desbordarse.
+              ? Center(child: SingleChildScrollView(child: EmptyView(icon: Icons.forum_outlined, text: l.chatEmpty)))
               : ListView.builder(
                   controller: _scroll,
                   padding: const EdgeInsets.all(16),

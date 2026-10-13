@@ -8,6 +8,7 @@ import pytest
 import app.routers.expenses as expenses_router
 import app.services.coach as coach_service
 from app.core.time import fmt_fecha
+from app.services.coach import inventa_cifras
 from app.services.groq_client import ExpenseParseError, GroqServiceError, _validar_gasto
 from app.services.prompts import build_coach_rules
 
@@ -62,6 +63,15 @@ def test_parse_receipt_ilegible_da_422_y_groq_caido_502(client, auth_headers, ca
     monkeypatch.setattr(expenses_router, "parse_receipt_text", _caido)
     r = client.post("/expenses/parse-receipt", json={"texto_ocr": "TOTAL 5000"}, headers=auth_headers)
     assert r.status_code == 502
+
+
+def test_un_consejo_no_puede_traer_cifras_que_no_esten_en_el_dato():
+    dato = "Gastas 9.625 por día los fines de semana, frente a 845 entre semana."
+    assert not inventa_cifras("Los fines de semana se te van 9625 diarios, contra 845 entre semana.", dato)
+    assert not inventa_cifras("En 2 frases: el fin de semana pesa más.", dato)
+    # Un cálculo o un monto propuesto por la IA no viene del dato: se descarta el mensaje.
+    assert inventa_cifras("9.625×2=19.250; considera reducir 2.000 los fines de semana.", dato)
+    assert inventa_cifras("Ajusta tus gastos en 10% para llegar a fin de mes.", dato)
 
 
 def test_las_fechas_de_los_consejos_van_en_palabras():

@@ -35,6 +35,11 @@ def test_trends_agrupa_por_semana_y_rellena_con_cero(
     assert Decimal(data["promedio_semanal"]) == Decimal("10750.00")
     assert data["variacion_vs_semana_anterior_pct"] == 150
 
+    # Pidiendo más semanas de las que la persona lleva registrando, el promedio no cambia:
+    # las semanas anteriores a su primer gasto no cuentan como semanas de cero.
+    r = client.get("/reports/trends?semanas=8", headers=auth_headers)
+    assert Decimal(r.json()["promedio_semanal"]) == Decimal("10750.00")
+
     dias = data["dias"]
     assert len(dias) == 14
     assert dias[0]["fecha"] == (LUNES - timedelta(weeks=1)).isoformat()

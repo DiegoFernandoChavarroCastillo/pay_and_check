@@ -4,6 +4,7 @@ de guardrails y tiene un texto de respaldo determinista, así el coach nunca
 deja de responder ni rompe sus reglas aunque el modelo falle."""
 
 import json
+import re
 from dataclasses import asdict
 from datetime import date
 
@@ -75,6 +76,20 @@ def rompe_guardrails(texto: str) -> str | None:
     return None
 
 
+_CIFRA = re.compile(r"\d[\d.,]*")
+
+
+def _cifras(texto: str) -> set[str]:
+    """Las cifras de un texto, sin separadores: "9.625" y "9625" son la misma."""
+    return {re.sub(r"\D", "", c) for c in _CIFRA.findall(texto)}
+
+
+def inventa_cifras(mensaje: str, fuente: str) -> bool:
+    """La IA redacta, no calcula: un consejo no puede traer montos ni porcentajes que no estén en el dato
+    del que parte. Los números de una sola cifra ("2 frases", "1 día") no cuentan."""
+    return any(len(c) >= 2 for c in _cifras(mensaje) - _cifras(fuente))
+
+
 def contexto_financiero(session: Session, user: User, today: date, patrones: list[Pattern] | None = None) -> str:
     """Situación del usuario en texto compacto y agregado para la IA."""
     # Fechas en palabras: el modelo las repite tal cual en lo que redacta.
@@ -133,7 +148,10 @@ def reaccion_a_gasto(session: Session, user: User, expense: Expense, today: date
         mensaje = generate_coach_text(build_coach_reaction_prompt(reglas_para(user), contexto))
     except GroqServiceError:
         return respaldo
-    return respaldo if not mensaje or rompe_guardrails(mensaje) else mensaje
+    # El disponible por día ya descuenta este gasto: si la IA resta o suma por su cuenta, el dato sale mal.
+    if not mensaje or rompe_guardrails(mensaje) or inventa_cifras(mensaje, contexto):
+        return respaldo
+    return mensaje
 
 
 def _redactar_insights(user: User, patrones: list[Pattern]) -> list[str]:
@@ -150,7 +168,12 @@ def _redactar_insights(user: User, patrones: list[Pattern]) -> list[str]:
     if not isinstance(mensajes, list) or len(mensajes) != len(patrones):
         return respaldo
     return [
-        mensaje if isinstance(mensaje, str) and mensaje.strip() and not rompe_guardrails(mensaje) else original
+        mensaje
+        if isinstance(mensaje, str)
+        and mensaje.strip()
+        and not rompe_guardrails(mensaje)
+        and not inventa_cifras(mensaje, original)
+        else original
         for mensaje, original in zip(mensajes, respaldo, strict=True)
     ]
 

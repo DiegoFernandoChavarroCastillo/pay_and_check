@@ -293,6 +293,9 @@ def _del_presupuesto(idioma, session: Session, user: User, today: date) -> list[
     ).first()
     # Se sugiere apartar la mitad del margen, sin pasarse de lo realmente disponible.
     sugerido = min(margen / 2, summary.disponible_total).quantize(Decimal("1"))
+    # En miles cerrados cuando alcanza: nadie aparta "104.167".
+    if sugerido >= 1000:
+        sugerido = sugerido // 1000 * 1000
     if meta is not None and sugerido > 0:
         accion = {
             "tipo": "apartar_meta",

@@ -24,6 +24,9 @@ MODEL = "openai/gpt-oss-20b"
 # Modelo del coach (mensajes, consejos, chat). Separado del de extracción para
 # poder subirlo a uno más capaz (ej. "openai/gpt-oss-120b") sin encarecer el parseo.
 COACH_MODEL = MODEL
+# Extraer un gasto es mecánico y va con el razonamiento al mínimo (rápido y barato). Redactar no: con "low"
+# el modelo se limita a copiar el dato que recibe en vez de escribir el consejo con sus palabras.
+COACH_REASONING = "medium"
 
 _client: Groq | None = None
 
@@ -43,14 +46,16 @@ class ExpenseParseError(GroqServiceError):
     """El modelo no devolvió un JSON válido o no pudo extraer un monto."""
 
 
-def _chat(messages: list[dict], *, model: str = MODEL, temperature: float = 0) -> str:
+def _chat(
+    messages: list[dict], *, model: str = MODEL, temperature: float = 0, reasoning_effort: str = "low"
+) -> str:
     # Sin `response_format={"type": "json_object"}` a propósito: con los modelos
     # de razonamiento (gpt-oss) el modo JSON de Groq hace que el modelo se quede
     # dando vueltas y devuelva vacío (400 json_validate_failed) de forma
     # intermitente. El JSON se pide en el prompt y se extrae con `_extraer_json`.
     try:
         completion = _get_client().chat.completions.create(
-            model=model, messages=messages, temperature=temperature, reasoning_effort="low"
+            model=model, messages=messages, temperature=temperature, reasoning_effort=reasoning_effort
         )
         return completion.choices[0].message.content
     except Exception as exc:  # errores de red / API de Groq
@@ -164,6 +169,7 @@ def generate_coach_text(system_prompt: str, messages: list[dict] | None = None) 
         [{"role": "system", "content": system_prompt}, *(messages or [])],
         model=COACH_MODEL,
         temperature=0.6,
+        reasoning_effort=COACH_REASONING,
     ).strip()
 
 
@@ -173,6 +179,7 @@ def generate_coach_json(system_prompt: str, contenido: str) -> dict:
         [{"role": "system", "content": system_prompt}, {"role": "user", "content": contenido}],
         model=COACH_MODEL,
         temperature=0.5,
+        reasoning_effort=COACH_REASONING,
     )
     try:
         data = _extraer_json(raw)
