@@ -1,0 +1,23 @@
+# Blueprint de Render (https://render.com/docs/blueprint-spec): crea el servicio
+# web del backend a partir de backend/Dockerfile. La base de datos es externa
+# (Neon): pega su cadena de conexión en DATABASE_URL al crear el servicio.
+services:
+  - type: web
+    name: pay-and-check-api
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    # Migra y siembra las categorías por defecto en cada arranque (ambos pasos
+    # son idempotentes) y escucha en el puerto que asigna Render.
+    dockerCommand: sh -c "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false

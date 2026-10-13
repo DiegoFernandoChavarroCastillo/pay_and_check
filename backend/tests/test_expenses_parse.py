@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlmodel import Session
@@ -11,7 +11,7 @@ from app.services.groq_client import ExpenseParseError, GroqServiceError
 def _crear_presupuesto_del_mes(client, headers):
     hoy = date.today()
     inicio = hoy.replace(day=1).isoformat()
-    fin = date(hoy.year, hoy.month, 28).isoformat()
+    fin = (hoy + timedelta(days=30)).isoformat()
     client.post(
         "/budgets", json={"monto_total": "300000.00", "fecha_inicio": inicio, "fecha_fin": fin},
         headers=headers,
@@ -25,7 +25,7 @@ def test_parse_devuelve_json_estructurado_sin_guardar(client, auth_headers, db_e
     monkeypatch.setattr(
         expenses_router,
         "parse_expense_text",
-        lambda texto, categorias: {
+        lambda texto, categorias, hoy: {
             "monto": Decimal("5000"), "categoria": "comida", "descripcion": "helado", "fecha": date.today(),
         },
     )
@@ -73,7 +73,7 @@ def test_from_text_guarda_el_gasto_y_actualiza_el_summary(client, auth_headers, 
     monkeypatch.setattr(
         expenses_router,
         "parse_expense_text",
-        lambda texto, categorias: {
+        lambda texto, categorias, hoy: {
             "monto": Decimal("12000"), "categoria": "transporte", "descripcion": "bus", "fecha": date.today(),
         },
     )

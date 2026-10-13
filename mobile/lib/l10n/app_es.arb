@@ -1,0 +1,447 @@
+{
+  "@@locale": "es",
+  "appName": "Pay & Check",
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "retry": "Reintentar",
+  "save": "Guardar",
+  "create": "Crear",
+  "delete": "Eliminar",
+  "add": "Registrar",
+  "send": "Enviar",
+  "name": "Nombre",
+  "amount": "Monto",
+  "description": "Descripción",
+  "category": "Categoría",
+  "date": "Fecha",
+  "invalidAmount": "Escribe un monto mayor que cero",
+  "requiredField": "Este campo es necesario",
+  "errorInvalidData": "Revisa los datos e inténtalo de nuevo.",
+  "errorNetwork": "No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.",
+  "errorGeneric": "Algo no salió como esperábamos. Inténtalo de nuevo.",
+  "loginTitle": "Hola de nuevo",
+  "loginSubtitle": "Tu dinero, a tu ritmo y sin culpas.",
+  "loginAction": "Entrar",
+  "continueWithGoogle": "Continuar con Google",
+  "goToRegister": "¿No tienes cuenta? Crea una",
+  "registerTitle": "Crea tu cuenta",
+  "registerSubtitle": "Un minuto ahora, y tu presupuesto siempre a la vista.",
+  "registerAction": "Crear cuenta",
+  "goToLogin": "Ya tengo cuenta",
+  "email": "Correo",
+  "invalidEmail": "Escribe un correo válido",
+  "password": "Contraseña",
+  "showPassword": "Mostrar contraseña",
+  "hidePassword": "Ocultar contraseña",
+  "passwordTooShort": "Usa al menos {min} caracteres",
+  "@passwordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "tabHome": "Inicio",
+  "tabTransactions": "Movimientos",
+  "tabCoach": "Coach",
+  "tabProgress": "Progreso",
+  "tabProfile": "Perfil",
+  "homeGreeting": "Hola, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "streakDays": "{n, plural, =1{1 día} other{{n} días}}",
+  "@streakDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "noBudgetTitle": "Aún no tienes un presupuesto activo",
+  "noBudgetBody": "Dinos cuánto tienes y hasta cuándo debe alcanzarte, y te diremos cuánto puedes gastar cada día.",
+  "createBudget": "Crear presupuesto",
+  "editBudget": "Editar presupuesto",
+  "availablePerDay": "Disponible por día",
+  "availableTotal": "{amount} en total",
+  "@availableTotal": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "daysLeft": "{n, plural, =1{queda 1 día} other{quedan {n} días}}",
+  "@daysLeft": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "riskBody": "Al ritmo de ahora, el presupuesto alcanzaría hasta el {date}. Un pequeño ajuste esta semana lo estira hasta el final.",
+  "@riskBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "spent": "Gastado",
+  "extraIncome": "Ingresos",
+  "setAsideTotal": "Apartado",
+  "coachSays": "Tu coach dice",
+  "seeAll": "Ver todo",
+  "activeGoal": "Tu meta",
+  "activeChallenge": "Reto en curso",
+  "byCategory": "Por categoría",
+  "limitOf": "límite {amount}",
+  "@limitOf": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "toneMotivating": "Motivador",
+  "toneDirect": "Directo",
+  "toneHumorous": "Con humor",
+  "toneMinimal": "Minimalista",
+  "budgetDatesError": "La fecha final debe ser posterior a la inicial.",
+  "budgetExplain": "Tu presupuesto es el dinero con el que cuentas para un periodo, por ejemplo un semestre.",
+  "budgetAmount": "Dinero para el periodo",
+  "startDate": "Desde",
+  "endDate": "Hasta",
+  "coachToneQuestion": "¿Cómo quieres que te hable tu coach?",
+  "moodAnxious": "Ansiedad",
+  "moodWorried": "Inquietud",
+  "moodNeutral": "Neutral",
+  "moodCalm": "Calma",
+  "moodConfident": "Confianza",
+  "checkinQuestion": "¿Cómo te sientes hoy con tu dinero?",
+  "checkinDone": "Tu check-in de hoy",
+  "actionDone": "Hecho",
+  "whyThis": "Basado en:",
+  "coachTips": "Consejos",
+  "coachChat": "Chat",
+  "noInsights": "Cuando registres algunos gastos, aquí verás consejos hechos con tus propios datos.",
+  "coachDisclaimer": "El coach orienta sobre hábitos y presupuesto. No es asesoría financiera ni de inversión.",
+  "chatEmpty": "Pregúntale a tu coach cómo vas o qué puedes ajustar.",
+  "chatHint": "Escribe un mensaje",
+  "goals": "Metas",
+  "newGoal": "Nueva meta",
+  "goalName": "¿Para qué ahorras?",
+  "goalNameHint": "Viaje, portátil, fondo de emergencia…",
+  "goalTarget": "Monto objetivo",
+  "setAside": "Apartar",
+  "setAsideFor": "Apartar para {name}",
+  "@setAsideFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setAsideHint": "Lo apartado deja de contar como disponible.",
+  "setAsideAvailable": "Tienes {amount} disponible. Lo apartado deja de contar para tu gasto diario.",
+  "@setAsideAvailable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noGoals": "Una meta le da destino a lo que no gastas. Crea la primera.",
+  "goalReached": "Cumplida",
+  "goalVerified": "Apartado de verdad",
+  "undoContribution": "Devolver al disponible",
+  "deleteGoalTitle": "¿Eliminar la meta?",
+  "deleteGoalBody": "Lo que habías apartado vuelve a estar disponible.",
+  "challenges": "Retos",
+  "badges": "Insignias",
+  "newBadge": "Nueva insignia: {names}",
+  "@newBadge": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "pointsEarned": "+{n} puntos",
+  "@pointsEarned": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsShort": "{n} pts",
+  "@pointsShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsTotal": "{n} puntos",
+  "@pointsTotal": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsToNext": "faltan {n}",
+  "@pointsToNext": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "maxLevel": "nivel máximo",
+  "levelTitle": "Nivel {n} · {name}",
+  "@levelTitle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "metricSavings": "Ahorro",
+  "metricSavingsHint": "Qué parte de lo que te tocaba este mes sigue sin gastarse.",
+  "metricConsistency": "Constancia",
+  "metricConsistencyHint": "Días con registro en los últimos 30 días.",
+  "metricImprovement": "Mejora",
+  "metricImprovementHint": "Cambio de tu ahorro frente al mes anterior, en puntos porcentuales.",
+  "noChallenges": "Aún no hay retos. Vuelve cuando tengas algunos gastos registrados.",
+  "suggestedChallenges": "Retos para ti",
+  "acceptChallenge": "Aceptar reto",
+  "pastChallenges": "Historial",
+  "challengeDone": "Cumplido · +{n} puntos",
+  "@challengeDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "challengeMissed": "Esta vez no se dio. El siguiente es tuyo.",
+  "challengeSpentSoFar": "Llevas",
+  "challengeProgress": "Avance",
+  "endsOn": "Termina el {date}",
+  "@endsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "abandon": "Abandonar",
+  "abandonTitle": "¿Abandonar el reto?",
+  "abandonBody": "Puedes aceptar otro cuando quieras.",
+  "expenses": "Gastos",
+  "incomes": "Ingresos",
+  "search": "Buscar",
+  "allCategories": "Todas",
+  "noExpenses": "Aquí aparecerán tus gastos.",
+  "noIncomes": "Aquí aparecerá el dinero extra que recibas.",
+  "newExpense": "Nuevo gasto",
+  "editExpense": "Editar gasto",
+  "confirmExpense": "Confirma el gasto",
+  "confirmExpenseHint": "Esto fue lo que entendimos. Corrige lo que haga falta antes de guardar.",
+  "merchantOptional": "Comercio (opcional)",
+  "deleteExpenseTitle": "¿Eliminar el gasto?",
+  "deleteExpenseBody": "Tu disponible se recalcula al instante.",
+  "deleteIncomeTitle": "¿Eliminar el ingreso?",
+  "deleteIncomeBody": "Tu disponible se recalcula al instante.",
+  "addByText": "Escribir o dictar",
+  "addByTextHint": "Cuéntalo con tus palabras",
+  "addByReceipt": "Foto de un recibo",
+  "addByReceiptHint": "La foto no sale de tu teléfono",
+  "addByGallery": "Recibo desde la galería",
+  "addManual": "Formulario manual",
+  "addIncome": "Dinero que recibí",
+  "addIncomeHint": "Amplía tu disponible sin cambiar el presupuesto original.",
+  "quickAddExample": "Ej.: me compré un helado de 5000",
+  "voiceStart": "Toca para dictar",
+  "voiceStop": "Detener",
+  "voiceListening": "Te escucho…",
+  "voiceUnavailable": "El dictado no está disponible en este teléfono. Puedes escribirlo.",
+  "analyze": "Continuar",
+  "receiptReading": "Leyendo el recibo…",
+  "receiptUnreadable": "No logramos leer texto en la foto. Prueba con más luz y el recibo plano.",
+  "sourceManual": "Manual",
+  "sourceText": "Texto",
+  "sourceVoice": "Voz",
+  "sourceReceipt": "Recibo",
+  "sourceSms": "SMS",
+  "sourceRecurring": "Gasto fijo",
+  "categories": "Categorías",
+  "newCategory": "Nueva categoría",
+  "editCategory": "Editar categoría",
+  "limitOptional": "Límite (opcional)",
+  "fixedExpense": "Gasto fijo",
+  "fixedExpenseHint": "Algo que sí o sí pagas, como transporte.",
+  "optionalExpense": "Opcional",
+  "defaultCategory": "predeterminada",
+  "recurringExpenses": "Gastos fijos semanales",
+  "newRecurring": "Nuevo gasto fijo",
+  "weekday": "Día de la semana",
+  "everyWeekday": "cada {day}",
+  "@everyWeekday": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noRecurring": "Los gastos que se repiten cada semana se registran solos desde aquí.",
+  "deleteRecurringTitle": "¿Eliminar el gasto fijo?",
+  "deleteRecurringBody": "Los gastos ya generados se conservan.",
+  "sectionCoach": "Coach",
+  "sectionMoney": "Tu dinero",
+  "sectionReports": "Resúmenes",
+  "sectionApp": "Aplicación",
+  "coachTone": "Estilo del coach",
+  "reminder": "Recordatorio del check-in",
+  "reminderOff": "Desactivado",
+  "reminderTime": "Hora del recordatorio",
+  "reminderTitle": "¿Cómo va tu día?",
+  "reminderBody": "Un minuto para tu check-in y tus gastos de hoy.",
+  "reminderDenied": "Para recordarte, activa las notificaciones de la app en los ajustes del teléfono.",
+  "language": "Idioma",
+  "theme": "Apariencia",
+  "themeLight": "Clara",
+  "themeDark": "Oscura",
+  "themeSystem": "Como el teléfono",
+  "privacy": "Privacidad",
+  "logout": "Cerrar sesión",
+  "deleteAccount": "Eliminar mi cuenta",
+  "deleteAccountBody": "Se borran para siempre tu cuenta y todos tus datos: gastos, metas, retos, check-ins y conversaciones. No se puede deshacer.",
+  "privacyIntro": "Estos son los datos que usa la app y para qué.",
+  "privacyExpensesTitle": "Tus gastos, ingresos y metas",
+  "privacyExpensesBody": "Se guardan en nuestro servidor para calcular tu disponible, tus retos y tus puntos. No se venden ni se usan para publicidad.",
+  "privacyReceiptsTitle": "Fotos de recibos",
+  "privacyReceiptsBody": "El texto se reconoce en tu teléfono. La foto no se sube: al servidor solo viaja el texto reconocido.",
+  "privacyVoiceTitle": "Dictado por voz",
+  "privacyVoiceBody": "Lo convierte a texto el servicio de voz de tu teléfono. La app solo recibe el texto.",
+  "privacySmsTitle": "SMS del banco",
+  "privacySmsBody": "Solo si lo activas. La app lee tus SMS recientes en el teléfono para mostrarte los que parecen movimientos; nada se envía hasta que tú eliges registrar uno.",
+  "privacyAiTitle": "Inteligencia artificial",
+  "privacyAiBody": "Las frases, los textos de recibos y un resumen de tus cifras se envían a un servicio de IA para interpretarlos y redactar los consejos. El coach explica en qué dato se basa cada sugerencia.",
+  "privacyDeleteTitle": "Tú tienes el control",
+  "privacyDeleteBody": "Puedes eliminar tu cuenta y todos tus datos cuando quieras desde Perfil.",
+  "weeklyReport": "Reporte de la semana",
+  "weekSpent": "Gasto de la semana",
+  "weekUnderPace": "Vas {amount} por debajo de tu ritmo semanal.",
+  "@weekUnderPace": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "weekOverPace": "Vas {amount} por encima de tu ritmo semanal. Aún hay semana para equilibrar.",
+  "@weekOverPace": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "wrappedTitle": "Tu mes en resumen",
+  "wrappedSpent": "{n, plural, =1{en 1 gasto registrado} other{en {n} gastos registrados}}",
+  "@wrappedSpent": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "wrappedDays": "días al tanto de tu dinero",
+  "wrappedTopCategory": "fue tu categoría principal: {pct}% del gasto",
+  "@wrappedTopCategory": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "wrappedBiggest": "tu gasto más grande: {desc}",
+  "@wrappedBiggest": {
+    "placeholders": {
+      "desc": {
+        "type": "String"
+      }
+    }
+  },
+  "wrappedVsLastMonth": "frente al mes anterior",
+  "wrappedGoals": "apartados para tus metas",
+  "wrappedPoints": "puntos ganados",
+  "wrappedMood": "tu ánimo más frecuente: {mood}",
+  "@wrappedMood": {
+    "placeholders": {
+      "mood": {
+        "type": "String"
+      }
+    }
+  },
+  "wrappedEmpty": "Este mes aún no tiene gastos registrados.",
+  "previousMonth": "Mes anterior",
+  "nextMonth": "Mes siguiente",
+  "analytics": "Análisis",
+  "thisWeek": "Esta semana",
+  "seeAnalytics": "Ver análisis",
+  "otherCategories": "Otras",
+  "analyticsEmpty": "Cuando registres gastos, aquí verás cómo se reparten y cómo cambian de una semana a otra.",
+  "analyticsEmptyWeek": "Sin gastos registrados en esta semana.",
+  "trend": "Tendencia",
+  "trendWeeks": "Semanas",
+  "trendDays": "Días",
+  "previousWeek": "Semana anterior",
+  "nextWeek": "Semana siguiente",
+  "weekMoreThanPrevious": "{pct}% más que la semana anterior",
+  "@weekMoreThanPrevious": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "weekLessThanPrevious": "{pct}% menos que la semana anterior",
+  "@weekLessThanPrevious": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "weekSameAsPrevious": "Igual que la semana anterior",
+  "weeklyAverage": "Promedio semanal: {amount}",
+  "@weeklyAverage": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "average": "Promedio",
+  "badgeUnlocked": "¡Nueva insignia!",
+  "great": "¡Genial!",
+  "smsTitle": "SMS del banco",
+  "smsSubtitle": "Registra movimientos desde los mensajes de tu banco",
+  "smsExplain": "Con tu permiso, la app busca en tus SMS de los últimos 14 días los que parecen movimientos bancarios. Se leen en tu teléfono y nada se guarda hasta que tú lo confirmes.",
+  "smsAllow": "Permitir lectura de SMS",
+  "smsEmpty": "No hay mensajes bancarios por revisar.",
+  "smsUnavailable": "La lectura de SMS no está disponible en este dispositivo.",
+  "smsDismiss": "Descartar",
+  "smsRegister": "Registrar"
+}

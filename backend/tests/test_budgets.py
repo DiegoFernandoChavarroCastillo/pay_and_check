@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlmodel import Session
@@ -10,7 +10,7 @@ from app.models.expense import Expense
 def _rango_mes_actual() -> tuple[str, str]:
     hoy = date.today()
     inicio = hoy.replace(day=1)
-    fin = date(hoy.year, hoy.month, 28)
+    fin = hoy + timedelta(days=30)
     return inicio.isoformat(), fin.isoformat()
 
 

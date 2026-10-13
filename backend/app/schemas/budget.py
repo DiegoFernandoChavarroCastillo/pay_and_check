@@ -44,6 +44,7 @@ class BudgetSummaryResponse(BaseModel):
     budget: BudgetResponse
     gastado_total: Decimal
     ingresos_total: Decimal
+    apartado_total: Decimal
     disponible_total: Decimal
     dias_restantes: int
     semanas_restantes: Decimal

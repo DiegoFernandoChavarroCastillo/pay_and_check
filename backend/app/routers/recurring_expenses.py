@@ -1,8 +1,7 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
+from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.recurring_expense import RecurringExpense
@@ -32,6 +31,7 @@ def create_recurring_expense(
     current_user: User = Depends(get_current_user),
 ) -> RecurringExpense:
     validate_category_access(session, current_user.id, payload.category_id)
+    today = today_for(current_user)
 
     recurrente = RecurringExpense(
         user_id=current_user.id,
@@ -39,13 +39,13 @@ def create_recurring_expense(
         monto=payload.monto,
         descripcion=payload.descripcion,
         dia_semana=payload.dia_semana,
-        fecha_inicio=payload.fecha_inicio or date.today(),
+        fecha_inicio=payload.fecha_inicio or today,
     )
     session.add(recurrente)
     session.commit()
     session.refresh(recurrente)
 
-    sync_recurring_expenses(session, current_user.id)
+    sync_recurring_expenses(session, current_user.id, today)
     return recurrente
 
 

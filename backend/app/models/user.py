@@ -20,6 +20,11 @@ class User(SQLModel, table=True):
     hashed_password: str | None = Field(default=None)
     google_id: str | None = Field(default=None, unique=True, index=True)
     nombre: str
+    # Estilo del coach: motivador | directo | humoristico | minimalista.
+    coach_tone: str = Field(default="motivador")
+    idioma: str = Field(default="es")
+    # Nombre IANA (ej. "America/Bogota") — define qué día es "hoy" para el usuario.
+    zona_horaria: str = Field(default="America/Bogota")
     # Preparado para el modo familiar/grupal — no se usa en el MVP.
     group_id: int | None = Field(default=None, foreign_key="groups.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

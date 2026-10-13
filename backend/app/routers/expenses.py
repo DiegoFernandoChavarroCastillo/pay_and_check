@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, or_, select
 
+from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.category import Category
@@ -14,10 +15,17 @@ from app.schemas.expense import (
     ExpenseParseResponse,
     ExpenseResponse,
     ExpenseUpdate,
+    ReceiptParseRequest,
+    ReceiptParseResponse,
 )
 from app.services.budget_lookup import find_budget_for_date
 from app.services.category_lookup import validate_category_access
-from app.services.groq_client import ExpenseParseError, GroqServiceError, parse_expense_text
+from app.services.groq_client import (
+    ExpenseParseError,
+    GroqServiceError,
+    parse_expense_text,
+    parse_receipt_text,
+)
 from app.services.recurring_expenses import sync_recurring_expenses
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -58,6 +66,9 @@ def create_expense(
         category_id=payload.category_id,
         monto=payload.monto,
         descripcion=payload.descripcion,
+        texto_original=payload.texto_original,
+        source=payload.source,
+        comercio=payload.comercio,
         fecha=payload.fecha,
     )
     session.add(expense)
@@ -74,7 +85,7 @@ def list_expenses(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> list[Expense]:
-    sync_recurring_expenses(session, current_user.id)
+    sync_recurring_expenses(session, current_user.id, today_for(current_user))
     query = select(Expense).where(Expense.user_id == current_user.id)
     if category_id is not None:
         query = query.where(Expense.category_id == category_id)
@@ -95,12 +106,30 @@ def parse_expense(
     """Parsea el texto con IA y devuelve el JSON estructurado SIN guardar el gasto."""
     categorias = _categorias_disponibles(session, current_user.id)
     try:
-        data = parse_expense_text(payload.texto, [c.nombre for c in categorias])
+        data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except GroqServiceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     return ExpenseParseResponse(**data)
+
+
+@router.post("/parse-receipt", response_model=ReceiptParseResponse)
+def parse_receipt(
+    payload: ReceiptParseRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ReceiptParseResponse:
+    """Estructura el texto de un recibo (OCR hecho en el teléfono) SIN guardar
+    el gasto: la app lo muestra para confirmar y luego usa POST /expenses."""
+    categorias = _categorias_disponibles(session, current_user.id)
+    try:
+        data = parse_receipt_text(payload.texto_ocr, [c.nombre for c in categorias], today_for(current_user))
+    except ExpenseParseError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    except GroqServiceError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return ReceiptParseResponse(**data)
 
 
 @router.post("/from-text", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
@@ -112,7 +141,7 @@ def create_expense_from_text(
     """Parsea el texto con IA y guarda el gasto directamente en un solo paso."""
     categorias = _categorias_disponibles(session, current_user.id)
     try:
-        data = parse_expense_text(payload.texto, [c.nombre for c in categorias])
+        data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except GroqServiceError as exc:
@@ -134,6 +163,7 @@ def create_expense_from_text(
         monto=data["monto"],
         descripcion=data["descripcion"],
         texto_original=payload.texto,
+        source="texto",
         fecha=data["fecha"],
     )
     session.add(expense)

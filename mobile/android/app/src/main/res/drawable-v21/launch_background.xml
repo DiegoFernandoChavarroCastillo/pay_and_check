@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de arranque: color de marca con el símbolo de la app. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/brand" />
+    <item android:width="120dp" android:height="120dp" android:gravity="center"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

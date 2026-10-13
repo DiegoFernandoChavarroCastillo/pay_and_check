@@ -13,6 +13,11 @@ def verify_google_token(token: str) -> dict[str, str]:
 
     Devuelve {google_id, email, nombre} si es válido; lanza GoogleTokenError si no.
     """
+    # Sin Client ID no hay contra qué validar la audiencia del token: se
+    # rechaza siempre, en vez de arriesgarse a aceptar tokens emitidos para otra app.
+    if not settings.GOOGLE_CLIENT_ID:
+        raise GoogleTokenError("El inicio de sesión con Google no está configurado.")
+
     try:
         idinfo = google_id_token.verify_oauth2_token(
             token, google_requests.Request(), settings.GOOGLE_CLIENT_ID

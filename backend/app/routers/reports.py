@@ -1,13 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from dataclasses import asdict
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
+from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.user import User
-from app.schemas.report import WeeklyReportResponse
+from app.schemas.report import MonthlyWrappedResponse, TrendsResponse, WeeklyReportResponse
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.groq_client import GroqServiceError, generate_weekly_recommendations
+from app.services.trends import build_trends
 from app.services.weekly_report import build_weekly_summary, summary_to_text
+from app.services.wrapped import build_wrapped
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -17,11 +22,12 @@ def weekly_report(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> WeeklyReportResponse:
-    budget = get_active_budget_for_user(session, current_user.id)
+    today = today_for(current_user)
+    budget = get_active_budget_for_user(session, current_user.id, today)
     if budget is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No hay un presupuesto activo.")
 
-    summary = build_weekly_summary(session, current_user.id, budget)
+    summary = build_weekly_summary(session, current_user.id, budget, today)
 
     try:
         recomendaciones = generate_weekly_recommendations(summary_to_text(summary))
@@ -40,3 +46,29 @@ def weekly_report(
         diferencia_vs_ritmo=summary.diferencia_vs_ritmo,
         recomendaciones=recomendaciones,
     )
+
+
+@router.get("/trends", response_model=TrendsResponse)
+def trends(
+    semanas: int = Query(default=8, ge=2, le=26),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> TrendsResponse:
+    """Gasto por semana y por categoría para las gráficas. Sin IA: responde rápido."""
+    datos = build_trends(session, current_user.id, today_for(current_user), semanas)
+    return TrendsResponse.model_validate(asdict(datos))
+
+
+@router.get("/monthly-wrapped", response_model=MonthlyWrappedResponse)
+def monthly_wrapped(
+    mes: str | None = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Resumen del mes indicado (por defecto, el mes en curso del usuario)."""
+    if mes is None:
+        today = today_for(current_user)
+        anio, numero = today.year, today.month
+    else:
+        anio, numero = (int(parte) for parte in mes.split("-"))
+    return build_wrapped(session, current_user, anio, numero)

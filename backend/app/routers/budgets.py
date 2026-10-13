@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, func, select
 
+from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.expense import Expense
-from app.models.income import Income
 from app.models.user import User
 from app.schemas.budget import (
     BudgetCreate,
@@ -15,8 +15,8 @@ from app.schemas.budget import (
     BudgetUpdate,
     CategoriaDesgloseResponse,
 )
-from app.services.budget_calculator import calculate_budget_summary
 from app.services.budget_lookup import get_active_budget_for_user
+from app.services.budget_totals import summary_for
 from app.services.recurring_expenses import sync_recurring_expenses
 
 router = APIRouter(prefix="/budgets", tags=["budgets"])
@@ -55,12 +55,22 @@ def create_budget(
     return budget
 
 
+@router.get("", response_model=list[BudgetResponse])
+def list_budgets(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[Budget]:
+    return session.exec(
+        select(Budget).where(Budget.owner_id == current_user.id).order_by(Budget.fecha_inicio.desc())
+    ).all()
+
+
 @router.get("/active", response_model=BudgetResponse)
 def get_active_budget(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> Budget:
-    budget = get_active_budget_for_user(session, current_user.id)
+    budget = get_active_budget_for_user(session, current_user.id, today_for(current_user))
     if budget is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No hay un presupuesto activo.")
     return budget
@@ -71,19 +81,13 @@ def get_active_budget_summary(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> BudgetSummaryResponse:
-    sync_recurring_expenses(session, current_user.id)
-    budget = get_active_budget_for_user(session, current_user.id)
+    today = today_for(current_user)
+    sync_recurring_expenses(session, current_user.id, today)
+    budget = get_active_budget_for_user(session, current_user.id, today)
     if budget is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No hay un presupuesto activo.")
 
-    gastado_total = session.exec(
-        select(func.coalesce(func.sum(Expense.monto), 0)).where(Expense.budget_id == budget.id)
-    ).one()
-    ingresos_total = session.exec(
-        select(func.coalesce(func.sum(Income.monto), 0)).where(Income.budget_id == budget.id)
-    ).one()
-
-    summary = calculate_budget_summary(budget, gastado_total, ingresos_total)
+    summary = summary_for(session, budget, today)
     return BudgetSummaryResponse(
         budget=budget,
         desglose_por_categoria=_desglose_por_categoria(session, budget),

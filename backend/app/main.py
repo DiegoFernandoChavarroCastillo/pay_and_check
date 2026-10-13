@@ -10,7 +10,19 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.db.session import engine
-from app.routers import auth, budgets, categories, expenses, incomes, recurring_expenses, reports
+from app.routers import (
+    auth,
+    budgets,
+    categories,
+    checkins,
+    coach,
+    expenses,
+    gamification,
+    goals,
+    incomes,
+    recurring_expenses,
+    reports,
+)
 
 logger = logging.getLogger("app")
 
@@ -31,6 +43,10 @@ app.include_router(expenses.router)
 app.include_router(incomes.router)
 app.include_router(recurring_expenses.router)
 app.include_router(reports.router)
+app.include_router(checkins.router)
+app.include_router(coach.router)
+app.include_router(goals.router)
+app.include_router(gamification.router)
 
 
 @app.exception_handler(RequestValidationError)

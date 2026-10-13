@@ -19,6 +19,7 @@ dependencies = [
     "python-jose>=3.5.0",
     "requests>=2.34.2",
     "sqlmodel>=0.0.42",
+    "tzdata>=2026.5",
     "uvicorn[standard]>=0.52.4",
 ]
 

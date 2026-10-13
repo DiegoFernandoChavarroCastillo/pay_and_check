@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.models.expense import Expense
@@ -49,10 +50,16 @@ def _sync_una_recurrencia(session: Session, recurrente: RecurringExpense, today:
                         monto=recurrente.monto,
                         descripcion=recurrente.descripcion,
                         recurring_expense_id=recurrente.id,
+                        source="recurrente",
                         fecha=objetivo,
                     )
                 )
-                session.commit()
+                try:
+                    session.commit()
+                except IntegrityError:
+                    # Otra petición simultánea (la app pide el resumen y la
+                    # lista de gastos a la vez) ya generó este mismo gasto.
+                    session.rollback()
             # Si no hay presupuesto para esa semana, se omite (no se puede
             # asociar un gasto a nada) — se reintentará en el próximo sync
             # por si luego se crea un presupuesto que la cubra.

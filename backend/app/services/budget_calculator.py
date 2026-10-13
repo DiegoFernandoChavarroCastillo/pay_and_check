@@ -11,6 +11,7 @@ CENTAVOS = Decimal("0.01")
 class BudgetSummary:
     gastado_total: Decimal
     ingresos_total: Decimal
+    apartado_total: Decimal
     disponible_total: Decimal
     dias_restantes: int
     semanas_restantes: Decimal
@@ -29,11 +30,13 @@ def calculate_budget_summary(
     gastado_total: Decimal,
     ingresos_total: Decimal = Decimal("0"),
     today: date | None = None,
+    apartado_total: Decimal = Decimal("0"),
 ) -> BudgetSummary:
     """Calcula gastado/disponible total y por día/semana para un presupuesto.
 
-    - `disponible_total` = monto_total + ingresos_total - gastado_total (Fase 11:
-      los ingresos amplían el disponible sin tocar el monto_total original).
+    - `disponible_total` = monto_total + ingresos_total - gastado_total - apartado_total
+      (los ingresos amplían el disponible sin tocar el monto_total original; lo
+      apartado hacia metas de ahorro deja de estar disponible para gastar).
     - Si `today` es posterior a `fecha_fin`, el presupuesto está vencido:
       0 días/semanas restantes y 0 disponible por día/semana (para no dividir
       entre cero), pero `disponible_total` sigue reflejando el saldo real.
@@ -44,7 +47,7 @@ def calculate_budget_summary(
       `fecha_fin`.
     """
     today = today or date.today()
-    disponible_total = budget.monto_total + ingresos_total - gastado_total
+    disponible_total = budget.monto_total + ingresos_total - gastado_total - apartado_total
 
     if today > budget.fecha_fin:
         dias_restantes = 0
@@ -68,6 +71,7 @@ def calculate_budget_summary(
     return BudgetSummary(
         gastado_total=_redondear(gastado_total),
         ingresos_total=_redondear(ingresos_total),
+        apartado_total=_redondear(apartado_total),
         disponible_total=_redondear(disponible_total),
         dias_restantes=dias_restantes,
         semanas_restantes=semanas_restantes.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),

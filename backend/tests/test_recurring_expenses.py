@@ -122,3 +122,39 @@ def test_recurring_expenses_categoria_ajena_da_404(client, make_user):
         headers=headers_b,
     )
     assert r.status_code == 404
+
+
+def test_dos_sincronizaciones_simultaneas_no_duplican_el_gasto(db_engine, monkeypatch):
+    """La app pide el resumen y la lista de gastos a la vez: ambas peticiones
+    sincronizan. La restricción única deja pasar solo un gasto por fecha."""
+    import app.services.recurring_expenses as servicio
+
+    with Session(db_engine) as session:
+        user, budget, cat = _crear_usuario_presupuesto_y_categoria(session)
+        recurrente = RecurringExpense(
+            user_id=user.id, category_id=cat.id, monto=Decimal("15000"), descripcion="bus",
+            dia_semana=0, fecha_inicio=date(2026, 1, 5),
+        )
+        session.add(recurrente)
+        session.commit()
+        session.refresh(recurrente)
+        user_id, budget_id, cat_id, recurrente_id = user.id, budget.id, cat.id, recurrente.id
+
+        # Simula la otra petición: genera el mismo gasto después de que esta
+        # comprobó que no existía y antes de que guarde el suyo.
+        original = servicio.find_budget_for_date
+
+        def _otra_peticion_se_adelanta(sesion, uid, fecha):
+            with Session(db_engine) as otra:
+                otra.add(Expense(
+                    user_id=user_id, budget_id=budget_id, category_id=cat_id, monto=Decimal("15000"),
+                    descripcion="bus", recurring_expense_id=recurrente_id, source="recurrente", fecha=fecha,
+                ))
+                otra.commit()
+            return original(sesion, uid, fecha)
+
+        monkeypatch.setattr(servicio, "find_budget_for_date", _otra_peticion_se_adelanta)
+        sync_recurring_expenses(session, user_id, today=date(2026, 1, 5))
+
+        gastos = session.exec(select(Expense).where(Expense.recurring_expense_id == recurrente_id)).all()
+        assert [g.fecha for g in gastos] == [date(2026, 1, 5)]

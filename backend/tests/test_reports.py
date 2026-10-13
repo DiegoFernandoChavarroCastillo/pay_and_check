@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlmodel import Session
@@ -13,7 +13,7 @@ def test_weekly_report_agrega_bien_y_pasa_por_la_ia_mockeada(client, auth_header
 
     hoy = date.today()
     inicio = hoy.replace(day=1).isoformat()
-    fin = date(hoy.year, hoy.month, 28).isoformat()
+    fin = (hoy + timedelta(days=30)).isoformat()
     client.post(
         "/budgets", json={"monto_total": "300000.00", "fecha_inicio": inicio, "fecha_fin": fin},
         headers=auth_headers,
@@ -63,7 +63,7 @@ def test_weekly_report_si_falla_groq_no_tumba_el_resumen_numerico(client, auth_h
 
     hoy = date.today()
     inicio = hoy.replace(day=1).isoformat()
-    fin = date(hoy.year, hoy.month, 28).isoformat()
+    fin = (hoy + timedelta(days=30)).isoformat()
     client.post(
         "/budgets", json={"monto_total": "300000.00", "fecha_inicio": inicio, "fecha_fin": fin},
         headers=auth_headers,
