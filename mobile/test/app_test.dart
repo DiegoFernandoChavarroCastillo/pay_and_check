@@ -130,4 +130,17 @@ void main() {
     expect(api.retosCreados.single, {'plantilla': 'reducir_categoria', 'category_id': 3, 'porcentaje': 20});
     expect(find.text('Hecho'), findsWidgets);
   });
+
+  testWidgets('desplazar el inicio no mueve la cabecera de Progreso', (tester) async {
+    await tester.pumpWidget(await appDePrueba(FakeApi()));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.emoji_events_outlined));
+    await tester.pumpAndSettle();
+
+    // El nivel se ve nada más entrar, sin tener que tirar hacia abajo.
+    expect(tester.getTopLeft(find.text('Nivel 1 · Aprendiz')).dy, greaterThan(0));
+  });
 }

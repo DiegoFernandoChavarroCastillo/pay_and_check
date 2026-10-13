@@ -103,7 +103,15 @@ class ProfileScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(user.nombre, style: theme.textTheme.titleLarge?.copyWith(color: scheme.onPrimaryContainer)),
-                    Text(user.email, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer)),
+                    // Un correo largo se encoge antes que partirse en dos renglones.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        user.email,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer),
+                      ),
+                    ),
                     if (perfil != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),

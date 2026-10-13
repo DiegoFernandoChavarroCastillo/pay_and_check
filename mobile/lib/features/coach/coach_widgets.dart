@@ -220,11 +220,14 @@ class CheckinCard extends ConsumerWidget {
                         child: ExcludeSemantics(child: Text(moodEmojis[animo]!, style: const TextStyle(fontSize: 28))),
                       ),
                       const SizedBox(height: 4),
+                      // La etiqueta se encoge si no cabe ("Confianza"), en vez de cortarse.
                       ExcludeSemantics(
-                        child: Text(
-                          moodLabel(l, animo),
-                          style: Theme.of(context).textTheme.labelSmall,
-                          overflow: TextOverflow.ellipsis,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(moodLabel(l, animo), style: Theme.of(context).textTheme.labelSmall),
+                          ),
                         ),
                       ),
                     ],
