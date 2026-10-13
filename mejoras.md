@@ -5,6 +5,42 @@
 
 ---
 
+## ✅ Estado de implementación (13 de octubre de 2026)
+
+Este documento es la visión original y se conserva tal cual. Esta tabla dice qué parte existe hoy en la app;
+el detalle está en `plan-app-movil.md` y `notas-iteracion-app-movil.md`.
+
+| ID | Funcionalidad | Estado |
+|----|---------------|--------|
+| C-01 | Mensaje al registrar una transacción | Hecho |
+| C-02 | Check-in emocional diario | Hecho |
+| C-03 | Alertas proactivas de riesgo | Parcial: aviso cuando el presupuesto no alcanzaría al ritmo actual |
+| C-04 | Consejos accionables contextuales | Hecho, con acción de un toque |
+| C-05 | Ejecución asistida con consentimiento | Parcial: apartar a una meta, aceptar un reto o poner un límite con un toque; sin mover dinero real |
+| C-06 | Predicción de déficit con calendario | No |
+| C-07 | Tono configurable | Hecho (motivador, directo, con humor, minimalista) |
+| G-01 | Retos personalizados | Hecho: 6 tipos, sugeridos según los datos |
+| G-02 | Metas con verificación real | Hecho, con dinero apartado dentro del presupuesto |
+| G-03 | Puntos y niveles | Hecho |
+| G-04 | Insignias y logros | Hecho: 23 |
+| G-05 | Ligas y competición social | No |
+| G-06 | Retos colaborativos | No |
+| G-07 | Recompensas desbloqueables | No |
+| G-08 | Wrapped mensual | Hecho (sin fotos) |
+| A-01 | OCR de recibos | Hecho, reconociendo el texto en el teléfono; sin probar con recibos reales |
+| A-02 | Lectura de correos (Gmail) | No |
+| A-03 | Lectura de SMS | Hecho bajo demanda (al abrir la app), con aprobación de cada movimiento |
+| A-04 | Categorización automática con IA | Hecho al registrar por texto, voz, recibo o SMS |
+| A-05 | Ejecución de acciones con el banco | No |
+| A-06 | Sincronización con calendario | No |
+| A-07 | Detección de suscripciones | No. En su lugar, gastos fijos que programa la persona, con recordatorio |
+
+Diferencias de fondo frente a esta visión: el stack es FastAPI + Groq + Flutter (no el sugerido en la
+sección 4), no hay conexión bancaria ni servidor de push, y la IA nunca calcula: solo redacta sobre cifras
+que salen de código determinista.
+
+---
+
 ## 🎯 1. Visión del Producto
 
 **Nombre provisional:** `FinCoach` (ajustable)
