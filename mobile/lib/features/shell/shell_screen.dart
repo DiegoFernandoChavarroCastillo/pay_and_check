@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/motion.dart';
+import '../../core/notifications.dart';
+import '../../core/settings.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/models.dart';
@@ -36,6 +38,24 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _ciclo;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sincronizarRecordatorio());
+  }
+
+  /// El aviso programado en el teléfono debe ser el de la cuenta que acaba de entrar, no el de la anterior.
+  Future<void> _sincronizarRecordatorio() async {
+    if (!mounted) return;
+    final l = context.l;
+    final ajustes = ref.read(settingsProvider);
+    final servicio = ref.read(notificationsProvider);
+    try {
+      if (ajustes.reminderEnabled) {
+        await servicio.schedule(ajustes.reminderTime, title: l.reminderTitle, body: l.reminderBody);
+      } else {
+        await servicio.cancel();
+      }
+    } catch (_) {
+      // Sin servicio de notificaciones (otra plataforma) no hay nada que sincronizar.
+    }
   }
 
   @override

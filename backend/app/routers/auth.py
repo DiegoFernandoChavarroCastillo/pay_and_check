@@ -12,7 +12,7 @@ from app.core.security import (
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.budget import Budget
-from app.models.category import Category
+from app.models.category import Category, CategoryLimit
 from app.models.coach import CoachMessage, EmotionalCheckin
 from app.models.expense import Expense
 from app.models.gamification import Achievement, Challenge, PointEvent
@@ -59,6 +59,8 @@ def register(payload: RegisterRequest, session: Session = Depends(get_session)) 
         email=payload.email,
         hashed_password=hash_password(payload.password),
         nombre=payload.nombre,
+        # La app manda el idioma del teléfono: la cuenta nace hablando como el dispositivo.
+        idioma=payload.idioma or "es",
     )
     session.add(user)
     session.commit()
@@ -148,7 +150,9 @@ def delete_me(
     """Borra la cuenta y todos sus datos. El orden respeta las llaves foráneas:
     los gastos apuntan a presupuestos, categorías y gastos fijos."""
     user_id = current_user.id
-    for modelo in (GoalContribution, Goal, Challenge, Achievement, PointEvent, EmotionalCheckin, CoachMessage):
+    for modelo in (
+        GoalContribution, Goal, Challenge, Achievement, PointEvent, EmotionalCheckin, CoachMessage, CategoryLimit,
+    ):  # fmt: skip
         session.exec(delete(modelo).where(modelo.user_id == user_id))
     session.exec(delete(Expense).where(Expense.user_id == user_id))
     session.exec(delete(Income).where(Income.user_id == user_id))

@@ -60,8 +60,40 @@ def test_no_se_puede_editar_categoria_por_defecto_compartida(client, auth_header
         seed_default_categories(session)
     comida = next(c for c in client.get("/categories", headers=auth_headers).json() if c["nombre"] == "comida")
 
+    # Es compartida entre todos los usuarios: ni el tipo ni el nombre se pueden tocar.
     r = client.patch(f"/categories/{comida['id']}", json={"tipo": "fijo"}, headers=auth_headers)
-    assert r.status_code == 404  # es compartida entre todos los usuarios, no editable
+    assert r.status_code == 400
+    r = client.patch(f"/categories/{comida['id']}", json={"nombre": "mercado"}, headers=auth_headers)
+    assert r.status_code == 400
+
+
+def test_cada_persona_pone_su_propio_limite_a_una_categoria_por_defecto(client, auth_headers, db_engine):
+    with Session(db_engine) as session:
+        seed_default_categories(session)
+    comida = next(c for c in client.get("/categories", headers=auth_headers).json() if c["nombre"] == "comida")
+
+    r = client.patch(f"/categories/{comida['id']}", json={"limite": "200000"}, headers=auth_headers)
+    assert r.status_code == 200 and r.json()["limite"] == "200000.00"
+    mias = {c["nombre"]: c["limite"] for c in client.get("/categories", headers=auth_headers).json()}
+    assert mias["comida"] == "200000.00"
+
+    # Otra persona no ve ese límite: es de quien lo puso.
+    client.post("/auth/register", json={"email": "otra@test.com", "password": "secret123", "nombre": "Otra"})
+    token = client.post("/auth/login", json={"email": "otra@test.com", "password": "secret123"}).json()["access_token"]
+    suyas = client.get("/categories", headers={"Authorization": f"Bearer {token}"}).json()
+    assert next(c for c in suyas if c["nombre"] == "comida")["limite"] is None
+
+    # Y se puede quitar.
+    r = client.patch(f"/categories/{comida['id']}", json={"limite": None}, headers=auth_headers)
+    assert r.json()["limite"] is None
+
+
+def test_transporte_salud_y_servicios_son_gasto_fijo(client, auth_headers, db_engine):
+    with Session(db_engine) as session:
+        seed_default_categories(session)
+    tipos = {c["nombre"]: c["tipo"] for c in client.get("/categories", headers=auth_headers).json()}
+    assert [tipos[n] for n in ("transporte", "salud", "servicios")] == ["fijo"] * 3
+    assert [tipos[n] for n in ("comida", "entretenimiento", "otros")] == ["opcional"] * 3
 
 
 def test_editar_categoria_propia(client, auth_headers):

@@ -23,8 +23,10 @@ class Api {
   Future<Json> login(String email, String password) =>
       _json(_dio.post('/auth/login', data: {'email': email, 'password': password}));
 
-  Future<void> register(String nombre, String email, String password) =>
-      _dio.post('/auth/register', data: {'nombre': nombre, 'email': email, 'password': password});
+  Future<void> register(String nombre, String email, String password, {String? idioma}) => _dio.post(
+        '/auth/register',
+        data: {'nombre': nombre, 'email': email, 'password': password, 'idioma': ?idioma},
+      );
 
   Future<Json> loginWithGoogle(String idToken) => _json(_dio.post('/auth/google', data: {'id_token': idToken}));
 

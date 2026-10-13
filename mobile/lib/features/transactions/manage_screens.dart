@@ -18,38 +18,49 @@ class CategoriesScreen extends ConsumerWidget {
     final nombre = TextEditingController(text: actual?.nombre ?? '');
     final limite = TextEditingController(text: actual?.limite?.round().toString() ?? '');
     var fijo = actual?.tipo == 'fijo';
+    final soloLimite = actual != null && !actual.esPropia;
 
     final guardar = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(actual == null ? l.newCategory : l.editCategory),
+          title: Text(actual == null ? l.newCategory : (soloLimite ? actual.nombre : l.editCategory)),
           content: Form(
             key: form,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: nombre,
-                  autofocus: actual == null,
-                  decoration: InputDecoration(labelText: l.name),
-                  validator: (v) => (v ?? '').trim().isEmpty ? l.requiredField : null,
-                ),
-                const SizedBox(height: 12),
+                // De una categoría por defecto solo es tuyo el límite: nombre y tipo son comunes a todos.
+                if (soloLimite)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(l.defaultCategoryLimitHint, style: Theme.of(context).textTheme.bodyMedium),
+                  )
+                else ...[
+                  TextFormField(
+                    controller: nombre,
+                    autofocus: actual == null,
+                    decoration: InputDecoration(labelText: l.name),
+                    validator: (v) => (v ?? '').trim().isEmpty ? l.requiredField : null,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 TextFormField(
                   controller: limite,
+                  autofocus: soloLimite,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(labelText: l.limitOptional, prefixText: '\$ '),
                   validator: (v) =>
                       (v ?? '').trim().isEmpty || parseMoney(v!) != null ? null : l.invalidAmount,
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l.fixedExpense),
-                  subtitle: Text(l.fixedExpenseHint),
-                  value: fijo,
-                  onChanged: (v) => setState(() => fijo = v),
-                ),
+                if (!soloLimite)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.fixedExpense),
+                    subtitle: Text(l.fixedExpenseHint),
+                    value: fijo,
+                    onChanged: (v) => setState(() => fijo = v),
+                  ),
               ],
             ),
           ),
@@ -74,7 +85,10 @@ class CategoriesScreen extends ConsumerWidget {
       context,
       () => actual == null
           ? api.createCategory(nombre.text.trim(), tipo, tope)
-          : api.updateCategory(actual.id, {'nombre': nombre.text.trim(), 'tipo': tipo, 'limite': tope}),
+          : api.updateCategory(
+              actual.id,
+              soloLimite ? {'limite': tope} : {'nombre': nombre.text.trim(), 'tipo': tipo, 'limite': tope},
+            ),
     );
     if (ok) refreshData(ref);
   }
@@ -105,8 +119,8 @@ class CategoriesScreen extends ConsumerWidget {
                     if (!c.esPropia) l.defaultCategory,
                   ].join(' · '),
                 ),
-                trailing: c.esPropia ? const Icon(Icons.edit_outlined) : null,
-                onTap: c.esPropia ? () => _editar(context, ref, c) : null,
+                trailing: Icon(c.esPropia ? Icons.edit_outlined : Icons.tune),
+                onTap: () => _editar(context, ref, c),
               ),
           ],
         ),

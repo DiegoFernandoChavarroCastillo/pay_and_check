@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/session.dart';
+
 /// Preferencias que viven solo en el teléfono (el tono del coach y el idioma
-/// viven en el backend, con la cuenta).
+/// viven en el backend, con la cuenta). La apariencia es del teléfono; el
+/// recordatorio es de cada cuenta, para que no lo herede quien entre después.
 class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
@@ -35,13 +38,20 @@ class SettingsController extends Notifier<AppSettings> {
 
   SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
 
+  /// Sufijo de las preferencias que son de la cuenta y no del teléfono.
+  String get _cuenta => '_${ref.read(sessionProvider).value?.id ?? 0}';
+
   @override
   AppSettings build() {
     final prefs = ref.watch(sharedPreferencesProvider);
+    ref.watch(sessionProvider.select((s) => s.value?.id));
     return AppSettings(
       themeMode: ThemeMode.values[prefs.getInt(_theme) ?? ThemeMode.system.index],
-      reminderEnabled: prefs.getBool(_reminder) ?? false,
-      reminderTime: TimeOfDay(hour: prefs.getInt(_hour) ?? 20, minute: prefs.getInt(_minute) ?? 0),
+      reminderEnabled: prefs.getBool('$_reminder$_cuenta') ?? false,
+      reminderTime: TimeOfDay(
+        hour: prefs.getInt('$_hour$_cuenta') ?? 20,
+        minute: prefs.getInt('$_minute$_cuenta') ?? 0,
+      ),
     );
   }
 
@@ -53,9 +63,9 @@ class SettingsController extends Notifier<AppSettings> {
   void setReminder({required bool enabled, TimeOfDay? time}) {
     final hora = time ?? state.reminderTime;
     _prefs
-      ..setBool(_reminder, enabled)
-      ..setInt(_hour, hora.hour)
-      ..setInt(_minute, hora.minute);
+      ..setBool('$_reminder$_cuenta', enabled)
+      ..setInt('$_hour$_cuenta', hora.hour)
+      ..setInt('$_minute$_cuenta', hora.minute);
     state = state.copyWith(reminderEnabled: enabled, reminderTime: hora);
   }
 }

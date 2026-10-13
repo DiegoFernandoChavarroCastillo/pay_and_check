@@ -19,10 +19,15 @@ extension L10nX on BuildContext {
 /// las pestañas pasa por detrás de ella, así que cada lista lo suma a su margen.
 double bottomInset(BuildContext context) => MediaQuery.paddingOf(context).bottom;
 
+/// Los avisos se muestran uno tras otro: "+5 puntos" no tapa el mensaje del coach que llega después.
 void showSnack(String texto) {
-  messengerKey.currentState
-    ?..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(texto), behavior: SnackBarBehavior.floating));
+  messengerKey.currentState?.showSnackBar(
+    SnackBar(
+      content: Text(texto),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(milliseconds: 3200),
+    ),
+  );
 }
 
 /// Ejecuta una acción contra el backend y muestra el error si falla.

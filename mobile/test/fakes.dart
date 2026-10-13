@@ -186,6 +186,11 @@ class FakeApi extends Api {
   Future<List<Income>> incomes() async => [];
 
   final ingresosCreados = <Json>[];
+  final categoriasEditadas = <(int, Json)>[];
+
+  @override
+  Future<void> updateCategory(int id, Json cambios) async => categoriasEditadas.add((id, cambios));
+
 
   @override
   Future<void> createIncome(double monto, String descripcion, DateTime fecha) async =>

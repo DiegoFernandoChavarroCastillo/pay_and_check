@@ -17,6 +17,7 @@ from app.models.goal import Goal
 from app.models.user import User
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
+from app.services.category_lookup import limite_de, limites_propios
 from app.services.weekly_report import build_weekly_summary
 
 VENTANA_DIAS = 28
@@ -187,7 +188,7 @@ def _variacion_semanal(idioma, gastos, categorias, today: date) -> Pattern | Non
     )
 
 
-def _categoria_dominante(idioma, gastos, categorias, user_id: int, today: date) -> Pattern | None:
+def _categoria_dominante(idioma, gastos, categorias, limites: dict, today: date) -> Pattern | None:
     desde = today - timedelta(days=29)
     totales: dict[int, Decimal] = defaultdict(Decimal)
     for (fecha, category_id), monto in gastos.items():
@@ -204,9 +205,8 @@ def _categoria_dominante(idioma, gastos, categorias, user_id: int, today: date) 
 
     categoria = categorias[category_id]
     pct = int(monto / total * 100)
-    # El límite vive en la categoría, y las por defecto son compartidas entre
-    # todos los usuarios: solo se puede proponer límite sobre una propia.
-    if categoria.owner_id == user_id and categoria.limite is None:
+    # Se propone un límite si la persona aún no le ha puesto uno (propio o sobre una por defecto).
+    if limite_de(categoria, limites) is None:
         limite = (monto * Decimal("0.9")).quantize(Decimal("1"))
         accion = {
             "tipo": "poner_limite",
@@ -342,6 +342,6 @@ def detect_patterns(session: Session, user: User, today: date) -> list[Pattern]:
             idioma, {k: v for k, v in gastos.items() if k[0] >= desde}, categorias, desde, today
         ),
         _animo_y_gasto(idioma, session, gastos, user.id, today),
-        _categoria_dominante(idioma, gastos, categorias, user.id, today),
+        _categoria_dominante(idioma, gastos, categorias, limites_propios(session, user.id), today),
     ]
     return [p for p in candidatos if p is not None]

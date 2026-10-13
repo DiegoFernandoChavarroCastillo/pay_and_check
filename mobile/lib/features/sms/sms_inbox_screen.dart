@@ -13,6 +13,7 @@ import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
+import '../../data/session.dart';
 import '../transactions/add_sheet.dart';
 import '../transactions/expense_form_screen.dart';
 
@@ -73,11 +74,14 @@ class SmsInboxState {
 }
 
 class SmsInbox extends Notifier<SmsInboxState> {
-  static const _revisados = 'sms_revisados';
+  /// Los revisados son de cada cuenta: descartar un SMS en una no lo oculta en otra.
+  String get _revisados => 'sms_revisados_${ref.read(sessionProvider).value?.id ?? 0}';
   static const _diasAtras = 14;
 
   @override
   SmsInboxState build() {
+    // Al cambiar de cuenta la bandeja se arma de nuevo con lo que esa cuenta ya revisó.
+    ref.watch(sessionProvider.select((s) => s.value?.id));
     // Nunca pide el permiso por su cuenta: solo mira si ya lo tiene.
     unawaited(Future.microtask(cargar));
     return const SmsInboxState();

@@ -285,7 +285,8 @@ def test_wrapped_mensual_resume_el_mes_con_datos_reales(
 
     presupuesto(date(2026, 2, 1), date(2026, 4, 30))
     fijar_hoy(date(2026, 3, 20))
-    gastar(20000, date(2026, 2, 10), 1, "mercado feb")
+    gastar(20000, date(2026, 2, 5), 1, "mercado feb")
+    gastar(40000, date(2026, 2, 25), 1, "mercado fin de feb")
     gastar(30000, date(2026, 3, 3), 1, "mercado")
     gastar(50000, date(2026, 3, 7), ENTRETENIMIENTO, "concierto")
     gastar(10000, date(2026, 3, 7), 2, "taxi")
@@ -297,7 +298,8 @@ def test_wrapped_mensual_resume_el_mes_con_datos_reales(
     assert (w["categoria_top"]["categoria"], w["categoria_top"]["porcentaje"]) == ("entretenimiento", 55)
     assert w["gasto_mayor"]["descripcion"] == "concierto"
     assert (w["dia_mas_gasto"]["fecha"], Decimal(w["dia_mas_gasto"]["monto"])) == ("2026-03-07", Decimal("60000.00"))
-    assert w["variacion_vs_mes_anterior_pct"] == 350  # 90.000 frente a 20.000
+    # Marzo va por el día 20: se compara con febrero hasta el 20 (20.000), no con el mes entero (60.000).
+    assert w["variacion_vs_mes_anterior_pct"] == 350
     assert w["animo_frecuente"] == "confiado"
     assert "3 gastos" in w["frase_coach"]  # respaldo determinista: la IA está caída
 
@@ -319,3 +321,18 @@ def test_borrar_cuenta_tambien_borra_coach_metas_y_gamificacion(
     _perfil(client, auth_headers)
 
     assert client.delete("/auth/me", headers=auth_headers).status_code == 204
+
+
+def test_wrapped_no_compara_con_un_mes_que_se_empezo_a_medias(
+    client, auth_headers, categorias, presupuesto, gastar, fijar_hoy, monkeypatch
+):
+    monkeypatch.setattr(wrapped_service, "generate_coach_text", lambda *_a: "ok")
+    presupuesto(date(2026, 2, 1), date(2026, 4, 30))
+    fijar_hoy(date(2026, 3, 20))
+    # Empezó a registrar el 21 de febrero: ese mes solo tiene una semana de datos.
+    gastar(20000, date(2026, 2, 21), 1, "mercado feb")
+    gastar(30000, date(2026, 3, 3), 1, "mercado")
+
+    w = client.get("/reports/monthly-wrapped?mes=2026-03", headers=auth_headers).json()
+    assert w["variacion_vs_mes_anterior_pct"] is None
+

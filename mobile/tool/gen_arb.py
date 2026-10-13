@@ -241,6 +241,10 @@ TEXTOS = {
     "fixedExpenseHint": ("Algo que sí o sí pagas, como transporte.", "Something you always pay, like transport."),
     "optionalExpense": ("Opcional", "Optional"),
     "defaultCategory": ("predeterminada", "default"),
+    "defaultCategoryLimitHint": (
+        "Esta categoría viene con la app. Puedes ponerle tu propio límite de gasto.",
+        "This category comes with the app. You can set your own spending limit for it.",
+    ),
     "recurringExpenses": ("Gastos fijos semanales", "Weekly recurring expenses"),
     "newRecurring": ("Nuevo gasto fijo", "New recurring expense"),
     "weekday": ("Día de la semana", "Day of the week"),

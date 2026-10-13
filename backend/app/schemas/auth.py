@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, EmailStr
 
@@ -11,6 +11,7 @@ class RegisterRequest(BaseModel):
     email: Email
     password: str
     nombre: str
+    idioma: Literal["es", "en"] | None = None
 
 
 class LoginRequest(BaseModel):

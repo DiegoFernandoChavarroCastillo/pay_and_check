@@ -11,7 +11,9 @@ mis papás" o "mis papás me dieron" es un ingreso; "le pagué a mis papás" es 
 - "monto": número (sin símbolos de moneda ni separadores de miles ni comas), el valor del movimiento. Un punto \
 o una coma seguidos de exactamente tres dígitos son separadores de miles, no decimales: "100.000", "1,000,000" y \
 "1000,000" (así lo escribe a veces el dictado por voz) valen 100000, 1000000 y 1000000.
-- "categoria": si es un gasto, exactamente una de estas categorías: {categorias}. Si es un ingreso, null.
+- "categoria": si es un gasto, exactamente una de estas categorías: {categorias}. Si es un ingreso, null. \
+Clasifica por lo que se compró, no por cómo llegó: un domicilio de comida (Rappi, iFood, Uber Eats, DiDi Food) \
+es comida; un viaje (Uber, DiDi, taxi, bus) es transporte.
 - "descripcion": una descripción corta y clara del movimiento.
 - "fecha": fecha en formato YYYY-MM-DD. Si el texto no menciona una fecha, usa "{hoy}".
 
@@ -127,6 +129,8 @@ por patrón y en el mismo orden.
 
 COACH_CHAT_PROMPT = """{reglas}
 Conversas con la persona por chat. Respuestas cortas (máximo 4 frases), útiles y basadas en su situación real.
+No propongas montos ni porcentajes concretos por tu cuenta ("aparta 10.000"): sugiere el paso con palabras y \
+usa solo cifras de su situación. Si la persona te pide expresamente una cuenta, sí puedes hacerla.
 
 Situación actual de la persona:
 {contexto}

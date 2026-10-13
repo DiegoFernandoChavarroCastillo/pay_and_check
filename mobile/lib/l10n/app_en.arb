@@ -177,6 +177,7 @@
   "fixedExpenseHint": "Something you always pay, like transport.",
   "optionalExpense": "Optional",
   "defaultCategory": "default",
+  "defaultCategoryLimitHint": "This category comes with the app. You can set your own spending limit for it.",
   "recurringExpenses": "Weekly recurring expenses",
   "newRecurring": "New recurring expense",
   "weekday": "Day of the week",

@@ -129,9 +129,8 @@ class _LevelHeader extends StatelessWidget {
             _Metric(label: l.metricConsistency, value: _pct(perfil.consistencia), tooltip: l.metricConsistencyHint),
             _Metric(
               label: l.metricImprovement,
-              value: perfil.mejoraMensual == null
-                  ? '—'
-                  : '${perfil.mejoraMensual! >= 0 ? '+' : ''}${(perfil.mejoraMensual! * 100).round()} pts',
+              // Solo se muestra cuando hay mejora: un mes más flojo no se marca en negativo (cero culpa).
+              value: (perfil.mejoraMensual ?? -1) < 0 ? '—' : '+${(perfil.mejoraMensual! * 100).round()} pts',
               tooltip: l.metricImprovementHint,
             ),
           ],

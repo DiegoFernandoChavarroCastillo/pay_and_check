@@ -79,9 +79,9 @@ def monthly_wrapped(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Resumen del mes indicado (por defecto, el mes en curso del usuario)."""
+    today = today_for(current_user)
     if mes is None:
-        today = today_for(current_user)
         anio, numero = today.year, today.month
     else:
         anio, numero = (int(parte) for parte in mes.split("-"))
-    return build_wrapped(session, current_user, anio, numero)
+    return build_wrapped(session, current_user, anio, numero, today)

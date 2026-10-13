@@ -17,6 +17,7 @@ from app.schemas.budget import (
 )
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
+from app.services.category_lookup import limite_de, limites_propios
 from app.services.recurring_expenses import sync_recurring_expenses
 
 router = APIRouter(prefix="/budgets", tags=["budgets"])
@@ -24,22 +25,26 @@ router = APIRouter(prefix="/budgets", tags=["budgets"])
 
 def _desglose_por_categoria(session: Session, budget: Budget) -> list[CategoriaDesgloseResponse]:
     rows = session.exec(
-        select(Category.nombre, Category.tipo, Category.limite, func.coalesce(func.sum(Expense.monto), 0))
+        select(Category, func.coalesce(func.sum(Expense.monto), 0))
         .join(Expense, Expense.category_id == Category.id)
         .where(Expense.budget_id == budget.id)
-        .group_by(Category.nombre, Category.tipo, Category.limite)
+        .group_by(Category.id)
     ).all()
+    propios = limites_propios(session, budget.owner_id)
 
-    return [
-        CategoriaDesgloseResponse(
-            categoria=nombre,
-            tipo=tipo,
-            gastado=gastado,
-            limite=limite,
-            excedido=limite is not None and gastado > limite,
+    desglose = []
+    for categoria, gastado in rows:
+        limite = limite_de(categoria, propios)
+        desglose.append(
+            CategoriaDesgloseResponse(
+                categoria=categoria.nombre,
+                tipo=categoria.tipo,
+                gastado=gastado,
+                limite=limite,
+                excedido=limite is not None and gastado > limite,
+            )
         )
-        for nombre, tipo, limite, gastado in rows
-    ]
+    return desglose
 
 
 @router.post("", response_model=BudgetResponse, status_code=status.HTTP_201_CREATED)

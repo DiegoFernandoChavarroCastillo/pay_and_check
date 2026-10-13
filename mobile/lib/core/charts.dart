@@ -306,7 +306,14 @@ class TrendLine extends StatelessWidget {
         ),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(),
-          rightTitles: const AxisTitles(),
+          // Margen a la derecha: la etiqueta del último punto va centrada bajo él y si no, se corta.
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 20,
+              getTitlesWidget: (_, _) => const SizedBox.shrink(),
+            ),
+          ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,

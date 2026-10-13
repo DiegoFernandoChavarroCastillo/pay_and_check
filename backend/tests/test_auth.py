@@ -113,3 +113,10 @@ def test_el_correo_no_distingue_mayusculas(client):
     r = client.post("/auth/register", json={"email": "JUAN.RAMIREZ@test.com", "password": "x", "nombre": "Otro"})
     assert r.status_code == 400
 
+
+def test_la_cuenta_nace_en_el_idioma_del_telefono(client):
+    datos = {"email": "kim@test.com", "password": "secret123", "nombre": "Kim", "idioma": "en"}
+    client.post("/auth/register", json=datos)
+    token = client.post("/auth/login", json=datos).json()["access_token"]
+    assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).json()["idioma"] == "en"
+

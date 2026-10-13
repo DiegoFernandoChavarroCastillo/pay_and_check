@@ -37,7 +37,7 @@ def _suma(session: Session, columna, *condiciones) -> Decimal:
     return Decimal(session.exec(select(func.coalesce(func.sum(columna), 0)).where(*condiciones)).one())
 
 
-def build_wrapped(session: Session, user: User, anio: int, mes: int) -> dict:
+def build_wrapped(session: Session, user: User, anio: int, mes: int, today: date) -> dict:
     inicio, fin = rango_del_mes(anio, mes)
     gastos = session.exec(
         select(Expense, Category.nombre)
@@ -75,8 +75,17 @@ def build_wrapped(session: Session, user: User, anio: int, mes: int) -> dict:
         dia_mas_gasto = {"fecha": dia, "monto": monto}
 
     inicio_previo, fin_previo = rango_del_mes(*((anio - 1, 12) if mes == 1 else (anio, mes - 1)))
-    gasto_previo = gasto_entre(session, user.id, inicio_previo, fin_previo)
-    variacion = int((gasto_total / gasto_previo - 1) * 100) if gasto_previo > 0 else None
+    variacion = None
+    # Solo se comparan periodos equivalentes. Si el mes consultado va a medias, el anterior se corta en el
+    # mismo día; y si la persona empezó a registrar con el mes anterior ya avanzado, no hay con qué comparar.
+    primer_gasto = session.exec(select(func.min(Expense.fecha)).where(Expense.user_id == user.id)).one()
+    if primer_gasto is not None and primer_gasto <= inicio_previo + timedelta(days=6):
+        dias_del_mes = (min(fin, today) - inicio).days if today >= inicio else -1
+        if dias_del_mes >= 0:
+            corte_previo = min(fin_previo, inicio_previo + timedelta(days=dias_del_mes))
+            gasto_previo = gasto_entre(session, user.id, inicio_previo, corte_previo)
+            if gasto_previo > 0:
+                variacion = int((gasto_total / gasto_previo - 1) * 100)
 
     animos = Counter(
         session.exec(

@@ -228,8 +228,27 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
         {"role": "user" if m.tipo == "chat_user" else "assistant", "content": m.contenido}
         for m in historial_chat(session, user.id, HISTORIAL_CHAT)
     ]
-    prompt = build_coach_chat_prompt(reglas_para(user), contexto_financiero(session, user, today))
-    respuesta = generate_coach_text(prompt, [*previos, {"role": "user", "content": mensaje}])
+    contexto = contexto_financiero(session, user, today)
+    prompt = build_coach_chat_prompt(reglas_para(user), contexto)
+    turnos = [*previos, {"role": "user", "content": mensaje}]
+    respuesta = generate_coach_text(prompt, turnos)
+
+    # Si trae cifras que no salen ni de sus datos ni de lo conversado, se le pide una vez que responda sin
+    # ellas. No se descarta sin más: en el chat la persona puede haber pedido una cuenta.
+    conocido = "\n".join([contexto, *(t["content"] for t in turnos)])
+    if respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje):
+        turnos += [
+            {"role": "assistant", "content": respuesta},
+            {
+                "role": "user",
+                "content": "Repite tu respuesta sin proponer montos ni porcentajes que no estén en mi "
+                "situación: describe el paso con palabras.",
+            },
+        ]
+        try:
+            respuesta = generate_coach_text(prompt, turnos) or respuesta
+        except GroqServiceError:
+            pass
 
     regla_rota = rompe_guardrails(respuesta) if respuesta else "vacia"
     if regla_rota == "inversion":

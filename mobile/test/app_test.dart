@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pay_and_check/core/api/api_client.dart';
+import 'package:pay_and_check/core/settings.dart';
+import 'package:pay_and_check/data/api.dart';
 import 'package:pay_and_check/data/models.dart';
+import 'package:pay_and_check/data/session.dart';
 import 'package:pay_and_check/features/coach/coach_widgets.dart';
 import 'package:pay_and_check/features/sms/sms_inbox_screen.dart';
 import 'package:pay_and_check/features/transactions/add_sheet.dart';
 import 'package:pay_and_check/features/transactions/expense_form_screen.dart';
+import 'package:pay_and_check/features/transactions/manage_screens.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fakes.dart';
 
@@ -243,5 +250,46 @@ void main() {
 
     expect(api.ingresosCreados.single['monto'], 200000.0);
     expect(api.gastosCreados, isEmpty);
+  });
+
+  testWidgets('a una categoría por defecto solo se le puede poner un límite propio', (tester) async {
+    final api = FakeApi();
+    await tester.pumpWidget(await pantallaDePrueba(api, const CategoriesScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('comida'));
+    await tester.pumpAndSettle();
+    // Ni el nombre ni el tipo: son comunes a todas las personas.
+    expect(find.text('Nombre'), findsNothing);
+    await tester.enterText(find.byType(TextFormField), '200000');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    final (id, cambios) = api.categoriasEditadas.single;
+    expect(id, 1);
+    expect(cambios, {'limite': 200000.0});
+  });
+
+  testWidgets('lo revisado y el recordatorio son de cada cuenta, no del teléfono', (tester) async {
+    SharedPreferences.setMockInitialValues({'reminder_enabled_7': true, 'sms_revisados_7': ['1']});
+    final prefs = await SharedPreferences.getInstance();
+    final api = FakeApi();
+    api.sms.llega(1, 'Nequi', 'Nequi: Pagaste 12.000 a Juan');
+    final contenedor = ProviderContainer(
+      overrides: [
+        apiProvider.overrideWithValue(api),
+        tokenStorageProvider.overrideWithValue(MemoryTokenStorage((access: 'a', refresh: 'r'))),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        deviceTimezoneProvider.overrideWithValue(() async => null),
+        smsSourceProvider.overrideWithValue(api.sms),
+      ],
+    );
+    addTearDown(contenedor.dispose);
+
+    // La cuenta de la prueba es la 1: no hereda lo que dejó la cuenta 7 en este teléfono.
+    expect((await contenedor.read(sessionProvider.future))!.id, 1);
+    expect(contenedor.read(settingsProvider).reminderEnabled, isFalse);
+    await contenedor.read(smsInboxProvider.notifier).cargar();
+    expect(contenedor.read(smsInboxProvider).mensajes, hasLength(1));
   });
 }

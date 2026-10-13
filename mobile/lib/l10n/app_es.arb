@@ -309,6 +309,7 @@
   "fixedExpenseHint": "Algo que sí o sí pagas, como transporte.",
   "optionalExpense": "Opcional",
   "defaultCategory": "predeterminada",
+  "defaultCategoryLimitHint": "Esta categoría viene con la app. Puedes ponerle tu propio límite de gasto.",
   "recurringExpenses": "Gastos fijos semanales",
   "newRecurring": "Nuevo gasto fijo",
   "weekday": "Día de la semana",
