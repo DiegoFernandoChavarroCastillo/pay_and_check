@@ -26,10 +26,13 @@ COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 COPY --from=builder --chown=appuser:appuser /app/app /app/app
 COPY --from=builder --chown=appuser:appuser /app/alembic /app/alembic
 COPY --from=builder --chown=appuser:appuser /app/alembic.ini /app/alembic.ini
+COPY --from=builder --chown=appuser:appuser /app/start.sh /app/start.sh
 
 ENV PATH="/app/.venv/bin:$PATH"
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Migra, siembra y arranca. El comando vive en un script y no en la configuración de la plataforma: Render
+# no interpreta las comillas de un `sh -c "..."` puesto como comando y el contenedor moría al arrancar.
+CMD ["sh", "/app/start.sh"]

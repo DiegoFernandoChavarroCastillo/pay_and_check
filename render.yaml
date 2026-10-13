@@ -10,9 +10,8 @@ services:
     region: ohio
     rootDir: backend
     dockerfilePath: ./Dockerfile
-    # Migra y siembra las categorías por defecto en cada arranque (ambos pasos
-    # son idempotentes) y escucha en el puerto que asigna Render.
-    dockerCommand: sh -c "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    # Sin comando propio: el Dockerfile ya arranca con backend/start.sh, que migra, siembra las
+    # categorías por defecto y escucha en el puerto que asigna Render.
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

@@ -146,7 +146,8 @@ gestionado (Railway, Render, Fly.io, etc.):
 
 **Render + Neon (camino previsto).** `render.yaml` en la raíz es un blueprint: en Render, *New → Blueprint*,
 elegir este repo y completar `DATABASE_URL` (la cadena de conexión de Neon), `GROQ_API_KEY` y, si aplica,
-`GOOGLE_CLIENT_ID`. El servicio aplica las migraciones y siembra las categorías en cada arranque. La URL que
+`GOOGLE_CLIENT_ID`. Al crearlo, elegir la rama que tenga el código. El servicio aplica las migraciones y siembra
+las categorías en cada arranque (`backend/start.sh`). La URL que
 entrega Render es el `API_BASE_URL` de la app móvil. En el plan gratuito el servicio se duerme tras un rato
 sin uso y la primera petición tarda cerca de un minuto en responder.
 
@@ -161,14 +162,8 @@ docker build -t pay-and-check-backend ./backend
 docker run -p 8000:8000 --env-file backend/.env pay-and-check-backend
 ```
 
-Antes del primer despliegue (o tras cambiar los modelos), aplicar las migraciones contra la base de datos de
-producción:
-
-```bash
-cd backend
-DATABASE_URL="<url de producción>" uv run alembic upgrade head
-DATABASE_URL="<url de producción>" uv run python -m app.db.seed
-```
+La imagen aplica las migraciones y siembra las categorías al arrancar (`backend/start.sh`), así que no hay
+que hacerlo a mano. Lee el puerto de la variable `PORT` y usa el 8000 si no está.
 
 ### CI
 
