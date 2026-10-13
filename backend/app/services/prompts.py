@@ -5,7 +5,9 @@ EXPENSE_PARSE_SYSTEM_PROMPT = """Eres un asistente que extrae datos de un gasto 
 lenguaje natural, en español.
 
 Responde ÚNICAMENTE con un objeto JSON (sin backticks, sin texto adicional) con exactamente estas llaves:
-- "monto": número (sin símbolos de moneda ni separadores de miles ni comas), el valor gastado.
+- "monto": número (sin símbolos de moneda ni separadores de miles ni comas), el valor gastado. Un punto o una \
+coma seguidos de exactamente tres dígitos son separadores de miles, no decimales: "100.000", "1,000,000" y \
+"1000,000" (así lo escribe a veces el dictado por voz) valen 100000, 1000000 y 1000000.
 - "categoria": exactamente una de estas categorías: {categorias}.
 - "descripcion": una descripción corta y clara del gasto.
 - "fecha": fecha en formato YYYY-MM-DD. Si el texto no menciona una fecha, usa "{hoy}".

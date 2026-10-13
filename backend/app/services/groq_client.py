@@ -43,23 +43,36 @@ class ExpenseParseError(GroqServiceError):
     """El modelo no devolvió un JSON válido o no pudo extraer un monto."""
 
 
-def _chat(messages: list[dict], *, model: str = MODEL, temperature: float = 0, json_mode: bool = False) -> str:
-    kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
+def _chat(messages: list[dict], *, model: str = MODEL, temperature: float = 0) -> str:
+    # Sin `response_format={"type": "json_object"}` a propósito: con los modelos
+    # de razonamiento (gpt-oss) el modo JSON de Groq hace que el modelo se quede
+    # dando vueltas y devuelva vacío (400 json_validate_failed) de forma
+    # intermitente. El JSON se pide en el prompt y se extrae con `_extraer_json`.
     try:
         completion = _get_client().chat.completions.create(
-            model=model, messages=messages, temperature=temperature, **kwargs
+            model=model, messages=messages, temperature=temperature, reasoning_effort="low"
         )
         return completion.choices[0].message.content
     except Exception as exc:  # errores de red / API de Groq
         raise GroqServiceError(f"Error llamando a Groq: {exc}") from exc
 
 
+def _extraer_json(raw: str | None):
+    """Decodifica el JSON de la respuesta del modelo, tolerando backticks o
+    texto alrededor del objeto. Lanza ValueError si no hay un JSON válido."""
+    texto = raw or ""
+    inicio, fin = texto.find("{"), texto.rfind("}")
+    if inicio != -1 and fin > inicio:
+        texto = texto[inicio : fin + 1]
+    return json.loads(texto)
+
+
 def _validar_gasto(raw: str, categorias: list[str]) -> dict:
     """Valida el JSON de un gasto devuelto por el modelo. Nunca inventa datos:
     si falta algo o no es interpretable, lanza ExpenseParseError."""
     try:
-        data = json.loads(raw)
-    except (json.JSONDecodeError, TypeError) as exc:
+        data = _extraer_json(raw)
+    except ValueError as exc:
         raise ExpenseParseError("El modelo no devolvió un JSON válido.") from exc
 
     if not isinstance(data, dict):
@@ -108,8 +121,7 @@ def parse_expense_text(texto: str, categorias: list[str], hoy: date | None = Non
         [
             {"role": "system", "content": build_expense_parse_prompt(categorias, hoy.isoformat())},
             {"role": "user", "content": texto},
-        ],
-        json_mode=True,
+        ]
     )
     data = _validar_gasto(raw, categorias)
     data.pop("comercio")
@@ -125,8 +137,7 @@ def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date | None =
         [
             {"role": "system", "content": build_receipt_parse_prompt(categorias, hoy.isoformat())},
             {"role": "user", "content": texto_ocr},
-        ],
-        json_mode=True,
+        ]
     )
     return _validar_gasto(raw, categorias)
 
@@ -151,11 +162,10 @@ def generate_coach_json(system_prompt: str, contenido: str) -> dict:
         [{"role": "system", "content": system_prompt}, {"role": "user", "content": contenido}],
         model=COACH_MODEL,
         temperature=0.5,
-        json_mode=True,
     )
     try:
-        data = json.loads(raw)
-    except (json.JSONDecodeError, TypeError) as exc:
+        data = _extraer_json(raw)
+    except ValueError as exc:
         raise GroqServiceError("El coach no devolvió un JSON válido.") from exc
     if not isinstance(data, dict):
         raise GroqServiceError("El coach no devolvió un objeto JSON.")

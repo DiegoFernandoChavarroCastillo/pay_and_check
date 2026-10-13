@@ -71,8 +71,17 @@ def test_validar_gasto_no_inventa_datos():
     )
     assert (ok["monto"], ok["comercio"]) == (Decimal("23500"), "Éxito")
 
+    # Sin el modo JSON de Groq el modelo puede envolver el objeto en backticks o texto.
+    envuelto = _validar_gasto(
+        'Aquí va:\n```json\n{"monto": 10, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}\n```',
+        ["comida"],
+    )
+    assert envuelto["monto"] == Decimal("10")
+
     for malo in (
         "no es json",
+        None,
+        "",
         '{"error": "no se pudo identificar un monto"}',
         '{"monto": 0, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}',
         '{"monto": 10, "categoria": "inventada", "descripcion": "x", "fecha": "2026-03-01"}',
