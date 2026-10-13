@@ -147,6 +147,12 @@ def create_expense_from_text(
     except GroqServiceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 
+    if data.get("tipo") == "ingreso":
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "El texto describe un ingreso, no un gasto: regístralo como ingreso.",
+        )
+
     budget = find_budget_for_date(session, current_user.id, data["fecha"])
     if budget is None:
         raise HTTPException(

@@ -85,6 +85,13 @@ def test_validar_gasto_no_inventa_datos():
     )
     assert envuelto["monto"] == Decimal("10")
 
+    # Un ingreso llega sin categoría y eso es válido; un gasto sin categoría, no.
+    ingreso = _validar_gasto(
+        '{"tipo": "ingreso", "monto": 200000, "categoria": null, "descripcion": "pago", "fecha": "2026-03-01"}',
+        ["comida"],
+    )
+    assert (ingreso["tipo"], ingreso["categoria"], ok["tipo"]) == ("ingreso", None, "gasto")
+
     for malo in (
         "no es json",
         None,
@@ -92,6 +99,8 @@ def test_validar_gasto_no_inventa_datos():
         '{"error": "no se pudo identificar un monto"}',
         '{"monto": 0, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}',
         '{"monto": 10, "categoria": "inventada", "descripcion": "x", "fecha": "2026-03-01"}',
+        '{"tipo": "gasto", "monto": 10, "categoria": null, "descripcion": "x", "fecha": "2026-03-01"}',
+        '{"tipo": "regalo", "monto": 10, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}',
         '{"monto": 10, "categoria": "comida", "descripcion": "x", "fecha": "ayer"}',
     ):
         with pytest.raises(ExpenseParseError):

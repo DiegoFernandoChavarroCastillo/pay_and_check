@@ -212,6 +212,11 @@ TEXTOS = {
     "addByGallery": ("Recibo desde la galería", "Receipt from gallery"),
     "addManual": ("Formulario manual", "Manual form"),
     "addIncome": ("Dinero que recibí", "Money I received"),
+    "confirmIncome": ("Confirma el ingreso", "Confirm the income"),
+    "confirmIncomeHint": (
+        "Entendimos que recibiste este dinero. Corrige lo que haga falta antes de guardar.",
+        "We understood you received this money. Fix anything before saving.",
+    ),
     "addIncomeHint": ("Amplía tu disponible sin cambiar el presupuesto original.", "Raises your available amount without changing the original budget."),
     "quickAddExample": ("Ej.: me compré un helado de 5000", "E.g.: I bought an ice cream for 5000"),
     "voiceStart": ("Toca para dictar", "Tap to dictate"),

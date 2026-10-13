@@ -81,7 +81,9 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
     if "error" in data:
         raise ExpenseParseError("No se pudo identificar un monto en el texto.")
 
-    faltantes = {"monto", "categoria", "descripcion", "fecha"} - data.keys()
+    faltantes = {"monto", "descripcion", "fecha"} - data.keys()
+    if data.get("tipo") != "ingreso":
+        faltantes |= {"categoria"} - data.keys()
     if faltantes:
         raise ExpenseParseError(f"La respuesta del modelo no incluye: {', '.join(sorted(faltantes))}.")
 
@@ -92,7 +94,11 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
     if monto <= 0:
         raise ExpenseParseError("El monto debe ser mayor que cero.")
 
-    if data["categoria"] not in categorias:
+    # Un ingreso no lleva categoría: las categorías son de gasto.
+    tipo = data.get("tipo", "gasto")
+    if tipo not in ("gasto", "ingreso"):
+        raise ExpenseParseError(f"El modelo devolvió un tipo de movimiento inválido: {tipo!r}.")
+    if tipo == "gasto" and data["categoria"] not in categorias:
         raise ExpenseParseError(f"El modelo devolvió una categoría inválida: {data['categoria']!r}.")
 
     try:
@@ -102,8 +108,9 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
 
     comercio = data.get("comercio")
     return {
+        "tipo": tipo,
         "monto": monto,
-        "categoria": data["categoria"],
+        "categoria": data["categoria"] if tipo == "gasto" else None,
         "descripcion": str(data["descripcion"]),
         "fecha": fecha,
         "comercio": str(comercio).strip() if comercio else None,
@@ -111,7 +118,8 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
 
 
 def parse_expense_text(texto: str, categorias: list[str], hoy: date | None = None) -> dict:
-    """Extrae {monto, categoria, descripcion, fecha} de un texto libre.
+    """Extrae {tipo, monto, categoria, descripcion, fecha} de un texto libre.
+    `tipo` es "gasto" o "ingreso"; un ingreso viene sin categoría.
 
     Lanza ExpenseParseError con un mensaje claro si el modelo no devuelve un
     JSON usable o no logra identificar un monto — nunca inventa un monto.
@@ -139,7 +147,10 @@ def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date | None =
             {"role": "user", "content": texto_ocr},
         ]
     )
-    return _validar_gasto(raw, categorias)
+    data = _validar_gasto(raw, categorias)
+    if data.pop("tipo") != "gasto":
+        raise ExpenseParseError("El recibo no corresponde a un gasto.")
+    return data
 
 
 def generate_weekly_recommendations(resumen: str) -> str:

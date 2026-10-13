@@ -152,6 +152,8 @@
   "addByGallery": "Receipt from gallery",
   "addManual": "Manual form",
   "addIncome": "Money I received",
+  "confirmIncome": "Confirm the income",
+  "confirmIncomeHint": "We understood you received this money. Fix anything before saving.",
   "addIncomeHint": "Raises your available amount without changing the original budget.",
   "quickAddExample": "E.g.: I bought an ice cream for 5000",
   "voiceStart": "Tap to dictate",

@@ -151,7 +151,7 @@ class RecurringExpense {
   final bool activo;
 }
 
-/// Borrador de gasto: lo que devuelve la IA al parsear un texto o un recibo,
+/// Borrador de un movimiento: lo que devuelve la IA al parsear un texto o un recibo,
 /// o lo que se precarga al editar. Siempre pasa por confirmación del usuario.
 class ExpenseDraft {
   ExpenseDraft({
@@ -162,10 +162,12 @@ class ExpenseDraft {
     this.comercio,
     this.source = 'manual',
     this.textoOriginal,
+    this.esIngreso = false,
   });
 
   ExpenseDraft.fromParse(Map<String, dynamic> j, {required this.source, this.textoOriginal})
-      : monto = _num(j['monto']),
+      : esIngreso = j['tipo'] == 'ingreso',
+        monto = _num(j['monto']),
         categoria = j['categoria'] as String?,
         descripcion = j['descripcion'] as String?,
         fecha = _dateOrNull(j['fecha']),
@@ -178,6 +180,9 @@ class ExpenseDraft {
   final String? comercio;
   final String source;
   final String? textoOriginal;
+
+  /// El texto hablaba de dinero recibido ("me pagaron…"): se confirma como ingreso, sin categoría.
+  final bool esIngreso;
 }
 
 class Checkin {

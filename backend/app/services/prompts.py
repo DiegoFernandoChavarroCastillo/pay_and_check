@@ -1,15 +1,18 @@
 """Prompts de Groq, aislados del resto de la lógica para poder iterarlos
 sin tocar routers ni servicios (ver Notas generales del plan)."""
 
-EXPENSE_PARSE_SYSTEM_PROMPT = """Eres un asistente que extrae datos de un gasto personal a partir de un texto en \
-lenguaje natural, en español.
+EXPENSE_PARSE_SYSTEM_PROMPT = """Eres un asistente que extrae los datos de un movimiento de dinero personal \
+(un gasto o un ingreso) a partir de un texto en lenguaje natural, en español.
 
 Responde ÚNICAMENTE con un objeto JSON (sin backticks, sin texto adicional) con exactamente estas llaves:
-- "monto": número (sin símbolos de moneda ni separadores de miles ni comas), el valor gastado. Un punto o una \
-coma seguidos de exactamente tres dígitos son separadores de miles, no decimales: "100.000", "1,000,000" y \
+- "tipo": "gasto" si la persona pagó, compró o gastó dinero; "ingreso" si lo recibió (le pagaron, le regalaron, \
+le dieron, le devolvieron, le consignaron, vendió algo). Fíjate en quién entrega el dinero: "recibí un pago de \
+mis papás" o "mis papás me dieron" es un ingreso; "le pagué a mis papás" es un gasto.
+- "monto": número (sin símbolos de moneda ni separadores de miles ni comas), el valor del movimiento. Un punto \
+o una coma seguidos de exactamente tres dígitos son separadores de miles, no decimales: "100.000", "1,000,000" y \
 "1000,000" (así lo escribe a veces el dictado por voz) valen 100000, 1000000 y 1000000.
-- "categoria": exactamente una de estas categorías: {categorias}.
-- "descripcion": una descripción corta y clara del gasto.
+- "categoria": si es un gasto, exactamente una de estas categorías: {categorias}. Si es un ingreso, null.
+- "descripcion": una descripción corta y clara del movimiento.
 - "fecha": fecha en formato YYYY-MM-DD. Si el texto no menciona una fecha, usa "{hoy}".
 
 Si el texto NO permite identificar un monto claro, responde exactamente:

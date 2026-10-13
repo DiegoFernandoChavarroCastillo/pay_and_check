@@ -32,8 +32,11 @@ class ExpenseParseRequest(BaseModel):
 
 
 class ExpenseParseResponse(BaseModel):
+    # "ingreso" cuando el texto describe dinero recibido; entonces no hay categoría
+    # y la app lo confirma como ingreso (POST /incomes), no como gasto.
+    tipo: Literal["gasto", "ingreso"] = "gasto"
     monto: Decimal
-    categoria: str
+    categoria: str | None
     descripcion: str
     fecha: date
 

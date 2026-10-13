@@ -11,6 +11,7 @@ import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
+import '../coach/coach_widgets.dart';
 import 'expense_form_screen.dart';
 
 void _abrir(BuildContext context, Widget pantalla) =>
@@ -217,10 +218,15 @@ class _QuickAddScreenState extends ConsumerState<QuickAddScreen> {
     await guarded(context, () async => draft = await ref.read(apiProvider).parseText(texto, source: source));
     if (!mounted) return;
     setState(() => _busy = false);
-    if (draft != null) {
+    final borrador = draft;
+    if (borrador != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute<void>(builder: (_) => ExpenseFormScreen(draft: draft)),
+        MaterialPageRoute<void>(
+          // "Me pagaron…" no es un gasto: se confirma en el formulario de ingresos.
+          builder: (_) =>
+              borrador.esIngreso ? IncomeFormScreen(draft: borrador) : ExpenseFormScreen(draft: borrador),
+        ),
       );
     }
   }
@@ -463,7 +469,10 @@ class _ReceiptScanScreenState extends ConsumerState<ReceiptScanScreen> {
 }
 
 class IncomeFormScreen extends ConsumerStatefulWidget {
-  const IncomeFormScreen({super.key});
+  const IncomeFormScreen({super.key, this.draft});
+
+  /// Ingreso propuesto por la IA a partir de un texto; se precarga para confirmar.
+  final ExpenseDraft? draft;
 
   @override
   ConsumerState<IncomeFormScreen> createState() => _IncomeFormScreenState();
@@ -471,9 +480,9 @@ class IncomeFormScreen extends ConsumerStatefulWidget {
 
 class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   final _form = GlobalKey<FormState>();
-  final _monto = TextEditingController();
-  final _descripcion = TextEditingController();
-  DateTime _fecha = today();
+  late final _monto = TextEditingController(text: widget.draft?.monto?.round().toString() ?? '');
+  late final _descripcion = TextEditingController(text: widget.draft?.descripcion ?? '');
+  late DateTime _fecha = widget.draft?.fecha ?? today();
   bool _saving = false;
 
   @override
@@ -501,16 +510,37 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l = context.l;
+    final esConfirmacion = widget.draft != null;
     return Scaffold(
-      appBar: AppBar(title: Text(l.addIncome)),
+      appBar: AppBar(title: Text(esConfirmacion ? l.confirmIncome : l.addIncome)),
       body: Form(
         key: _form,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(l.addIncomeHint, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 16),
-            MoneyField(controller: _monto, label: l.amount, autofocus: true, hero: true),
+            if (esConfirmacion)
+              SectionCard(
+                color: context.tokens.coach.container,
+                child: Row(
+                  children: [
+                    const CoachAvatar(size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l.confirmIncomeHint,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: context.tokens.coach.onContainer,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              Text(l.addIncomeHint, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 16),
+            ],
+            MoneyField(controller: _monto, label: l.amount, autofocus: !esConfirmacion, hero: true),
             const SizedBox(height: 12),
             TextFormField(
               controller: _descripcion,

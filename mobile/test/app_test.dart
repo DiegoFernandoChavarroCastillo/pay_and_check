@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pay_and_check/data/models.dart';
 import 'package:pay_and_check/features/coach/coach_widgets.dart';
+import 'package:pay_and_check/features/transactions/add_sheet.dart';
 import 'package:pay_and_check/features/transactions/expense_form_screen.dart';
 
 import 'fakes.dart';
@@ -98,6 +99,34 @@ void main() {
       'source': 'voz',
       'texto_original': 'me compré un helado de 5000',
     });
+  });
+
+  testWidgets('un texto que habla de dinero recibido se confirma y se guarda como ingreso', (tester) async {
+    final api = FakeApi()
+      ..parseo = {
+        'tipo': 'ingreso',
+        'monto': '200000',
+        'categoria': null,
+        'descripcion': 'pago de mis papás',
+        'fecha': '2026-03-10',
+      };
+    await tester.pumpWidget(
+      await pantallaDePrueba(api, const QuickAddScreen(initialText: 'recibí un pago de 200,000 por mis papás')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
+    // No es el formulario de gasto: no pide categoría.
+    expect(find.text('Confirma el ingreso'), findsOneWidget);
+    expect(find.text('Categoría'), findsNothing);
+    expect(find.text('200000'), findsOneWidget);
+
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(api.ingresosCreados.single, {'monto': 200000.0, 'descripcion': 'pago de mis papás', 'fecha': '2026-03-10'});
+    expect(api.gastosCreados, isEmpty);
   });
 
   testWidgets('el formulario no guarda un gasto sin monto', (tester) async {

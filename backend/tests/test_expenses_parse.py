@@ -84,3 +84,23 @@ def test_from_text_guarda_el_gasto_y_actualiza_el_summary(client, auth_headers, 
 
     r = client.get("/budgets/active/summary", headers=auth_headers)
     assert r.json()["gastado_total"] == "12000.00"
+
+
+def test_parse_reconoce_un_ingreso_y_no_exige_categoria(client, auth_headers, db_engine, monkeypatch):
+    monkeypatch.setattr(
+        expenses_router,
+        "parse_expense_text",
+        lambda texto, categorias, hoy: {
+            "tipo": "ingreso", "monto": Decimal("200000"), "categoria": None, "descripcion": "pago de mis papás",
+            "fecha": date.today(),
+        },
+    )  # fmt: skip
+
+    r = client.post("/expenses/parse", json={"texto": "recibí un pago de 200,000 por mis papás"}, headers=auth_headers)
+    assert r.status_code == 200
+    assert (r.json()["tipo"], r.json()["categoria"], r.json()["monto"]) == ("ingreso", None, "200000")
+
+    # Guardar directo como gasto un texto que es un ingreso no tiene sentido: se rechaza.
+    r = client.post("/expenses/from-text", json={"texto": "recibí un pago de 200,000"}, headers=auth_headers)
+    assert r.status_code == 422
+

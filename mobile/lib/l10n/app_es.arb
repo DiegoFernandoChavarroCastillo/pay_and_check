@@ -284,6 +284,8 @@
   "addByGallery": "Recibo desde la galería",
   "addManual": "Formulario manual",
   "addIncome": "Dinero que recibí",
+  "confirmIncome": "Confirma el ingreso",
+  "confirmIncomeHint": "Entendimos que recibiste este dinero. Corrige lo que haga falta antes de guardar.",
   "addIncomeHint": "Amplía tu disponible sin cambiar el presupuesto original.",
   "quickAddExample": "Ej.: me compré un helado de 5000",
   "voiceStart": "Toca para dictar",

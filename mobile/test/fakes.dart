@@ -165,6 +165,19 @@ class FakeApi extends Api {
   @override
   Future<List<Income>> incomes() async => [];
 
+  final ingresosCreados = <Json>[];
+
+  @override
+  Future<void> createIncome(double monto, String descripcion, DateTime fecha) async =>
+      ingresosCreados.add({'monto': monto, 'descripcion': descripcion, 'fecha': isoDate(fecha)});
+
+  /// Lo que "responde la IA" al interpretar un texto.
+  Json parseo = {'tipo': 'gasto', 'monto': '5000', 'categoria': 'entretenimiento', 'descripcion': 'helado', 'fecha': '2026-03-10'};
+
+  @override
+  Future<ExpenseDraft> parseText(String texto, {required String source}) async =>
+      ExpenseDraft.fromParse(parseo, source: source, textoOriginal: texto);
+
   @override
   Future<List<RecurringExpense>> recurring() async => [];
 
