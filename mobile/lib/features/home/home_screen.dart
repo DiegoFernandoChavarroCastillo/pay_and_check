@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +14,7 @@ import '../../data/session.dart';
 import '../budget/budget_screen.dart';
 import '../coach/coach_widgets.dart';
 import '../reports/analytics_screen.dart';
+import '../sms/sms_inbox_screen.dart';
 
 /// Dashboard: cuánto se puede gastar hoy, el check-in y lo que propone el coach.
 class HomeScreen extends ConsumerWidget {
@@ -31,6 +34,7 @@ class HomeScreen extends ConsumerWidget {
       onRefresh: () async {
         refreshData(ref);
         ref.invalidate(insightsProvider);
+        unawaited(ref.read(smsInboxProvider.notifier).cargar());
         await ref.read(summaryProvider.future);
       },
       child: ListView(
@@ -41,6 +45,7 @@ class HomeScreen extends ConsumerWidget {
               Expanded(child: Text(l.homeGreeting(nombre), style: theme.textTheme.headlineSmall)),
               if (perfil != null && perfil.rachaActual > 0)
                 StreakChip(dias: perfil.rachaActual),
+              const NotificationsBell(),
             ],
           ),
           const SizedBox(height: 16),

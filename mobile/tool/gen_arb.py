@@ -345,6 +345,14 @@ TEXTOS = {
     "badgeUnlocked": ("¡Nueva insignia!", "New badge!"),
     "great": ("¡Genial!", "Great!"),
     # --- SMS ---
+    "notifications": ("Notificaciones", "Notifications"),
+    "notifDetected": ("Movimientos detectados en tus SMS", "Transactions found in your SMS"),
+    "notifApprove": ("Aprobar", "Approve"),
+    "notifEdit": ("Editar", "Edit"),
+    "notifIsExpense": ("Gasto", "Expense"),
+    "notifIsIncome": ("Ingreso", "Income"),
+    "notifSavedExpense": ("Gasto registrado.", "Expense logged."),
+    "notifSavedIncome": ("Ingreso registrado.", "Income logged."),
     "smsTitle": ("SMS del banco", "Bank SMS"),
     "smsSubtitle": ("Registra movimientos desde los mensajes de tu banco", "Log transactions from your bank's messages"),
     "smsExplain": (
@@ -352,7 +360,7 @@ TEXTOS = {
         "With your permission, the app looks through your SMS from the last 14 days for ones that look like bank transactions. They are read on your phone and nothing is saved until you confirm it.",
     ),
     "smsAllow": ("Permitir lectura de SMS", "Allow SMS access"),
-    "smsEmpty": ("No hay mensajes bancarios por revisar.", "No bank messages to review."),
+    "smsEmpty": ("Estás al día: no hay movimientos por revisar.", "You're all caught up: nothing to review."),
     "smsUnavailable": ("La lectura de SMS no está disponible en este dispositivo.", "SMS reading isn't available on this device."),
     "smsDismiss": ("Descartar", "Dismiss"),
     "smsRegister": ("Registrar", "Log it"),

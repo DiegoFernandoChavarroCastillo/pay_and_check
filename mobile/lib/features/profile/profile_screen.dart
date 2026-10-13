@@ -183,7 +183,7 @@ class ProfileScreen extends ConsumerWidget {
           leading: const Icon(Icons.sms_outlined),
           title: Text(l.smsTitle),
           subtitle: Text(l.smsSubtitle),
-          onTap: () => _abrir(context, const SmsInboxScreen()),
+          onTap: () => _abrir(context, const NotificationsScreen()),
         ),
         titulo(l.sectionReports),
         ListTile(

@@ -8,6 +8,7 @@ import 'package:pay_and_check/core/settings.dart';
 import 'package:pay_and_check/data/api.dart';
 import 'package:pay_and_check/data/models.dart';
 import 'package:pay_and_check/data/session.dart';
+import 'package:pay_and_check/features/sms/sms_inbox_screen.dart';
 import 'package:pay_and_check/l10n/gen/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -122,12 +123,31 @@ const trendsVacioJson = {
   'variacion_vs_semana_anterior_pct': null,
 };
 
+/// SMS de mentira: los que haya en [mensajes], con el permiso ya concedido.
+class FakeSmsSource extends SmsSource {
+  final mensajes = <SmsMessage>[];
+
+  void llega(int id, String remitente, String cuerpo) => mensajes.add(
+        SmsMessage.fromMap({'id': id, 'address': remitente, 'body': cuerpo, 'date': DateTime.now().millisecondsSinceEpoch}),
+      );
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<List<SmsMessage>> read(DateTime desde) async => [...mensajes];
+}
+
 /// Backend de mentira: responde con datos fijos y anota lo que la app le envía.
 class FakeApi extends Api {
   FakeApi({this.conPresupuesto = true, this.conGastos = true}) : super(Dio());
 
   bool conPresupuesto;
   bool conGastos;
+  final sms = FakeSmsSource();
   final gastosCreados = <Json>[];
   final retosCreados = <Json>[];
   final checkinsHechos = <String>[];
@@ -237,6 +257,7 @@ Future<List<Object>> _overrides(FakeApi api, TokenStorage storage) async {
     tokenStorageProvider.overrideWithValue(storage),
     sharedPreferencesProvider.overrideWithValue(prefs),
     deviceTimezoneProvider.overrideWithValue(() async => null),
+    smsSourceProvider.overrideWithValue(api.sms),
   ];
 }
 

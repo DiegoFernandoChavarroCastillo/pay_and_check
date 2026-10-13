@@ -10,6 +10,7 @@ import '../coach/coach_screen.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../progress/progress_screen.dart';
+import '../sms/sms_inbox_screen.dart';
 import '../transactions/add_sheet.dart';
 import '../transactions/transactions_screen.dart';
 
@@ -28,8 +29,18 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
   // pestaña, para que todas conserven su estado dentro del IndexedStack.
   late final _fundido = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
 
+  // Al volver a la app puede haber llegado un SMS del banco: se revisa de nuevo.
+  late final _ciclo = AppLifecycleListener(onResume: () => ref.read(smsInboxProvider.notifier).cargar());
+
+  @override
+  void initState() {
+    super.initState();
+    _ciclo;
+  }
+
   @override
   void dispose() {
+    _ciclo.dispose();
     _fundido.dispose();
     super.dispose();
   }

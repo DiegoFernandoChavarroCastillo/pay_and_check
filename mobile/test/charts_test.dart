@@ -45,7 +45,9 @@ void main() {
     expect(find.byType(PieChart), findsOneWidget);
     expect(find.text('50% más que la semana anterior'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Ver análisis'));
+    // Al centro de la pantalla: en el borde inferior quedaría debajo de la barra flotante.
+    await Scrollable.ensureVisible(tester.element(find.text('Ver análisis')), alignment: 0.5);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Ver análisis'));
     await tester.pumpAndSettle();
 
