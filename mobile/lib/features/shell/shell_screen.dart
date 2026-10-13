@@ -14,6 +14,7 @@ import '../profile/profile_screen.dart';
 import '../progress/progress_screen.dart';
 import '../sms/sms_inbox_screen.dart';
 import '../transactions/add_sheet.dart';
+import '../transactions/manage_screens.dart';
 import '../transactions/transactions_screen.dart';
 
 /// Contenedor de las cinco pestañas principales.
@@ -90,6 +91,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
     ref.listen(gamificationProvider, (_, actual) {
       final perfil = actual.value;
       if (perfil != null && !actual.isLoading) _celebrar(perfil);
+    });
+
+    // Cada vez que cambian los gastos fijos (o se paga uno), se reprograman sus avisos.
+    ref.listen(recurringProvider, (_, actual) {
+      if (actual.hasValue && !actual.isLoading) syncFixedReminders(ref, l);
     });
 
     final tieneBudget = ref.watch(summaryProvider).value != null;

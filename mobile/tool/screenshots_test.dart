@@ -19,6 +19,7 @@ import 'package:pay_and_check/features/auth/auth_screens.dart';
 import 'package:pay_and_check/features/budget/budget_screen.dart';
 import 'package:pay_and_check/features/reports/analytics_screen.dart';
 import 'package:pay_and_check/features/reports/report_screens.dart';
+import 'package:pay_and_check/features/sms/sms_inbox_screen.dart';
 import 'package:pay_and_check/features/transactions/add_sheet.dart';
 import 'package:pay_and_check/features/transactions/expense_form_screen.dart';
 import 'package:pay_and_check/features/transactions/manage_screens.dart';
@@ -65,6 +66,28 @@ class _ApiLlena extends FakeApi {
             'comercio': comercio,
             'fecha': _dia(dias),
           }),
+      ];
+
+  @override
+  Future<List<PendingPayment>> pendingPayments() async => [
+        PendingPayment.fromJson({
+          'recurring_id': 1, 'category_id': 1, 'descripcion': 'Recibo de la luz', 'monto': '85000', 'fecha': _dia(0),
+        }),
+        PendingPayment.fromJson({
+          'recurring_id': 2, 'category_id': 1, 'descripcion': 'Arriendo', 'monto': '850000', 'fecha': _dia(2),
+        }),
+      ];
+
+  @override
+  Future<List<RecurringExpense>> recurring() async => [
+        RecurringExpense.fromJson({
+          'id': 1, 'category_id': 1, 'monto': '85000', 'descripcion': 'Recibo de la luz', 'frecuencia': 'mensual',
+          'dia_semana': 0, 'dia_mes': 12, 'activo': true, 'proximo_vencimiento': _dia(0), 'pendiente_desde': _dia(0),
+        }),
+        RecurringExpense.fromJson({
+          'id': 3, 'category_id': 1, 'monto': '25000', 'descripcion': 'Recarga de transporte', 'frecuencia': 'semanal',
+          'dia_semana': 0, 'dia_mes': null, 'activo': true, 'proximo_vencimiento': _dia(-5), 'pendiente_desde': null,
+        }),
       ];
 
   @override
@@ -253,6 +276,7 @@ void main() {
         'presupuesto': const BudgetScreen(onboarding: true),
         'categorias': const CategoriesScreen(),
         'fijos': const RecurringScreen(),
+        'notificaciones': const NotificationsScreen(),
       };
       for (final MapEntry(key: nombre, value: pantalla) in pantallas.entries) {
         await tester.pumpWidget(

@@ -16,6 +16,7 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) => _api(ref).cat
 final expensesProvider = FutureProvider<List<Expense>>((ref) => _api(ref).expenses());
 final incomesProvider = FutureProvider<List<Income>>((ref) => _api(ref).incomes());
 final recurringProvider = FutureProvider<List<RecurringExpense>>((ref) => _api(ref).recurring());
+final pendingPaymentsProvider = FutureProvider<List<PendingPayment>>((ref) => _api(ref).pendingPayments());
 final checkinsProvider = FutureProvider<List<Checkin>>((ref) => _api(ref).checkins());
 final insightsProvider = FutureProvider<List<Insight>>((ref) => _api(ref).insights());
 final goalsProvider = FutureProvider<List<Goal>>((ref) => _api(ref).goals());
@@ -38,6 +39,7 @@ void refreshData(WidgetRef ref) {
     ..invalidate(expensesProvider)
     ..invalidate(incomesProvider)
     ..invalidate(recurringProvider)
+    ..invalidate(pendingPaymentsProvider)
     ..invalidate(checkinsProvider)
     ..invalidate(goalsProvider)
     ..invalidate(challengesProvider)

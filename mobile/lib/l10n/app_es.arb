@@ -310,9 +310,59 @@
   "optionalExpense": "Opcional",
   "defaultCategory": "predeterminada",
   "defaultCategoryLimitHint": "Esta categoría viene con la app. Puedes ponerle tu propio límite de gasto.",
-  "recurringExpenses": "Gastos fijos semanales",
+  "recurringExpenses": "Gastos fijos",
   "newRecurring": "Nuevo gasto fijo",
   "weekday": "Día de la semana",
+  "frequency": "Se repite",
+  "freqWeekly": "Cada semana",
+  "freqMonthly": "Cada mes",
+  "dayOfMonth": "Día del mes",
+  "everyMonthDay": "el {n} de cada mes",
+  "@everyMonthDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "nextDue": "Próximo: {date}",
+  "@nextDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dueSince": "Por pagar desde el {date}",
+  "@dueSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "fixedReminderHint": "El día que toque te avisamos. Cuando lo marques como pagado, se descuenta de tu disponible.",
+  "paymentsDue": "Pagos por hacer",
+  "paidAction": "Ya lo pagué",
+  "skipAction": "Omitir",
+  "paymentLogged": "Pago registrado.",
+  "paymentSkipped": "Omitido. Te avisamos en el siguiente.",
+  "fixedDueTitle": "Hoy toca pagar: {name}",
+  "@fixedDueTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fixedDueBody": "{amount}. Márcalo como pagado y se descuenta de tu disponible.",
+  "@fixedDueBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "everyWeekday": "cada {day}",
   "@everyWeekday": {
     "placeholders": {
@@ -321,9 +371,9 @@
       }
     }
   },
-  "noRecurring": "Los gastos que se repiten cada semana se registran solos desde aquí.",
+  "noRecurring": "Arriendo, recibos, transporte: programa lo que pagas cada semana o cada mes y te avisamos el día que toca.",
   "deleteRecurringTitle": "¿Eliminar el gasto fijo?",
-  "deleteRecurringBody": "Los gastos ya generados se conservan.",
+  "deleteRecurringBody": "Los pagos ya registrados se conservan.",
   "sectionCoach": "Coach",
   "sectionMoney": "Tu dinero",
   "sectionReports": "Resúmenes",

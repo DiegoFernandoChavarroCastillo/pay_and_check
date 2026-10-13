@@ -292,4 +292,51 @@ void main() {
     await contenedor.read(smsInboxProvider.notifier).cargar();
     expect(contenedor.read(smsInboxProvider).mensajes, hasLength(1));
   });
+
+  testWidgets('un gasto fijo vencido aparece en notificaciones y se descuenta al marcarlo como pagado', (tester) async {
+    final api = FakeApi()
+      ..pagosPendientes.addAll([
+        {'recurring_id': 4, 'category_id': 1, 'descripcion': 'Recibo de la luz', 'monto': '150000.00', 'fecha': '2026-03-05'},
+        {'recurring_id': 5, 'category_id': 1, 'descripcion': 'Gimnasio', 'monto': '80000.00', 'fecha': '2026-03-05'},
+      ]);
+    await tester.pumpWidget(await appDePrueba(api));
+    await tester.pumpAndSettle();
+
+    // La campana cuenta los pagos que esperan.
+    expect(find.descendant(of: find.byType(Badge), matching: find.text('2')), findsOneWidget);
+    await tester.tap(find.byTooltip('Notificaciones'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pagos por hacer'), findsOneWidget);
+    expect(find.text(r'$ 150.000'), findsOneWidget);
+
+    // Este mes no hubo gimnasio: se omite sin registrar nada.
+    await tester.tap(find.text('Omitir').last);
+    await tester.pumpAndSettle();
+    expect(api.pagosOmitidos, [5]);
+    expect(find.text('Gimnasio'), findsNothing);
+
+    await tester.tap(find.text('Ya lo pagué'));
+    await tester.pumpAndSettle();
+    expect(api.pagosConfirmados, [4]);
+    expect(find.text('Recibo de la luz'), findsNothing);
+  });
+
+  testWidgets('se puede programar un gasto fijo mensual', (tester) async {
+    final api = FakeApi();
+    await tester.pumpWidget(await pantallaDePrueba(api, const RecurringScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Nuevo gasto fijo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).at(0), '850000');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Arriendo');
+    // Mensual es lo que viene elegido: arriendo y recibos son lo más común.
+    expect(find.text('Día del mes'), findsOneWidget);
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    final creado = api.fijosCreados.single;
+    expect((creado['monto'], creado['descripcion'], creado['dia_semana']), (850000.0, 'Arriendo', null));
+    expect(creado['dia_mes'], DateTime.now().day);
+  });
 }

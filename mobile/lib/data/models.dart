@@ -134,21 +134,75 @@ class Income {
   final DateTime fecha;
 }
 
+/// Gasto fijo (arriendo, recibos, transporte) que vence cada semana o cada mes.
+/// No se registra solo: el día que toca queda por pagar hasta que se confirma.
 class RecurringExpense {
   RecurringExpense.fromJson(Map<String, dynamic> j)
       : id = j['id'] as int,
         categoryId = j['category_id'] as int,
         monto = _num(j['monto']),
         descripcion = j['descripcion'] as String,
-        diaSemana = j['dia_semana'] as int,
-        activo = j['activo'] as bool;
+        mensual = j['frecuencia'] == 'mensual',
+        diaSemana = j['dia_semana'] as int? ?? 0,
+        diaMes = j['dia_mes'] as int?,
+        activo = j['activo'] as bool,
+        proximoVencimiento = _dateOrNull(j['proximo_vencimiento']),
+        pendienteDesde = _dateOrNull(j['pendiente_desde']);
 
   final int id;
   final int categoryId;
   final double monto;
   final String descripcion;
+  final bool mensual;
+
+  /// 0 = lunes … 6 = domingo. Solo aplica si es semanal.
   final int diaSemana;
+
+  /// 1 a 31; en meses más cortos vence el último día. Solo aplica si es mensual.
+  final int? diaMes;
   final bool activo;
+  final DateTime? proximoVencimiento;
+
+  /// Vencimiento que espera confirmación, si lo hay.
+  final DateTime? pendienteDesde;
+
+  /// Las próximas [n] fechas de vencimiento a partir de [desde] (ese día incluido).
+  /// Sirve para programar los recordatorios en el teléfono.
+  List<DateTime> proximosVencimientos(DateTime desde, int n) {
+    final hoy = DateTime(desde.year, desde.month, desde.day);
+    final fechas = <DateTime>[];
+    if (mensual) {
+      final dia = diaMes ?? 1;
+      for (var m = 0; fechas.length < n; m++) {
+        // El día 0 del mes siguiente es el último de este: así el 31 cae en 28, 29 o 30.
+        final ultimo = DateTime(hoy.year, hoy.month + m + 1, 0).day;
+        final vence = DateTime(hoy.year, hoy.month + m, dia > ultimo ? ultimo : dia);
+        if (!vence.isBefore(hoy)) fechas.add(vence);
+      }
+    } else {
+      final primero = hoy.add(Duration(days: (diaSemana - (hoy.weekday - 1)) % 7));
+      for (var i = 0; i < n; i++) {
+        fechas.add(DateTime(primero.year, primero.month, primero.day + 7 * i));
+      }
+    }
+    return fechas;
+  }
+}
+
+/// Un gasto fijo que ya venció y espera que la persona confirme que lo pagó.
+class PendingPayment {
+  PendingPayment.fromJson(Map<String, dynamic> j)
+      : recurringId = j['recurring_id'] as int,
+        categoryId = j['category_id'] as int,
+        descripcion = j['descripcion'] as String,
+        monto = _num(j['monto']),
+        fecha = _date(j['fecha']);
+
+  final int recurringId;
+  final int categoryId;
+  final String descripcion;
+  final double monto;
+  final DateTime fecha;
 }
 
 /// Borrador de un movimiento: lo que devuelve la IA al parsear un texto o un recibo,

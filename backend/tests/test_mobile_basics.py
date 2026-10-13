@@ -154,7 +154,7 @@ def test_source_y_comercio_del_gasto(client, auth_headers, db_engine, monkeypatc
     assert r.json()["source"] == "texto"
 
 
-def test_gasto_generado_por_recurrencia_queda_marcado(client, auth_headers, db_engine):
+def test_gasto_de_un_pago_fijo_queda_marcado_con_su_origen(client, auth_headers, db_engine):
     with Session(db_engine) as session:
         seed_default_categories(session)
     hoy = date.today()
@@ -169,7 +169,10 @@ def test_gasto_generado_por_recurrencia_queda_marcado(client, auth_headers, db_e
         headers=auth_headers,
     )
     assert r.status_code == 201, r.text
+    # Vence hoy, pero no se registra solo: espera a que la persona confirme que lo pagó.
+    assert client.get("/expenses", headers=auth_headers).json() == []
 
+    assert client.post(f"/recurring-expenses/{r.json()['id']}/pay", headers=auth_headers).status_code == 201
     gastos = client.get("/expenses", headers=auth_headers).json()
     assert [g["source"] for g in gastos] == ["recurrente"]
 

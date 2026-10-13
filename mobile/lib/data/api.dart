@@ -98,10 +98,29 @@ class Api {
 
   Future<List<RecurringExpense>> recurring() => _lista(_dio.get('/recurring-expenses'), RecurringExpense.fromJson);
 
-  Future<void> createRecurring(double monto, String descripcion, int categoryId, int diaSemana) => _dio.post(
+  /// Semanal con [diaSemana] (0 = lunes) o mensual con [diaMes] (1 a 31).
+  Future<void> createRecurring(double monto, String descripcion, int categoryId, {int? diaSemana, int? diaMes}) =>
+      _dio.post(
         '/recurring-expenses',
-        data: {'monto': monto, 'descripcion': descripcion, 'category_id': categoryId, 'dia_semana': diaSemana},
+        data: {
+          'monto': monto,
+          'descripcion': descripcion,
+          'category_id': categoryId,
+          'frecuencia': diaMes == null ? 'semanal' : 'mensual',
+          'dia_semana': ?diaSemana,
+          'dia_mes': ?diaMes,
+        },
       );
+
+  Future<List<PendingPayment>> pendingPayments() =>
+      _lista(_dio.get('/recurring-expenses/pending'), PendingPayment.fromJson);
+
+  /// "Ya lo pagué": registra el gasto y lo descuenta del disponible.
+  Future<Expense> payRecurring(int id) async =>
+      Expense.fromJson(await _json(_dio.post('/recurring-expenses/$id/pay')));
+
+  /// Salta este vencimiento sin registrar gasto.
+  Future<void> skipRecurring(int id) => _dio.post('/recurring-expenses/$id/skip');
 
   Future<void> setRecurringActive(int id, bool activo) =>
       _dio.patch('/recurring-expenses/$id', data: {'activo': activo});

@@ -26,7 +26,6 @@ from app.services.groq_client import (
     parse_expense_text,
     parse_receipt_text,
 )
-from app.services.recurring_expenses import sync_recurring_expenses
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -85,7 +84,6 @@ def list_expenses(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> list[Expense]:
-    sync_recurring_expenses(session, current_user.id, today_for(current_user))
     query = select(Expense).where(Expense.user_id == current_user.id)
     if category_id is not None:
         query = query.where(Expense.category_id == category_id)

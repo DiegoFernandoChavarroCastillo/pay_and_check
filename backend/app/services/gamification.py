@@ -210,15 +210,11 @@ def _t(idioma: str, clave: str, **kwargs) -> str:
 
 
 def dias_con_gasto(session: Session, user_id: int, today: date) -> set[date]:
-    """Días con al menos un gasto registrado por el usuario. Los generados por
-    una recurrencia no cuentan: no hubo acción del usuario ese día."""
+    """Días con al menos un gasto registrado por el usuario. Los pagos de gastos fijos cuentan: no se
+    registran solos, la persona los confirma."""
     return set(
         session.exec(
-            select(Expense.fecha)
-            .where(Expense.user_id == user_id)
-            .where(Expense.source != "recurrente")
-            .where(Expense.fecha <= today)
-            .distinct()
+            select(Expense.fecha).where(Expense.user_id == user_id).where(Expense.fecha <= today).distinct()
         ).all()
     )
 

@@ -127,7 +127,9 @@ class NotificationsBell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pendientes = ref.watch(smsInboxProvider.select((s) => s.mensajes.length));
+    // Lo que espera a la persona: SMS del banco por revisar y gastos fijos por pagar.
+    final pendientes = ref.watch(smsInboxProvider.select((s) => s.mensajes.length)) +
+        (ref.watch(pendingPaymentsProvider).value?.length ?? 0);
     return IconButton(
       tooltip: context.l.notifications,
       onPressed: () => Navigator.push(
@@ -157,30 +159,43 @@ class NotificationsScreen extends ConsumerWidget {
     final bandeja = ref.watch(smsInboxProvider);
     final control = ref.read(smsInboxProvider.notifier);
 
+    final pagos = ref.watch(pendingPaymentsProvider).value ?? const <PendingPayment>[];
+    final titulo = Theme.of(context).textTheme.titleMedium;
+
     final Widget cuerpo;
-    if (bandeja.error != null) {
-      cuerpo = Center(child: EmptyView(icon: Icons.sms_failed_outlined, text: l.smsUnavailable));
-    } else if (bandeja.permiso == null) {
-      cuerpo = const Center(child: CircularProgressIndicator());
-    } else if (bandeja.permiso == false) {
-      cuerpo = Center(
-        child: EmptyView(
-          icon: Icons.sms_outlined,
-          text: l.smsExplain,
-          action: FilledButton(onPressed: () => control.cargar(pedirPermiso: true), child: Text(l.smsAllow)),
-        ),
-      );
-    } else if (bandeja.mensajes.isEmpty) {
-      cuerpo = Center(child: EmptyView(icon: Icons.mark_email_read_outlined, text: l.smsEmpty));
+    if (pagos.isEmpty && bandeja.mensajes.isEmpty) {
+      // Nada por revisar: se explica el estado de los SMS (sin permiso, no disponible o al día).
+      if (bandeja.permiso == false) {
+        cuerpo = Center(
+          child: EmptyView(
+            icon: Icons.sms_outlined,
+            text: l.smsExplain,
+            action: FilledButton(onPressed: () => control.cargar(pedirPermiso: true), child: Text(l.smsAllow)),
+          ),
+        );
+      } else if (bandeja.permiso == null && bandeja.error == null) {
+        cuerpo = const Center(child: CircularProgressIndicator());
+      } else {
+        cuerpo = Center(child: EmptyView(icon: Icons.mark_email_read_outlined, text: l.smsEmpty));
+      }
     } else {
       cuerpo = ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 12),
-            child: Text(l.notifDetected, style: Theme.of(context).textTheme.titleMedium),
-          ),
-          for (final m in bandeja.mensajes) _SmsCard(key: ValueKey(m.id), mensaje: m),
+          if (pagos.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 12),
+              child: Text(l.paymentsDue, style: titulo),
+            ),
+            for (final p in pagos) _PaymentCard(key: ValueKey('pago-${p.recurringId}-${p.fecha}'), pago: p),
+          ],
+          if (bandeja.mensajes.isNotEmpty) ...[
+            Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 12, top: pagos.isEmpty ? 0 : 8),
+              child: Text(l.notifDetected, style: titulo),
+            ),
+            for (final m in bandeja.mensajes) _SmsCard(key: ValueKey(m.id), mensaje: m),
+          ],
         ],
       );
     }
@@ -188,9 +203,110 @@ class NotificationsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l.notifications),
-        actions: [IconButton(tooltip: l.retry, icon: const Icon(Icons.refresh), onPressed: control.cargar)],
+        actions: [
+          IconButton(
+            tooltip: l.retry,
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.invalidate(pendingPaymentsProvider);
+              control.cargar();
+            },
+          ),
+        ],
       ),
       body: cuerpo,
+    );
+  }
+}
+
+/// Un gasto fijo que ya venció. "Ya lo pagué" lo registra como gasto y lo descuenta del disponible;
+/// "Omitir" lo salta hasta el siguiente vencimiento.
+class _PaymentCard extends ConsumerStatefulWidget {
+  const _PaymentCard({super.key, required this.pago});
+
+  final PendingPayment pago;
+
+  @override
+  ConsumerState<_PaymentCard> createState() => _PaymentCardState();
+}
+
+class _PaymentCardState extends ConsumerState<_PaymentCard> {
+  bool _busy = false;
+
+  Future<void> _resolver({required bool pagado}) async {
+    final l = context.l;
+    final api = ref.read(apiProvider);
+    setState(() => _busy = true);
+    Expense? gasto;
+    final ok = await guarded(context, () async {
+      if (pagado) {
+        gasto = await api.payRecurring(widget.pago.recurringId);
+      } else {
+        await api.skipRecurring(widget.pago.recurringId);
+      }
+    });
+    if (!mounted) return;
+    if (!ok) return setState(() => _busy = false);
+
+    if (pagado) unawaited(HapticFeedback.lightImpact());
+    refreshData(ref);
+    showSnack(pagado ? l.paymentLogged : l.paymentSkipped);
+    final nuevo = gasto;
+    if (nuevo != null) unawaited(api.reaction(nuevo.id).then(showSnack, onError: (_) {}));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    final theme = Theme.of(context);
+    final acento = context.tokens.goals;
+    final p = widget.pago;
+    return SectionCard(
+      color: acento.container,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconBadge(icon: Icons.event_available_outlined, color: acento.color, foreground: acento.container),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.descripcion, style: theme.textTheme.titleSmall?.copyWith(color: acento.onContainer)),
+                    Text(
+                      l.dueSince(shortDate(context, p.fecha)),
+                      style: theme.textTheme.bodySmall?.copyWith(color: acento.onContainer),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                money(p.monto),
+                style: theme.textTheme.titleMedium?.copyWith(color: acento.onContainer, fontFeatures: kTabular),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_busy)
+            const Shimmer(child: SkeletonBox(height: 48, radius: AppTokens.radiusField))
+          else
+            Align(
+              alignment: Alignment.centerRight,
+              child: OverflowBar(
+                alignment: MainAxisAlignment.end,
+                overflowAlignment: OverflowBarAlignment.end,
+                spacing: 8,
+                overflowSpacing: 4,
+                children: [
+                  TextButton(onPressed: () => _resolver(pagado: false), child: Text(l.skipAction)),
+                  FilledButton(onPressed: () => _resolver(pagado: true), child: Text(l.paidAction)),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

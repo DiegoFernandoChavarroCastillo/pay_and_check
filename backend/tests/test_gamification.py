@@ -117,17 +117,21 @@ def test_puntos_por_consistencia_no_por_monto_y_sin_duplicar(
     assert desbloqueadas == {"primer_registro", "racha_3", "primer_checkin"}
 
 
-def test_gastos_recurrentes_no_dan_puntos_de_registro(client, auth_headers, categorias, presupuesto, fijar_hoy):
+def test_un_gasto_fijo_da_puntos_solo_cuando_se_confirma(client, auth_headers, categorias, presupuesto, fijar_hoy):
     fijar_hoy(LUNES)
     presupuesto(date(2026, 2, 1), date(2026, 4, 30))
-    client.post(
+    fijo = client.post(
         "/recurring-expenses",
         json={"monto": "12000", "category_id": 2, "descripcion": "bus", "dia_semana": 0,
               "fecha_inicio": "2026-03-09"},
         headers=auth_headers,
-    )
-    assert len(client.get("/expenses", headers=auth_headers).json()) == 1
+    ).json()
+    # Programarlo no es registrar: sin confirmar el pago no hay gasto ni puntos.
+    assert client.get("/expenses", headers=auth_headers).json() == []
     assert _perfil(client, auth_headers)["puntos"] == 0
+
+    client.post(f"/recurring-expenses/{fijo['id']}/pay", headers=auth_headers)
+    assert _perfil(client, auth_headers)["puntos"] == 5
 
 
 def test_dos_sincronizaciones_simultaneas_no_rompen_ni_duplican(

@@ -206,6 +206,41 @@ class FakeApi extends Api {
   @override
   Future<List<RecurringExpense>> recurring() async => [];
 
+  /// Gastos fijos por pagar que "tiene" el backend, y lo que la app hizo con ellos.
+  final pagosPendientes = <Json>[];
+  final pagosConfirmados = <int>[];
+  final pagosOmitidos = <int>[];
+  final fijosCreados = <Json>[];
+
+  @override
+  Future<List<PendingPayment>> pendingPayments() async => pagosPendientes.map(PendingPayment.fromJson).toList();
+
+  @override
+  Future<Expense> payRecurring(int id) async {
+    pagosConfirmados.add(id);
+    final pago = pagosPendientes.firstWhere((p) => p['recurring_id'] == id);
+    pagosPendientes.remove(pago);
+    return Expense.fromJson({
+      'id': 900 + id,
+      'category_id': pago['category_id'],
+      'monto': pago['monto'],
+      'descripcion': pago['descripcion'],
+      'source': 'recurrente',
+      'comercio': null,
+      'fecha': pago['fecha'],
+    });
+  }
+
+  @override
+  Future<void> skipRecurring(int id) async {
+    pagosOmitidos.add(id);
+    pagosPendientes.removeWhere((p) => p['recurring_id'] == id);
+  }
+
+  @override
+  Future<void> createRecurring(double monto, String descripcion, int categoryId, {int? diaSemana, int? diaMes}) async =>
+      fijosCreados.add({'monto': monto, 'descripcion': descripcion, 'dia_semana': diaSemana, 'dia_mes': diaMes});
+
   @override
   Future<List<Checkin>> checkins() async => [];
 

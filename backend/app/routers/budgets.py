@@ -18,7 +18,6 @@ from app.schemas.budget import (
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
 from app.services.category_lookup import limite_de, limites_propios
-from app.services.recurring_expenses import sync_recurring_expenses
 
 router = APIRouter(prefix="/budgets", tags=["budgets"])
 
@@ -87,7 +86,6 @@ def get_active_budget_summary(
     current_user: User = Depends(get_current_user),
 ) -> BudgetSummaryResponse:
     today = today_for(current_user)
-    sync_recurring_expenses(session, current_user.id, today)
     budget = get_active_budget_for_user(session, current_user.id, today)
     if budget is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No hay un presupuesto activo.")
