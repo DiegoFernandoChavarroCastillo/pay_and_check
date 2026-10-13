@@ -63,7 +63,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
 
     final tieneBudget = ref.watch(summaryProvider).value != null;
     return Scaffold(
+      // El contenido pasa por detrás de la barra inferior: así flota de verdad.
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: FadeTransition(
           opacity: CurvedAnimation(parent: _fundido, curve: kMotionCurve),
           child: IndexedStack(

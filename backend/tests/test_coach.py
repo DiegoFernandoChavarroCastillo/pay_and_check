@@ -7,6 +7,7 @@ import pytest
 
 import app.routers.expenses as expenses_router
 import app.services.coach as coach_service
+from app.core.time import fmt_fecha
 from app.services.groq_client import ExpenseParseError, GroqServiceError, _validar_gasto
 from app.services.prompts import build_coach_rules
 
@@ -61,6 +62,12 @@ def test_parse_receipt_ilegible_da_422_y_groq_caido_502(client, auth_headers, ca
     monkeypatch.setattr(expenses_router, "parse_receipt_text", _caido)
     r = client.post("/expenses/parse-receipt", json={"texto_ocr": "TOTAL 5000"}, headers=auth_headers)
     assert r.status_code == 502
+
+
+def test_las_fechas_de_los_consejos_van_en_palabras():
+    assert fmt_fecha(date(2026, 10, 13)) == "13 de octubre"
+    assert fmt_fecha(date(2026, 10, 13), "en") == "October 13"
+    assert fmt_fecha(date(2026, 3, 1), con_anio=True) == "1 de marzo de 2026"
 
 
 def test_validar_gasto_no_inventa_datos():

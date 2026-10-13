@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from sqlmodel import Session, func, select
 
+from app.core.time import fmt_fecha
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.expense import Expense
@@ -82,7 +83,7 @@ def build_weekly_summary(
 def summary_to_text(summary: WeeklySummary) -> str:
     """Texto compacto y agregado para pasarle a la IA — nunca transacciones individuales."""
     lineas = [
-        f"Semana: {summary.semana_inicio.isoformat()} a {summary.semana_fin.isoformat()}",
+        f"Semana: {fmt_fecha(summary.semana_inicio)} a {fmt_fecha(summary.semana_fin)}",
         f"Gasto total de la semana: {summary.gasto_total_semana}",
         f"Ritmo esperado semanal del presupuesto: {summary.ritmo_esperado_semanal}",
         f"Diferencia (gasto de la semana - ritmo esperado): {summary.diferencia_vs_ritmo}",

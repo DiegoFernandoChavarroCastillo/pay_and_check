@@ -15,6 +15,10 @@ extension L10nX on BuildContext {
   AppLocalizations get l => AppLocalizations.of(this)!;
 }
 
+/// Espacio que ocupa abajo la barra de navegación flotante. El contenido de
+/// las pestañas pasa por detrás de ella, así que cada lista lo suma a su margen.
+double bottomInset(BuildContext context) => MediaQuery.paddingOf(context).bottom;
+
 void showSnack(String texto) {
   messengerKey.currentState
     ?..hideCurrentSnackBar()

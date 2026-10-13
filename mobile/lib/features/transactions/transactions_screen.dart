@@ -145,7 +145,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         final dias = porDia.keys.toList();
         final colores = categoryColors(nombres.values, Theme.of(context).brightness);
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 96 + bottomInset(context)),
           itemCount: dias.length,
           itemBuilder: (context, i) {
             final delDia = porDia[dias[i]]!;
@@ -188,7 +188,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         }
         final acento = context.tokens.income;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 96 + bottomInset(context)),
           children: [
             BentoTile(
               padding: const EdgeInsets.symmetric(vertical: 8),

@@ -9,6 +9,7 @@ from datetime import date
 
 from sqlmodel import Session, select
 
+from app.core.time import fmt_fecha
 from app.models.category import Category
 from app.models.coach import CoachMessage
 from app.models.expense import Expense
@@ -76,7 +77,9 @@ def rompe_guardrails(texto: str) -> str | None:
 
 def contexto_financiero(session: Session, user: User, today: date, patrones: list[Pattern] | None = None) -> str:
     """Situación del usuario en texto compacto y agregado para la IA."""
-    lineas = [f"Fecha de hoy: {today.isoformat()}"]
+    # Fechas en palabras: el modelo las repite tal cual en lo que redacta.
+    idioma = user.idioma
+    lineas = [f"Fecha de hoy: {fmt_fecha(today, idioma, con_anio=True)}"]
 
     budget = get_active_budget_for_user(session, user.id, today)
     if budget is None:
@@ -84,7 +87,8 @@ def contexto_financiero(session: Session, user: User, today: date, patrones: lis
     else:
         s = summary_for(session, budget, today)
         lineas += [
-            f"Presupuesto del periodo ({budget.fecha_inicio.isoformat()} a {budget.fecha_fin.isoformat()}): "
+            f"Presupuesto del periodo ({fmt_fecha(budget.fecha_inicio, idioma, con_anio=True)} a "
+            f"{fmt_fecha(budget.fecha_fin, idioma, con_anio=True)}): "
             f"{fmt(budget.monto_total)}",
             f"Gastado: {fmt(s.gastado_total)}. Ingresos extra: {fmt(s.ingresos_total)}. "
             f"Apartado para metas: {fmt(s.apartado_total)}.",

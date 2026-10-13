@@ -78,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
     final scheme = theme.colorScheme;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + bottomInset(context)),
       children: _agrupar([
         BentoTile(
           padding: const EdgeInsets.all(20),

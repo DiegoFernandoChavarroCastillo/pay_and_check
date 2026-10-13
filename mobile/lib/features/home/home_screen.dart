@@ -34,7 +34,7 @@ class HomeScreen extends ConsumerWidget {
         await ref.read(summaryProvider.future);
       },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + bottomInset(context)),
         children: [
           Row(
             children: [

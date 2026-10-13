@@ -120,7 +120,12 @@ class _LevelHeader extends StatelessWidget {
         const SizedBox(height: AppTokens.gap),
         BentoRow(
           children: [
-            _Metric(label: l.metricSavings, value: _pct(perfil.ratioAhorro), tooltip: l.metricSavingsHint),
+            // Gastar más de lo que entró no se muestra como un porcentaje negativo enorme: no hubo ahorro, 0%.
+            _Metric(
+              label: l.metricSavings,
+              value: _pct(perfil.ratioAhorro?.clamp(0, 1).toDouble()),
+              tooltip: l.metricSavingsHint,
+            ),
             _Metric(label: l.metricConsistency, value: _pct(perfil.consistencia), tooltip: l.metricConsistencyHint),
             _Metric(
               label: l.metricImprovement,
@@ -184,7 +189,7 @@ class _Goals extends ConsumerWidget {
       value: ref.watch(goalsProvider),
       onRetry: () => ref.invalidate(goalsProvider),
       builder: (metas) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset(context)),
         children: [
           if (metas.isEmpty) EmptyView(icon: Icons.flag_outlined, text: l.noGoals),
           for (final meta in metas) _GoalCard(key: ValueKey(meta.id), meta: meta),
@@ -335,7 +340,7 @@ class _Challenges extends ConsumerWidget {
         final activos = retos.where((r) => r.activo).toList();
         final pasados = retos.where((r) => !r.activo).toList();
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset(context)),
           children: [
             if (activos.isEmpty && sugerencias.isEmpty) EmptyView(icon: Icons.emoji_events_outlined, text: l.noChallenges),
             for (final reto in activos) _ChallengeCard(reto: reto),
@@ -508,7 +513,7 @@ class _Badges extends ConsumerWidget {
     final insignias = ref.watch(gamificationProvider).value?.insignias ?? const <BadgeInfo>[];
     final obtenidas = insignias.where((i) => i.desbloqueada).length;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset(context)),
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 12),

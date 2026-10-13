@@ -69,7 +69,7 @@ class _Insights extends ConsumerWidget {
         value: ref.watch(insightsProvider),
         onRetry: () => ref.invalidate(insightsProvider),
         builder: (insights) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset(context)),
           children: [
             if (insights.isEmpty)
               EmptyView(icon: Icons.auto_awesome_outlined, text: l.noInsights)
@@ -208,7 +208,8 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
                 ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 12, 12),
+          // El campo queda por encima de la barra flotante (o del teclado, si está abierto).
+          padding: EdgeInsets.fromLTRB(16, 4, 12, 12 + bottomInset(context)),
           child: Row(
             children: [
               Expanded(

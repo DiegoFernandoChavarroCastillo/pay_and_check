@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from sqlmodel import Session, func, or_, select
 
+from app.core.time import fmt_fecha
 from app.models.category import Category
 from app.models.coach import ANIMOS_BAJOS, EmotionalCheckin
 from app.models.expense import Expense
@@ -270,8 +271,8 @@ def _del_presupuesto(idioma, session: Session, user: User, today: date) -> list[
                 descripcion=_t(
                     idioma,
                     "en_riesgo",
-                    fecha=summary.fecha_proyectada_agotamiento.isoformat(),
-                    fin=budget.fecha_fin.isoformat(),
+                    fecha=fmt_fecha(summary.fecha_proyectada_agotamiento, idioma),
+                    fin=fmt_fecha(budget.fecha_fin, idioma),
                 ),
                 datos={"fecha_proyectada_agotamiento": summary.fecha_proyectada_agotamiento.isoformat()},
                 accion={
