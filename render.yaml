@@ -6,6 +6,8 @@ services:
     name: pay-and-check-api
     runtime: docker
     plan: free
+    # Misma zona que la base de Neon (AWS us-east-2, Ohio): cada petición hace varias consultas.
+    region: ohio
     rootDir: backend
     dockerfilePath: ./Dockerfile
     # Migra y siembra las categorías por defecto en cada arranque (ambos pasos
