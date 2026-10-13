@@ -43,6 +43,25 @@ Los tests no necesitan backend ni teléfono: `test/fakes.dart` trae un backend d
 Si el PC anda corto de memoria y `flutter test` falla con "Connection closed before test suite loaded", usa
 `flutter test -j 1`.
 
+## Diseño
+
+La app usa un estilo de mosaico ("bento"): tarjetas de distinto tamaño con esquinas amplias. Las piezas
+comunes están en `lib/core/`:
+
+- `theme.dart`: colores, tipografía (Plus Jakarta Sans, en `assets/fonts/`) y `AppTokens`, con el acento de
+  cada zona (`context.tokens.coach`, `.goals`, `.challenges`, `.income`).
+- `widgets.dart`: `BentoTile`, `BentoRow` (se apila sola en pantallas angostas o con letra grande),
+  `ProgressRing`, `PillTabs`.
+- `motion.dart`: animaciones. Todas pasan por `motion()` para respetar "quitar animaciones" del teléfono.
+
+Para ver todas las pantallas sin teléfono, en claro, oscuro y con letra grande:
+
+```bash
+flutter test tool/screenshots_test.dart   # deja los PNG en build/screenshots/
+```
+
+Usa datos de mentira; los emojis salen como recuadros porque el entorno de pruebas no trae esa fuente.
+
 ## Textos y traducciones
 
 Todos los textos (español e inglés) viven en una sola tabla en `tool/gen_arb.py`. Tras cambiarla:

@@ -80,7 +80,8 @@ void main() {
     await tester.pumpWidget(await pantallaDePrueba(FakeApi(), const AnalyticsScreen()));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Días'));
+    // La tendencia queda más abajo que la primera pantalla: la lista la construye al llegar.
+    await tester.scrollUntilVisible(find.text('Días'), 200, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     LineChart linea() => tester.widget<LineChart>(find.byType(LineChart));
     expect(linea().data.lineBarsData.single.spots.map((s) => s.y), [0, 40000, 60000]);

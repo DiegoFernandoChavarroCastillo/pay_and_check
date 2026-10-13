@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pay_and_check/app.dart';
+import 'package:pay_and_check/core/theme.dart';
 import 'package:pay_and_check/core/api/api_client.dart';
 import 'package:pay_and_check/core/settings.dart';
 import 'package:pay_and_check/data/api.dart';
@@ -243,6 +244,8 @@ Future<Widget> pantallaDePrueba(FakeApi api, Widget pantalla, {bool sinAnimacion
     retry: (_, _) => null,
     overrides: (await _overrides(api, storage)).cast(),
     child: MaterialApp(
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
       locale: const Locale('es'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,

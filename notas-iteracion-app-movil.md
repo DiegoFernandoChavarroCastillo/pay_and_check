@@ -217,3 +217,47 @@ para levantarlo junto con el build): falta la revisión visual.
   "Connection closed before test suite loaded"). No es un fallo del código: `flutter test -j 1` pasa.
 - La tarjeta "Esta semana" empuja el check-in por debajo de la primera pantalla en teléfonos bajos. Si
   molesta, basta con intercambiar el orden de las dos tarjetas en `home_screen.dart`.
+
+## 8. Rediseño "Bento suave"
+
+Plan aprobado el 12 de octubre de 2026. Estado: `flutter analyze` limpio y 33 tests en verde. **Revisado solo
+con capturas generadas** (`flutter test tool/screenshots_test.dart`), no en el teléfono: estaba bloqueado con
+PIN durante la sesión. Falta ver en un dispositivo real las animaciones, la vibración y los emojis.
+
+### Qué cambió
+
+- **Sistema de diseño** en `mobile/lib/core/`: `AppTokens` (acentos por zona: coach lavanda, metas ámbar,
+  retos coral, ingresos azul), tipografía Plus Jakarta Sans empaquetada, y las piezas `BentoTile`, `BentoRow`,
+  `ProgressRing`, `PillTabs`, `IconBadge`. Animaciones nuevas en `motion.dart`: `Pressable`, `AnimatedCount`,
+  `Shimmer`, `ConfettiBurst`, `Breathing`.
+- **Inicio** en mosaico: disponible por día con anillo de días, gastado/ingresos/apartado, semana, check-in,
+  coach, meta y reto.
+- **Coach con presencia**: `CoachOrb`, una forma que respira y toma el color del ánimo del check-in de hoy.
+  Aparece en el inicio, el chat, el login, la confirmación de un gasto y los reportes.
+- **Navegación** flotante, hoja de registrar en mosaico, micrófono con ondas al dictar.
+- **Progreso**: anillo de nivel, metas con anillo, retos por pasos, insignias como medallones.
+- **Movimientos** agrupados por día con su total; formulario con el monto como protagonista y categorías
+  en chips de color.
+- **Resumen mensual** con un color por página e indicador de puntos.
+- Sin dependencias nuevas de código: solo la fuente (licencia OFL, en `mobile/assets/fonts/`).
+
+### Decisiones
+
+- **El bento se usa en pantallas de resumen**, no en listas ni formularios.
+- **El check-in y "Esta semana" ocupan el ancho completo**, no media tarjeta como en el boceto: cinco emojis
+  con su etiqueta no caben en media pantalla con objetivos táctiles de 48 px, y la dona necesita su leyenda.
+- **La dona completa va encima de su leyenda** (antes al lado): con la fuente nueva los montos no cabían.
+- **La cabecera de Progreso se desplaza con el contenido**: fija, no cabía con la letra del teléfono al máximo.
+- **Las animaciones en bucle se apagan en las pruebas** (`ambientMotionEnabled`, en
+  `test/flutter_test_config.dart`): con ellas `pumpAndSettle` no termina.
+- **La barra inferior y las pestañas acotan el tamaño de letra** (1.15× y 1.3×); el resto de la app sigue el
+  ajuste del teléfono sin límite.
+- **El confeti de una meta cumplida solo sale si se cumple durante la sesión**, no cada vez que se abre la
+  pestaña.
+
+### Pendiente
+
+- Revisión visual en teléfono real, en especial la fluidez del coach y del confeti en equipos modestos.
+- El selector de categoría del formulario muestra todas las categorías como chips; con muchas categorías
+  propias puede ocupar varias filas.
+
