@@ -114,7 +114,7 @@ sequenceDiagram
         App->>API: POST /coach/reaction {expense_id}
         API->>Co: reaccion_a_gasto (cifras de budget_totals)
         Co->>LLM: redacta mensaje
-        Co->>Co: guardrails; si falla → texto de respaldo
+        Co->>Co: guardrails (si falla, texto de respaldo)
         API-->>App: mensaje del coach
     and Refresco de datos
         App->>API: GET /budgets/active/summary

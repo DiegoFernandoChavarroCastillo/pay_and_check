@@ -6,6 +6,7 @@ App de finanzas personales para Android con un coach financiero. Un monorepo con
 | Documento | Contenido |
 |---|---|
 | [architecture.md](architecture.md) | Visión general, tech stack, capas, **Diagrama 1** (componentes) y **Diagrama 2** (flujo end-to-end) |
+| [use-cases.md](use-cases.md) | **Diagrama de contexto** y **diagrama de casos de uso**, con trazabilidad a endpoints |
 | [data-model.md](data-model.md) | **Diagrama 3** (ER), reglas de integridad y migraciones |
 | [api.md](api.md) | Endpoints HTTP por router, autenticación y errores |
 | [setup.md](setup.md) | Puesta en marcha local, variables de entorno, tests, CI y despliegue |
