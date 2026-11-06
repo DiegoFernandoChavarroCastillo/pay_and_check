@@ -5,10 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../core/format.dart';
+import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
+import '../coach/coach_widgets.dart';
 import 'expense_form_screen.dart';
 
 void _abrir(BuildContext context, Widget pantalla) =>
@@ -20,50 +23,124 @@ void showAddSheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (sheet) {
       void elegir(VoidCallback accion) {
         Navigator.pop(sheet);
         accion();
       }
 
+      final scheme = Theme.of(sheet).colorScheme;
+      final tokens = sheet.tokens;
+      // Mosaico: lo más rápido (decirlo o escribirlo) ocupa la tarjeta grande.
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.mic_none),
-              title: Text(l.addByText),
-              subtitle: Text(l.addByTextHint),
-              onTap: () => elegir(() => _abrir(context, const QuickAddScreen())),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(l.addByReceipt),
-              subtitle: Text(l.addByReceiptHint),
-              onTap: () => elegir(() => _abrir(context, const ReceiptScanScreen(source: ImageSource.camera))),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l.addByGallery),
-              onTap: () => elegir(() => _abrir(context, const ReceiptScanScreen(source: ImageSource.gallery))),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: Text(l.addManual),
-              onTap: () => elegir(() => _abrir(context, const ExpenseFormScreen())),
-            ),
-            ListTile(
-              leading: const Icon(Icons.south_west),
-              title: Text(l.addIncome),
-              subtitle: Text(l.addIncomeHint),
-              onTap: () => elegir(() => _abrir(context, const IncomeFormScreen())),
-            ),
-            const SizedBox(height: 8),
-          ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: staggered([
+              _AddTile(
+                icon: Icons.mic_none,
+                title: l.addByText,
+                subtitle: l.addByTextHint,
+                color: scheme.primaryContainer,
+                foreground: scheme.onPrimaryContainer,
+                large: true,
+                onTap: () => elegir(() => _abrir(context, const QuickAddScreen())),
+              ),
+              BentoRow(
+                children: [
+                  _AddTile(
+                    icon: Icons.photo_camera_outlined,
+                    title: l.addByReceipt,
+                    subtitle: l.addByReceiptHint,
+                    color: tokens.coach.container,
+                    foreground: tokens.coach.onContainer,
+                    onTap: () => elegir(() => _abrir(context, const ReceiptScanScreen(source: ImageSource.camera))),
+                  ),
+                  _AddTile(
+                    icon: Icons.photo_library_outlined,
+                    title: l.addByGallery,
+                    color: tokens.challenges.container,
+                    foreground: tokens.challenges.onContainer,
+                    onTap: () => elegir(() => _abrir(context, const ReceiptScanScreen(source: ImageSource.gallery))),
+                  ),
+                ],
+              ),
+              BentoRow(
+                children: [
+                  _AddTile(
+                    icon: Icons.edit_outlined,
+                    title: l.addManual,
+                    onTap: () => elegir(() => _abrir(context, const ExpenseFormScreen())),
+                  ),
+                  _AddTile(
+                    icon: Icons.south_west,
+                    title: l.addIncome,
+                    subtitle: l.addIncomeHint,
+                    color: tokens.income.container,
+                    foreground: tokens.income.onContainer,
+                    onTap: () => elegir(() => _abrir(context, const IncomeFormScreen())),
+                  ),
+                ],
+              ),
+            ].expand((t) => [t, const SizedBox(height: AppTokens.gap)]).toList()..removeLast()),
+          ),
         ),
       );
     },
   );
+}
+
+/// Una forma de registrar, como tarjeta del mosaico.
+class _AddTile extends StatelessWidget {
+  const _AddTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.color,
+    this.foreground,
+    this.large = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Color? color;
+  final Color? foreground;
+  final bool large;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tinta = foreground ?? theme.colorScheme.onSurface;
+    final icono = Icon(icon, size: large ? 32 : 26, color: tinta);
+    final textos = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: (large ? theme.textTheme.titleLarge : theme.textTheme.titleSmall)?.copyWith(color: tinta)),
+        if (subtitle != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall?.copyWith(color: tinta.withValues(alpha: 0.8)),
+            ),
+          ),
+      ],
+    );
+    return BentoTile(
+      color: color,
+      onTap: onTap,
+      padding: EdgeInsets.all(large ? 20 : 16),
+      child: large
+          ? Row(children: [icono, const SizedBox(width: 16), Expanded(child: textos)])
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [icono, const SizedBox(height: 12), textos]),
+    );
+  }
 }
 
 /// Registro por frase libre, escrita o dictada: "me compré un helado de 5000".
@@ -141,10 +218,15 @@ class _QuickAddScreenState extends ConsumerState<QuickAddScreen> {
     await guarded(context, () async => draft = await ref.read(apiProvider).parseText(texto, source: source));
     if (!mounted) return;
     setState(() => _busy = false);
-    if (draft != null) {
+    final borrador = draft;
+    if (borrador != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute<void>(builder: (_) => ExpenseFormScreen(draft: draft)),
+        MaterialPageRoute<void>(
+          // "Me pagaron…" no es un gasto: se confirma en el formulario de ingresos.
+          builder: (_) =>
+              borrador.esIngreso ? IncomeFormScreen(draft: borrador) : ExpenseFormScreen(draft: borrador),
+        ),
       );
     }
   }
@@ -171,13 +253,18 @@ class _QuickAddScreenState extends ConsumerState<QuickAddScreen> {
           Center(
             child: Column(
               children: [
-                IconButton.filled(
-                  iconSize: 36,
-                  padding: const EdgeInsets.all(20),
-                  style: IconButton.styleFrom(backgroundColor: _escuchando ? scheme.tertiary : scheme.primary),
-                  tooltip: _escuchando ? l.voiceStop : l.voiceStart,
-                  onPressed: _busy ? null : _dictar,
-                  icon: Icon(_escuchando ? Icons.stop : Icons.mic),
+                // Mientras escucha, el micrófono emite ondas.
+                _Ripple(
+                  active: _escuchando,
+                  color: scheme.tertiary,
+                  child: IconButton.filled(
+                    iconSize: 36,
+                    padding: const EdgeInsets.all(20),
+                    style: IconButton.styleFrom(backgroundColor: _escuchando ? scheme.tertiary : scheme.primary),
+                    tooltip: _escuchando ? l.voiceStop : l.voiceStart,
+                    onPressed: _busy ? null : _dictar,
+                    icon: Icon(_escuchando ? Icons.stop : Icons.mic),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(_escuchando ? l.voiceListening : l.voiceStart),
@@ -185,7 +272,109 @@ class _QuickAddScreenState extends ConsumerState<QuickAddScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          // Mientras la IA interpreta, se asoma la forma del gasto que va a proponer.
+          AnimatedSize(
+            duration: motion(context),
+            curve: kMotionCurve,
+            alignment: Alignment.topCenter,
+            child: _busy
+                ? const Padding(
+                    padding: EdgeInsets.only(bottom: 24),
+                    child: Shimmer(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonBox(height: 28, width: 140),
+                          SizedBox(height: 10),
+                          SkeletonBox(height: 16),
+                          SizedBox(height: 8),
+                          SkeletonBox(height: 16, width: 200),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
           SaveButton(saving: _busy, onPressed: _analizar, label: l.analyze),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ondas que salen de un botón mientras está activo (el micrófono escuchando).
+class _Ripple extends StatefulWidget {
+  const _Ripple({required this.active, required this.color, required this.child});
+
+  final bool active;
+  final Color color;
+  final Widget child;
+
+  @override
+  State<_Ripple> createState() => _RippleState();
+}
+
+class _RippleState extends State<_Ripple> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+
+  void _sincronizar() {
+    if (widget.active && ambient(context)) {
+      if (!_c.isAnimating) _c.repeat();
+    } else {
+      _c.stop();
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sincronizar();
+  }
+
+  @override
+  void didUpdateWidget(_Ripple old) {
+    super.didUpdateWidget(old);
+    _sincronizar();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 140,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _c,
+            builder: (context, _) => Stack(
+              alignment: Alignment.center,
+              children: [
+                for (final desfase in const [0.0, 0.5])
+                  if (widget.active && _c.isAnimating)
+                    Builder(
+                      builder: (context) {
+                        final t = (_c.value + desfase) % 1;
+                        return Container(
+                          width: 76 + 64 * t,
+                          height: 76 + 64 * t,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.color.withValues(alpha: 0.28 * (1 - t)),
+                          ),
+                        );
+                      },
+                    ),
+              ],
+            ),
+          ),
+          widget.child,
         ],
       ),
     );
@@ -280,7 +469,10 @@ class _ReceiptScanScreenState extends ConsumerState<ReceiptScanScreen> {
 }
 
 class IncomeFormScreen extends ConsumerStatefulWidget {
-  const IncomeFormScreen({super.key});
+  const IncomeFormScreen({super.key, this.draft});
+
+  /// Ingreso propuesto por la IA a partir de un texto; se precarga para confirmar.
+  final ExpenseDraft? draft;
 
   @override
   ConsumerState<IncomeFormScreen> createState() => _IncomeFormScreenState();
@@ -288,9 +480,9 @@ class IncomeFormScreen extends ConsumerStatefulWidget {
 
 class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   final _form = GlobalKey<FormState>();
-  final _monto = TextEditingController();
-  final _descripcion = TextEditingController();
-  DateTime _fecha = today();
+  late final _monto = TextEditingController(text: widget.draft?.monto?.round().toString() ?? '');
+  late final _descripcion = TextEditingController(text: widget.draft?.descripcion ?? '');
+  late DateTime _fecha = widget.draft?.fecha ?? today();
   bool _saving = false;
 
   @override
@@ -318,16 +510,37 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l = context.l;
+    final esConfirmacion = widget.draft != null;
     return Scaffold(
-      appBar: AppBar(title: Text(l.addIncome)),
+      appBar: AppBar(title: Text(esConfirmacion ? l.confirmIncome : l.addIncome)),
       body: Form(
         key: _form,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(l.addIncomeHint, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 16),
-            MoneyField(controller: _monto, label: l.amount, autofocus: true),
+            if (esConfirmacion)
+              SectionCard(
+                color: context.tokens.coach.container,
+                child: Row(
+                  children: [
+                    const CoachAvatar(size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l.confirmIncomeHint,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: context.tokens.coach.onContainer,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              Text(l.addIncomeHint, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 16),
+            ],
+            MoneyField(controller: _monto, label: l.amount, autofocus: !esConfirmacion, hero: true),
             const SizedBox(height: 12),
             TextFormField(
               controller: _descripcion,

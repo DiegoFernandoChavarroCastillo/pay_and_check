@@ -80,6 +80,32 @@ void main() {
     });
   });
 
+  test('los recordatorios de un gasto fijo caen en sus próximos vencimientos', () {
+    RecurringExpense fijo(Map<String, dynamic> extra) => RecurringExpense.fromJson({
+          'id': 1, 'category_id': 1, 'monto': '1000', 'descripcion': 'x', 'activo': true, 'dia_semana': 0, ...extra,
+        });
+
+    // Semanal, cada lunes. El 11 de marzo de 2026 es miércoles.
+    final semanal = fijo({'frecuencia': 'semanal', 'dia_semana': 0});
+    expect(semanal.proximosVencimientos(DateTime(2026, 3, 11), 3), [
+      DateTime(2026, 3, 16), DateTime(2026, 3, 23), DateTime(2026, 3, 30),
+    ]);
+    // Si hoy es el día, hoy cuenta.
+    expect(semanal.proximosVencimientos(DateTime(2026, 3, 9), 1), [DateTime(2026, 3, 9)]);
+
+    // Mensual, día 5: pasado el 5, el siguiente es el del mes que viene (y cruza de año).
+    final mensual = fijo({'frecuencia': 'mensual', 'dia_mes': 5});
+    expect(mensual.proximosVencimientos(DateTime(2026, 11, 6), 3), [
+      DateTime(2026, 12, 5), DateTime(2027, 1, 5), DateTime(2027, 2, 5),
+    ]);
+
+    // Día 31: en los meses más cortos vence el último día.
+    final finDeMes = fijo({'frecuencia': 'mensual', 'dia_mes': 31});
+    expect(finDeMes.proximosVencimientos(DateTime(2026, 1, 31), 4), [
+      DateTime(2026, 1, 31), DateTime(2026, 2, 28), DateTime(2026, 3, 31), DateTime(2026, 4, 30),
+    ]);
+  });
+
   test('el filtro de SMS reconoce movimientos bancarios y descarta lo demás', () {
     expect(pareceMovimientoBancario(r'Bancolombia: compra por $45.900 en EXITO 10:32'), isTrue);
     expect(pareceMovimientoBancario('Nequi: Pagaste 12.000 a Juan'), isTrue);

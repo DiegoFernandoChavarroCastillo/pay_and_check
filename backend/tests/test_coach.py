@@ -7,6 +7,8 @@ import pytest
 
 import app.routers.expenses as expenses_router
 import app.services.coach as coach_service
+from app.core.time import fmt_fecha
+from app.services.coach import inventa_cifras
 from app.services.groq_client import ExpenseParseError, GroqServiceError, _validar_gasto
 from app.services.prompts import build_coach_rules
 
@@ -63,6 +65,21 @@ def test_parse_receipt_ilegible_da_422_y_groq_caido_502(client, auth_headers, ca
     assert r.status_code == 502
 
 
+def test_un_consejo_no_puede_traer_cifras_que_no_esten_en_el_dato():
+    dato = "Gastas 9.625 por día los fines de semana, frente a 845 entre semana."
+    assert not inventa_cifras("Los fines de semana se te van 9625 diarios, contra 845 entre semana.", dato)
+    assert not inventa_cifras("En 2 frases: el fin de semana pesa más.", dato)
+    # Un cálculo o un monto propuesto por la IA no viene del dato: se descarta el mensaje.
+    assert inventa_cifras("9.625×2=19.250; considera reducir 2.000 los fines de semana.", dato)
+    assert inventa_cifras("Ajusta tus gastos en 10% para llegar a fin de mes.", dato)
+
+
+def test_las_fechas_de_los_consejos_van_en_palabras():
+    assert fmt_fecha(date(2026, 10, 13)) == "13 de octubre"
+    assert fmt_fecha(date(2026, 10, 13), "en") == "October 13"
+    assert fmt_fecha(date(2026, 3, 1), con_anio=True) == "1 de marzo de 2026"
+
+
 def test_validar_gasto_no_inventa_datos():
     ok = _validar_gasto(
         '{"monto": 23500, "categoria": "comida", "descripcion": "mercado", "fecha": "2026-03-01", '
@@ -71,11 +88,29 @@ def test_validar_gasto_no_inventa_datos():
     )
     assert (ok["monto"], ok["comercio"]) == (Decimal("23500"), "Éxito")
 
+    # Sin el modo JSON de Groq el modelo puede envolver el objeto en backticks o texto.
+    envuelto = _validar_gasto(
+        'Aquí va:\n```json\n{"monto": 10, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}\n```',
+        ["comida"],
+    )
+    assert envuelto["monto"] == Decimal("10")
+
+    # Un ingreso llega sin categoría y eso es válido; un gasto sin categoría, no.
+    ingreso = _validar_gasto(
+        '{"tipo": "ingreso", "monto": 200000, "categoria": null, "descripcion": "pago", "fecha": "2026-03-01"}',
+        ["comida"],
+    )
+    assert (ingreso["tipo"], ingreso["categoria"], ok["tipo"]) == ("ingreso", None, "gasto")
+
     for malo in (
         "no es json",
+        None,
+        "",
         '{"error": "no se pudo identificar un monto"}',
         '{"monto": 0, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}',
         '{"monto": 10, "categoria": "inventada", "descripcion": "x", "fecha": "2026-03-01"}',
+        '{"tipo": "gasto", "monto": 10, "categoria": null, "descripcion": "x", "fecha": "2026-03-01"}',
+        '{"tipo": "regalo", "monto": 10, "categoria": "comida", "descripcion": "x", "fecha": "2026-03-01"}',
         '{"monto": 10, "categoria": "comida", "descripcion": "x", "fecha": "ayer"}',
     ):
         with pytest.raises(ExpenseParseError):

@@ -149,6 +149,9 @@ activemq-data/
 
 # Environments
 .env
+# Variantes locales con secretos (ej. .env.neon, la conexión a la base desplegada).
+.env.*
+!.env.example
 .envrc
 .venv
 env/

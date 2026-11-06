@@ -46,6 +46,19 @@
   "tabCoach": "Coach",
   "tabProgress": "Progreso",
   "tabProfile": "Perfil",
+  "coachTagline": "Contigo, sin juzgar",
+  "badgesCount": "{n} de {total} insignias",
+  "@badgesCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeLocked": "Por desbloquear",
   "homeGreeting": "Hola, {name}",
   "@homeGreeting": {
     "placeholders": {
@@ -251,6 +264,8 @@
   "incomes": "Ingresos",
   "search": "Buscar",
   "allCategories": "Todas",
+  "dayToday": "Hoy",
+  "dayYesterday": "Ayer",
   "noExpenses": "Aquí aparecerán tus gastos.",
   "noIncomes": "Aquí aparecerá el dinero extra que recibas.",
   "newExpense": "Nuevo gasto",
@@ -269,6 +284,8 @@
   "addByGallery": "Recibo desde la galería",
   "addManual": "Formulario manual",
   "addIncome": "Dinero que recibí",
+  "confirmIncome": "Confirma el ingreso",
+  "confirmIncomeHint": "Entendimos que recibiste este dinero. Corrige lo que haga falta antes de guardar.",
   "addIncomeHint": "Amplía tu disponible sin cambiar el presupuesto original.",
   "quickAddExample": "Ej.: me compré un helado de 5000",
   "voiceStart": "Toca para dictar",
@@ -292,9 +309,60 @@
   "fixedExpenseHint": "Algo que sí o sí pagas, como transporte.",
   "optionalExpense": "Opcional",
   "defaultCategory": "predeterminada",
-  "recurringExpenses": "Gastos fijos semanales",
+  "defaultCategoryLimitHint": "Esta categoría viene con la app. Puedes ponerle tu propio límite de gasto.",
+  "recurringExpenses": "Gastos fijos",
   "newRecurring": "Nuevo gasto fijo",
   "weekday": "Día de la semana",
+  "frequency": "Se repite",
+  "freqWeekly": "Semanal",
+  "freqMonthly": "Mensual",
+  "dayOfMonth": "Día del mes",
+  "everyMonthDay": "el {n} de cada mes",
+  "@everyMonthDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "nextDue": "Próximo: {date}",
+  "@nextDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dueSince": "Por pagar desde el {date}",
+  "@dueSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "fixedReminderHint": "El día que toque te avisamos. Cuando lo marques como pagado, se descuenta de tu disponible.",
+  "paymentsDue": "Pagos por hacer",
+  "paidAction": "Ya lo pagué",
+  "skipAction": "Omitir",
+  "paymentLogged": "Pago registrado.",
+  "paymentSkipped": "Omitido. Te avisamos en el siguiente.",
+  "fixedDueTitle": "Hoy toca pagar: {name}",
+  "@fixedDueTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fixedDueBody": "{amount}. Márcalo como pagado y se descuenta de tu disponible.",
+  "@fixedDueBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "everyWeekday": "cada {day}",
   "@everyWeekday": {
     "placeholders": {
@@ -303,9 +371,9 @@
       }
     }
   },
-  "noRecurring": "Los gastos que se repiten cada semana se registran solos desde aquí.",
+  "noRecurring": "Arriendo, recibos, transporte: programa lo que pagas cada semana o cada mes y te avisamos el día que toca.",
   "deleteRecurringTitle": "¿Eliminar el gasto fijo?",
-  "deleteRecurringBody": "Los gastos ya generados se conservan.",
+  "deleteRecurringBody": "Los pagos ya registrados se conservan.",
   "sectionCoach": "Coach",
   "sectionMoney": "Tu dinero",
   "sectionReports": "Resúmenes",
@@ -341,6 +409,7 @@
   "privacyDeleteBody": "Puedes eliminar tu cuenta y todos tus datos cuando quieras desde Perfil.",
   "weeklyReport": "Reporte de la semana",
   "weekSpent": "Gasto de la semana",
+  "weekPace": "Ritmo esperado",
   "weekUnderPace": "Vas {amount} por debajo de tu ritmo semanal.",
   "@weekUnderPace": {
     "placeholders": {
@@ -436,11 +505,19 @@
   "average": "Promedio",
   "badgeUnlocked": "¡Nueva insignia!",
   "great": "¡Genial!",
+  "notifications": "Notificaciones",
+  "notifDetected": "Movimientos detectados en tus SMS",
+  "notifApprove": "Aprobar",
+  "notifEdit": "Editar",
+  "notifIsExpense": "Gasto",
+  "notifIsIncome": "Ingreso",
+  "notifSavedExpense": "Gasto registrado.",
+  "notifSavedIncome": "Ingreso registrado.",
   "smsTitle": "SMS del banco",
   "smsSubtitle": "Registra movimientos desde los mensajes de tu banco",
   "smsExplain": "Con tu permiso, la app busca en tus SMS de los últimos 14 días los que parecen movimientos bancarios. Se leen en tu teléfono y nada se guarda hasta que tú lo confirmes.",
   "smsAllow": "Permitir lectura de SMS",
-  "smsEmpty": "No hay mensajes bancarios por revisar.",
+  "smsEmpty": "Estás al día: no hay movimientos por revisar.",
   "smsUnavailable": "La lectura de SMS no está disponible en este dispositivo.",
   "smsDismiss": "Descartar",
   "smsRegister": "Registrar"

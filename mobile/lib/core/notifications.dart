@@ -54,4 +54,48 @@ class ReminderService {
     await _init();
     await _plugin.cancel(id: _id);
   }
+
+  /// Deja programados exactamente estos avisos de gastos fijos (a las 9:00 del día que vencen) y quita
+  /// los que ya no correspondan. Con [pedirPermiso] se solicita el permiso de notificaciones si falta;
+  /// sin él, no se le pregunta nada a la persona.
+  Future<void> syncFixed(List<FixedReminder> avisos, {bool pedirPermiso = false}) async {
+    await _init();
+    if (pedirPermiso && avisos.isNotEmpty) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
+    for (final pendiente in await _plugin.pendingNotificationRequests()) {
+      if (pendiente.id >= _baseFijos) await _plugin.cancel(id: pendiente.id);
+    }
+
+    final ahora = tz.TZDateTime.now(tz.local);
+    for (final aviso in avisos) {
+      final cuando = tz.TZDateTime(tz.local, aviso.fecha.year, aviso.fecha.month, aviso.fecha.day, 9);
+      // Si vence hoy y ya pasaron las 9, la app ya lo muestra como pendiente: no hace falta avisar.
+      if (!cuando.isAfter(ahora)) continue;
+      await _plugin.zonedSchedule(
+        id: _baseFijos + aviso.id,
+        title: aviso.title,
+        body: aviso.body,
+        scheduledDate: cuando,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails('gastos_fijos', 'Gastos fijos'),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    }
+  }
+
+  static const _baseFijos = 1000;
+}
+
+/// Aviso de un gasto fijo que vence en [fecha]. [id] debe ser único entre los avisos vigentes.
+class FixedReminder {
+  const FixedReminder({required this.id, required this.fecha, required this.title, required this.body});
+
+  final int id;
+  final DateTime fecha;
+  final String title;
+  final String body;
 }

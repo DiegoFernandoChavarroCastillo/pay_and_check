@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -65,7 +67,9 @@ class SessionController extends AsyncNotifier<User?> {
   Future<void> login(String email, String password) async => _entrar(await _api.login(email, password));
 
   Future<void> register(String nombre, String email, String password) async {
-    await _api.register(nombre, email, password);
+    // La cuenta nace en el idioma del teléfono: así la app no cambia de idioma al entrar.
+    final delTelefono = PlatformDispatcher.instance.locale.languageCode;
+    await _api.register(nombre, email, password, idioma: delTelefono == 'en' ? 'en' : 'es');
     await login(email, password);
   }
 

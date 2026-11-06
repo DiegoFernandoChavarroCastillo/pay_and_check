@@ -26,7 +26,6 @@ from app.services.groq_client import (
     parse_expense_text,
     parse_receipt_text,
 )
-from app.services.recurring_expenses import sync_recurring_expenses
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -85,7 +84,6 @@ def list_expenses(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> list[Expense]:
-    sync_recurring_expenses(session, current_user.id, today_for(current_user))
     query = select(Expense).where(Expense.user_id == current_user.id)
     if category_id is not None:
         query = query.where(Expense.category_id == category_id)
@@ -146,6 +144,12 @@ def create_expense_from_text(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except GroqServiceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+
+    if data.get("tipo") == "ingreso":
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "El texto describe un ingreso, no un gasto: regístralo como ingreso.",
+        )
 
     budget = find_budget_for_date(session, current_user.id, data["fecha"])
     if budget is None:

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/motion.dart';
+import '../../core/notifications.dart';
+import '../../core/settings.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
@@ -9,7 +12,9 @@ import '../coach/coach_screen.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../progress/progress_screen.dart';
+import '../sms/sms_inbox_screen.dart';
 import '../transactions/add_sheet.dart';
+import '../transactions/manage_screens.dart';
 import '../transactions/transactions_screen.dart';
 
 /// Contenedor de las cinco pestañas principales.
@@ -27,8 +32,36 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
   // pestaña, para que todas conserven su estado dentro del IndexedStack.
   late final _fundido = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
 
+  // Al volver a la app puede haber llegado un SMS del banco: se revisa de nuevo.
+  late final _ciclo = AppLifecycleListener(onResume: () => ref.read(smsInboxProvider.notifier).cargar());
+
+  @override
+  void initState() {
+    super.initState();
+    _ciclo;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sincronizarRecordatorio());
+  }
+
+  /// El aviso programado en el teléfono debe ser el de la cuenta que acaba de entrar, no el de la anterior.
+  Future<void> _sincronizarRecordatorio() async {
+    if (!mounted) return;
+    final l = context.l;
+    final ajustes = ref.read(settingsProvider);
+    final servicio = ref.read(notificationsProvider);
+    try {
+      if (ajustes.reminderEnabled) {
+        await servicio.schedule(ajustes.reminderTime, title: l.reminderTitle, body: l.reminderBody);
+      } else {
+        await servicio.cancel();
+      }
+    } catch (_) {
+      // Sin servicio de notificaciones (otra plataforma) no hay nada que sincronizar.
+    }
+  }
+
   @override
   void dispose() {
+    _ciclo.dispose();
     _fundido.dispose();
     super.dispose();
   }
@@ -60,9 +93,18 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
       if (perfil != null && !actual.isLoading) _celebrar(perfil);
     });
 
+    // Cada vez que cambian los gastos fijos (o se paga uno), se reprograman sus avisos.
+    ref.listen(recurringProvider, (_, actual) {
+      if (actual.hasValue && !actual.isLoading) syncFixedReminders(ref, l);
+    });
+
     final tieneBudget = ref.watch(summaryProvider).value != null;
     return Scaffold(
+      // El contenido pasa por detrás de la barra inferior: así flota de verdad. Con el teclado abierto la
+      // barra queda tapada, y el contenido (el campo del chat) debe terminar justo encima del teclado.
+      extendBody: MediaQuery.viewInsetsOf(context).bottom == 0,
       body: SafeArea(
+        bottom: false,
         child: FadeTransition(
           opacity: CurvedAnimation(parent: _fundido, curve: kMotionCurve),
           child: IndexedStack(
@@ -84,16 +126,32 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
               label: Text(l.add),
             )
           : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _irA,
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: l.tabHome),
-          NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: l.tabTransactions),
-          NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), selectedIcon: const Icon(Icons.auto_awesome), label: l.tabCoach),
-          NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events), label: l.tabProgress),
-          NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l.tabProfile),
-        ],
+      // Barra flotante: separada de los bordes y con las esquinas del mosaico.
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTokens.radius),
+          child: MediaQuery(
+            // Sin el margen inferior (ya lo da el SafeArea) y con la letra acotada para que quepan las etiquetas.
+            data: MediaQuery.of(context).removePadding(removeBottom: true).copyWith(
+                  textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
+                ),
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) {
+                tapFeedback();
+                _irA(i);
+              },
+              destinations: [
+                NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: l.tabHome),
+                NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: l.tabTransactions),
+                NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), selectedIcon: const Icon(Icons.auto_awesome), label: l.tabCoach),
+                NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events), label: l.tabProgress),
+                NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l.tabProfile),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -110,22 +168,32 @@ class _BadgeDialog extends StatelessWidget {
     final l = context.l;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return AlertDialog(
-      icon: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: motion(context, const Duration(milliseconds: 700)),
-        curve: Curves.elasticOut,
-        builder: (context, t, child) => Transform.scale(scale: t, child: child),
-        child: CircleAvatar(
-          radius: 40,
-          backgroundColor: scheme.primaryContainer,
-          child: Icon(Icons.military_tech, size: 48, color: scheme.onPrimaryContainer),
+    final tokens = context.tokens;
+    return Stack(
+      children: [
+        AlertDialog(
+          icon: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: motion(context, const Duration(milliseconds: 700)),
+            curve: Curves.elasticOut,
+            builder: (context, t, child) => Transform.scale(scale: t, child: child),
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: tokens.goals.container,
+              child: Icon(Icons.military_tech, size: 48, color: tokens.goals.onContainer),
+            ),
+          ),
+          title: Text(l.badgeUnlocked, textAlign: TextAlign.center),
+          content: Text(insignias.join('\n'), textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(l.great))],
         ),
-      ),
-      title: Text(l.badgeUnlocked, textAlign: TextAlign.center),
-      content: Text(insignias.join('\n'), textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(l.great))],
+        Positioned.fill(
+          child: ConfettiBurst(
+            colors: [scheme.primary, tokens.goals.color, tokens.challenges.color, tokens.coach.color, tokens.income.color],
+          ),
+        ),
+      ],
     );
   }
 }

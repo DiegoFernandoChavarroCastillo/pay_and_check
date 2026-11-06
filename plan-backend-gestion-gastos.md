@@ -1,5 +1,11 @@
 # Plan de construcción — Backend, app de gestión de gastos (MVP)
 
+> **Documento histórico.** Es el plan del backend original, ya terminado. Varias cosas cambiaron después y
+> aquí no se actualizaron; las principales: los gastos fijos ya no se registran solos (quedan por pagar hasta
+> que la persona los confirma, y pueden ser mensuales), las categorías por defecto admiten un límite propio
+> por persona, la extracción por IA distingue gastos de ingresos, y no se usa el modo JSON de Groq. El estado
+> vigente está en `README.md` y en `notas-iteracion-app-movil.md`.
+
 ## Cómo usar este documento
 
 Este documento es la guía de construcción del backend, fase por fase. Antes de escribir código:

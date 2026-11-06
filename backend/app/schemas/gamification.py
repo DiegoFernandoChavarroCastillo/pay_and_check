@@ -4,7 +4,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-Plantilla = Literal["reducir_categoria", "dias_sin_gasto", "checkins"]
+Plantilla = Literal[
+    "reducir_categoria", "dias_sin_gasto", "checkins", "registro_diario", "aportar_meta", "semana_en_ritmo"
+]
 
 
 class ChallengeCreate(BaseModel):

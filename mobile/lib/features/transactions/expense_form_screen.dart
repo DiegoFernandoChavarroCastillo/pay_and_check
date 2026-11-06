@@ -4,9 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/charts.dart';
 import '../../core/format.dart';
+import '../../core/motion.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/api.dart';
+import '../coach/coach_widgets.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 
@@ -132,12 +136,37 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // Lo que propone la IA llega como una tarjeta del coach: se revisa antes de guardar.
                 if (esConfirmacion)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(l.confirmExpenseHint, style: Theme.of(context).textTheme.bodyMedium),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.9, end: 1),
+                    duration: motion(context, const Duration(milliseconds: 450)),
+                    curve: kSpring,
+                    builder: (context, escala, child) => Transform.scale(scale: escala, child: child),
+                    child: SectionCard(
+                      color: context.tokens.coach.container,
+                      child: Row(
+                        children: [
+                          const CoachAvatar(size: 40),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              l.confirmExpenseHint,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: context.tokens.coach.onContainer,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                MoneyField(controller: _monto, label: l.amount, autofocus: widget.existing == null && !esConfirmacion),
+                MoneyField(
+                  controller: _monto,
+                  label: l.amount,
+                  autofocus: widget.existing == null && !esConfirmacion,
+                  hero: true,
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descripcion,
@@ -146,11 +175,32 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                   validator: (v) => (v ?? '').trim().isEmpty ? l.requiredField : null,
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<int>(
-                  initialValue: seleccion,
-                  decoration: InputDecoration(labelText: l.category),
-                  items: [for (final c in categorias) DropdownMenuItem(value: c.id, child: Text(c.nombre))],
-                  onChanged: (id) => setState(() => _categoryId = id),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 6, top: 4),
+                  child: Text(l.category, style: Theme.of(context).textTheme.labelLarge),
+                ),
+                // La categoría se elige de un toque, cada una con su color de las gráficas.
+                Builder(
+                  builder: (context) {
+                    final colores = categoryColors(categorias.map((c) => c.nombre), Theme.of(context).brightness);
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (final c in categorias)
+                          ChoiceChip(
+                            avatar: CircleAvatar(backgroundColor: colores[c.nombre], radius: 6),
+                            showCheckmark: false,
+                            label: Text(c.nombre),
+                            selected: c.id == seleccion,
+                            onSelected: (_) {
+                              tapFeedback();
+                              setState(() => _categoryId = c.id);
+                            },
+                          ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 DateField(label: l.date, value: _fecha, onChanged: (d) => setState(() => _fecha = d)),

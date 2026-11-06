@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# "recurrente" no se acepta desde la API: solo lo asigna sync_recurring_expenses.
+# "recurrente" no se acepta desde la API: solo lo asigna el pago de un gasto fijo.
 ExpenseSourceInput = Literal["manual", "texto", "voz", "ocr", "sms"]
 
 
@@ -32,8 +32,11 @@ class ExpenseParseRequest(BaseModel):
 
 
 class ExpenseParseResponse(BaseModel):
+    # "ingreso" cuando el texto describe dinero recibido; entonces no hay categoría
+    # y la app lo confirma como ingreso (POST /incomes), no como gasto.
+    tipo: Literal["gasto", "ingreso"] = "gasto"
     monto: Decimal
-    categoria: str
+    categoria: str | None
     descripcion: str
     fecha: date
 

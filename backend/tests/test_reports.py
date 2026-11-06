@@ -80,3 +80,23 @@ def test_weekly_report_si_falla_groq_no_tumba_el_resumen_numerico(client, auth_h
     assert r.status_code == 200
     assert r.json()["gasto_total_semana"] == "0.00"
     assert "no se pudieron generar" in r.json()["recomendaciones"].lower()
+
+
+def test_reporte_semanal_descarta_consejos_de_inversion_y_cifras_inventadas(
+    client, auth_headers, categorias, presupuesto, gastar, fijar_hoy, monkeypatch
+):
+    from app.routers import reports as reports_router
+
+    fijar_hoy(date(2026, 3, 11))
+    presupuesto(date(2026, 3, 1), date(2026, 3, 31))
+    gastar("20000.00", date(2026, 3, 10), category_id=1)
+
+    for texto in (
+        "Vas con margen: asigna el ahorro a una inversión de bajo riesgo.",
+        "Vas bien; si reduces 7.500 más, cierras la semana perfecta.",
+    ):
+        monkeypatch.setattr(reports_router, "generate_weekly_recommendations", lambda _r, t=texto: t)
+        data = client.get("/reports/weekly", headers=auth_headers).json()
+        assert "invers" not in data["recomendaciones"] and "7.500" not in data["recomendaciones"]
+        assert "20.000" in data["recomendaciones"]
+

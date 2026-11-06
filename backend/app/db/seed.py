@@ -3,7 +3,16 @@ from sqlmodel import Session, select
 from app.db.session import engine
 from app.models.category import Category
 
-DEFAULT_CATEGORIES = ["comida", "transporte", "entretenimiento", "salud", "servicios", "otros"]
+# Fijo = gasto que ocurre sí o sí; opcional = discrecional. Los retos de "días sin gasto opcional"
+# solo miran los opcionales: un pasaje de bus o una factura no rompen el día.
+DEFAULT_CATEGORIES = {
+    "comida": "opcional",
+    "transporte": "fijo",
+    "entretenimiento": "opcional",
+    "salud": "fijo",
+    "servicios": "fijo",
+    "otros": "opcional",
+}
 
 
 def seed_default_categories(session: Session) -> None:
@@ -11,9 +20,9 @@ def seed_default_categories(session: Session) -> None:
     existing = set(
         session.exec(select(Category.nombre).where(Category.owner_id.is_(None))).all()
     )
-    for nombre in DEFAULT_CATEGORIES:
+    for nombre, tipo in DEFAULT_CATEGORIES.items():
         if nombre not in existing:
-            session.add(Category(nombre=nombre, owner_id=None))
+            session.add(Category(nombre=nombre, owner_id=None, tipo=tipo))
     session.commit()
 
 

@@ -1,5 +1,11 @@
 # Plan — de backend de gastos a app móvil "coach financiero" (Flutter + FastAPI)
 
+> **Estado al 13 de octubre de 2026.** Las fases 1 a 5 y 7 están construidas y recorridas en un teléfono
+> (Moto G6, Android 9, modo depuración) con la IA real. Siguen abiertos el APK de release, el login con
+> Google, el despliegue del backend y la beta con probadores. Después de este plan vino la Fase 8 (al final):
+> rediseño, notificaciones, gastos fijos con recordatorio y más retos e insignias. El detalle de cada
+> iteración está en `notas-iteracion-app-movil.md`.
+
 ## Contexto
 
 El backend del MVP original (FastAPI + Groq, Fases 0–11, 51 tests) está terminado pero no hay app: nadie puede usarlo. `mejoras.md` define a dónde llevar el producto: un coach financiero emocional, con gamificación verificable y captura automática (OCR/SMS), en el teléfono.
@@ -18,8 +24,8 @@ Adaptaciones al stack de `mejoras.md` (para no añadir infraestructura ni costo)
 | mejoras.md | Aquí | Por qué |
 |---|---|---|
 | Google Vision + S3 | OCR en el dispositivo (ML Kit) + Groq estructura el texto | Gratis, offline, la foto no sale del teléfono, sirve el modelo de texto actual |
-| Firebase Cloud Messaging | Notificaciones locales programadas | El MVP solo necesita recordatorios (check-in, reto); no hace falta servidor de push |
-| Scheduler / ML en Python | Cálculo "al vuelo" + reglas deterministas | Mismo patrón que `sync_recurring_expenses`; la IA solo redacta, no calcula |
+| Firebase Cloud Messaging | Notificaciones locales programadas | El MVP solo necesita recordatorios (check-in, gastos fijos); no hace falta servidor de push |
+| Scheduler / ML en Python | Cálculo "al vuelo" + reglas deterministas | Nada corre en segundo plano en el servidor; la IA solo redacta, no calcula |
 | Mover dinero real | "Apartados" virtuales hacia metas | Sin banco, el dinero se reserva dentro del presupuesto |
 
 ## Opciones para generar el APK
@@ -57,7 +63,7 @@ Cada fase es una rebanada vertical (backend → app → criterio de aceptación)
 - [x] CI: añadir job `flutter analyze` + `flutter test` en `.github/workflows/` (`mobile-ci.yml`).
 
 **Aceptación**: app vacía corre en tu teléfono y hace `GET /health` contra el backend desplegado.
-⏳ **Pendiente**: la app mínima (pantalla que llama a `/health`) existe y pasa `flutter analyze` + `flutter test`, pero no se ha corrido en un teléfono (no había ninguno conectado) ni hay backend desplegado todavía.
+🟡 **A medias**: la app completa corre en un teléfono contra el backend local (por USB, con `adb reverse`). El backend desplegado sigue pendiente.
 
 **Notas de la fase**
 - El refresh token es stateless: no se puede revocar uno ya emitido (cerrar sesión solo lo borra del teléfono). Suficiente para la beta; si hiciera falta revocación, requiere una tabla de tokens.
@@ -73,7 +79,7 @@ Cada fase es una rebanada vertical (backend → app → criterio de aceptación)
 - [x] Pantallas: login/registro (email y Google), onboarding (crear presupuesto, elegir tono del coach), Home con `GET /budgets/active/summary` (disponible por día, alerta `en_riesgo`, desglose por categoría).
 
 **Aceptación**: registrarse, crear presupuesto y ver el disponible por día en el teléfono; la sesión sobrevive a cerrar la app.
-🟡 **Código completo y probado sin teléfono** (`flutter analyze` limpio; tests de widgets: login → dashboard con el disponible por día, contraseña incorrecta, sesión guardada, sin presupuesto). Falta el recorrido manual en un teléfono. Desviaciones: los modelos y llamadas a la API viven juntos en `mobile/lib/data/` (no una carpeta `data/domain` por feature) y las gráficas son barras nativas en vez de `fl_chart` — ver `notas-iteracion-app-movil.md`.
+✅ **Hecho y recorrido en un teléfono**: registro, presupuesto y disponible por día; la sesión sobrevive a cerrar la app. Falta el login con Google (sin Client ID). Desviaciones: los modelos y llamadas a la API viven juntos en `mobile/lib/data/` (no una carpeta `data/domain` por feature) — ver `notas-iteracion-app-movil.md`.
 
 ### Fase 2 — Transacciones: manual, texto y voz
 
@@ -82,7 +88,7 @@ Cada fase es una rebanada vertical (backend → app → criterio de aceptación)
 - [x] Voz: `speech_to_text` (reconocimiento en el dispositivo) y el texto resultante va al mismo flujo de parseo. Cierra el hueco "por voz" del plan original sin tocar el backend.
 
 **Aceptación**: decir "me compré un helado de 5000" crea el gasto tras confirmar y el dashboard se actualiza.
-🟡 **Código completo**; el flujo confirmar → guardar con su `source` y `texto_original` está cubierto por test de widgets. El dictado real solo se puede validar en un teléfono.
+✅ **Hecho y probado en un teléfono**, por texto y por voz. Del uso real salieron dos correcciones (el modo JSON de Groq y los miles con coma del dictado) y que la frase puede ser un ingreso.
 
 ### Fase 3 — OCR de recibos (A-01, A-04)
 
@@ -91,7 +97,7 @@ Cada fase es una rebanada vertical (backend → app → criterio de aceptación)
 - [x] Misma pantalla de confirmación de la Fase 2; `source="ocr"`.
 
 **Aceptación**: foto de un recibo real → monto, comercio, fecha y categoría propuestos correctamente en la mayoría de 10 recibos de prueba; un recibo ilegible da error controlado.
-🟡 **Backend validado** (tests + HTTP real contra Postgres). La prueba con 10 recibos reales necesita teléfono y `GROQ_API_KEY`.
+🟡 **Backend validado** (tests + HTTP real contra Postgres). **La foto de un recibo real no se ha probado en el teléfono**: sigue pendiente la prueba con 10 recibos.
 
 ### Fase 4 — Coach (C-01, C-02, C-04, C-07)
 
@@ -103,10 +109,10 @@ Módulo backend independiente: `routers/coach.py`, `routers/checkins.py`, `servi
 - [x] **Consejos accionables** (C-04): `GET /coach/insights` — la IA redacta a partir de los patrones calculados y cada consejo trae una acción de un tap (`{tipo, payload}`: apartar a una meta, aceptar un reto, poner límite a una categoría) que la app ejecuta con endpoints normales tras tu aprobación. Se cachea por día en `CoachMessage`.
 - [x] **Chat con el coach**: `POST /coach/chat`, con el resumen del presupuesto y patrones como contexto.
 - [x] **Guardrails** en el prompt y con tests: tono elegido, cero lenguaje culposo, sin recomendar inversiones concretas, explica el porqué de cada sugerencia.
-- [ ] Evaluar `openai/gpt-oss-120b` para el coach (el parseo sigue con el modelo chico); confirmar modelos disponibles en Groq en ese momento.
+- [ ] Evaluar `openai/gpt-oss-120b` para el coach (el parseo sigue con el modelo chico); confirmar modelos disponibles en Groq en ese momento. Por ahora el modelo chico resultó suficiente redactando con razonamiento `medium`.
 
 **Aceptación**: tras una semana de datos de prueba con gasto alto en fines de semana, el coach lo menciona con cifras correctas, en el tono configurado, y su acción de un tap funciona.
-🟡 **Validado con tests** (`backend/tests/test_coach.py`): el patrón de fin de semana sale con las cifras exactas (20.000 vs 250), la acción de un tap crea el reto y los guardrails descartan salidas con culpa o asesoría de inversión. Falta verlo con la IA real (sin `GROQ_API_KEY` el coach usa sus textos deterministas de respaldo).
+✅ **Validado con tests y con la IA real en un teléfono**: con tres semanas de datos de prueba el coach menciona el patrón de fin de semana con sus cifras, en el tono elegido, y la acción de un toque crea el reto. Con la IA real apareció que inventaba cifras; hay un guardrail nuevo que las descarta.
 
 ### Fase 5 — Gamificación (G-01 a G-04)
 
@@ -118,7 +124,7 @@ Módulo backend: `routers/goals.py`, `routers/gamification.py`, `services/gamifi
 - [x] App: pantallas Metas y Retos, anillos/barras de progreso, celebración al desbloquear.
 
 **Aceptación**: aceptar un reto de "reducir 20 % ocio", registrar gastos que lo cumplen y ver puntos + insignia otorgados sin intervención manual; repetir la consulta no duplica puntos.
-✅ **Validado con tests** (`backend/tests/test_gamification.py`) y por HTTP real contra Postgres: el reto de reducir 20 % se cumple solo al cerrar la ventana, otorga puntos e insignia, y repetir la consulta no duplica nada.
+✅ **Validado con tests** (`backend/tests/test_gamification.py`), por HTTP real contra Postgres y en un teléfono: el reto de reducir 20 % se cumple solo al cerrar la ventana, otorga puntos e insignia, y repetir la consulta no duplica nada.
 
 ### Fase 6 — APK de release y beta cerrada
 
@@ -128,12 +134,27 @@ Módulo backend: `routers/goals.py`, `routers/gamification.py`, `services/gamifi
 - [ ] Repartir a probadores y recoger feedback.
 
 **Aceptación**: un probador instala el APK desde el enlace, entra con Google y registra un gasto contra el backend de producción.
-🟡 **Firma, ícono y workflow configurados, pero todavía no existe un APK**: el build local no llegó a completarse (detalle en `notas-iteracion-app-movil.md`). El workflow de release está escrito pero no se ha ejecutado (necesita los secretos del keystore y `API_BASE_URL` en GitHub). El login con Google y el backend de producción dependen de los dos pendientes de la Fase 0.
+🟡 **Firma, ícono y workflow configurados, pero todavía no existe un APK de release**: la app solo ha corrido en modo depuración. El workflow de release está escrito pero no se ha ejecutado (necesita los secretos del keystore y `API_BASE_URL` en GitHub), y el keystore está en el PC de la primera iteración. El login con Google y el backend de producción dependen de los dos pendientes de la Fase 0.
 
 ### Fase 7 — Prioridad baja (después de la beta)
 
 - [x] **Wrapped mensual** (G-08): `GET /reports/monthly-wrapped` + pantalla tipo historias.
-- [x] **SMS bancarios** (A-03): canal nativo Android aislado en `mobile/lib/features/sms/`; el texto del SMS pasa por el parseo existente y cae en una bandeja "por confirmar" (`source="sms"`).
+- [x] **SMS bancarios** (A-03): canal nativo Android aislado en `mobile/lib/features/sms/`; el texto del SMS pasa por el parseo existente y cae en una bandeja "por confirmar" (`source="sms"`). Probado en un teléfono con SMS insertados por `adb`; no con mensajes reales de un banco.
+
+### Fase 8 — Después del plan original (12 y 13 de octubre)
+
+No estaba en el plan; salió de usar la app en un teléfono. Todo hecho y con tests.
+
+- [x] **Rediseño "Bento suave"** de todas las pantallas: sistema de diseño (`mobile/lib/core/`), coach con avatar animado, barra inferior flotante.
+- [x] **Ingresos por texto, voz o SMS**: `/expenses/parse` devuelve `tipo` y la app abre el formulario que corresponde.
+- [x] **Notificaciones** en la app: campana en el inicio con los pagos por hacer y los SMS por revisar; aprobar un SMS sin salir de la lista.
+- [x] **Gastos fijos semanales o mensuales**: quedan por pagar el día que vencen, con notificación local a las 9:00; confirmar el pago es lo que descuenta (`/recurring-expenses/pending`, `/pay`, `/skip`).
+- [x] **Límite propio sobre categorías por defecto** (`category_limits`); transporte, salud y servicios pasan a gasto fijo.
+- [x] **Más gamificación**: 6 tipos de reto y 23 insignias.
+- [x] **Guardrail de cifras** en consejos, reacción y reporte semanal; el reporte semanal bajo las reglas del coach.
+- [x] **Historia de usuario completa** con una cuenta de prueba (ver notas, sección 9).
+
+**Lo siguiente** (no empezado): subir la rama, desplegar el backend, plan de pago de Groq, APK de release, una bienvenida para usuarios nuevos y una beta de 30 a 50 personas para medir retención.
 
 ## Convenciones a respetar (del plan anterior)
 

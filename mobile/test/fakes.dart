@@ -2,11 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pay_and_check/app.dart';
+import 'package:pay_and_check/core/theme.dart';
 import 'package:pay_and_check/core/api/api_client.dart';
 import 'package:pay_and_check/core/settings.dart';
 import 'package:pay_and_check/data/api.dart';
 import 'package:pay_and_check/data/models.dart';
 import 'package:pay_and_check/data/session.dart';
+import 'package:pay_and_check/features/sms/sms_inbox_screen.dart';
 import 'package:pay_and_check/l10n/gen/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -121,12 +123,31 @@ const trendsVacioJson = {
   'variacion_vs_semana_anterior_pct': null,
 };
 
+/// SMS de mentira: los que haya en [mensajes], con el permiso ya concedido.
+class FakeSmsSource extends SmsSource {
+  final mensajes = <SmsMessage>[];
+
+  void llega(int id, String remitente, String cuerpo) => mensajes.add(
+        SmsMessage.fromMap({'id': id, 'address': remitente, 'body': cuerpo, 'date': DateTime.now().millisecondsSinceEpoch}),
+      );
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<List<SmsMessage>> read(DateTime desde) async => [...mensajes];
+}
+
 /// Backend de mentira: responde con datos fijos y anota lo que la app le envía.
 class FakeApi extends Api {
   FakeApi({this.conPresupuesto = true, this.conGastos = true}) : super(Dio());
 
   bool conPresupuesto;
   bool conGastos;
+  final sms = FakeSmsSource();
   final gastosCreados = <Json>[];
   final retosCreados = <Json>[];
   final checkinsHechos = <String>[];
@@ -164,8 +185,61 @@ class FakeApi extends Api {
   @override
   Future<List<Income>> incomes() async => [];
 
+  final ingresosCreados = <Json>[];
+  final categoriasEditadas = <(int, Json)>[];
+
+  @override
+  Future<void> updateCategory(int id, Json cambios) async => categoriasEditadas.add((id, cambios));
+
+
+  @override
+  Future<void> createIncome(double monto, String descripcion, DateTime fecha) async =>
+      ingresosCreados.add({'monto': monto, 'descripcion': descripcion, 'fecha': isoDate(fecha)});
+
+  /// Lo que "responde la IA" al interpretar un texto.
+  Json parseo = {'tipo': 'gasto', 'monto': '5000', 'categoria': 'entretenimiento', 'descripcion': 'helado', 'fecha': '2026-03-10'};
+
+  @override
+  Future<ExpenseDraft> parseText(String texto, {required String source}) async =>
+      ExpenseDraft.fromParse(parseo, source: source, textoOriginal: texto);
+
   @override
   Future<List<RecurringExpense>> recurring() async => [];
+
+  /// Gastos fijos por pagar que "tiene" el backend, y lo que la app hizo con ellos.
+  final pagosPendientes = <Json>[];
+  final pagosConfirmados = <int>[];
+  final pagosOmitidos = <int>[];
+  final fijosCreados = <Json>[];
+
+  @override
+  Future<List<PendingPayment>> pendingPayments() async => pagosPendientes.map(PendingPayment.fromJson).toList();
+
+  @override
+  Future<Expense> payRecurring(int id) async {
+    pagosConfirmados.add(id);
+    final pago = pagosPendientes.firstWhere((p) => p['recurring_id'] == id);
+    pagosPendientes.remove(pago);
+    return Expense.fromJson({
+      'id': 900 + id,
+      'category_id': pago['category_id'],
+      'monto': pago['monto'],
+      'descripcion': pago['descripcion'],
+      'source': 'recurrente',
+      'comercio': null,
+      'fecha': pago['fecha'],
+    });
+  }
+
+  @override
+  Future<void> skipRecurring(int id) async {
+    pagosOmitidos.add(id);
+    pagosPendientes.removeWhere((p) => p['recurring_id'] == id);
+  }
+
+  @override
+  Future<void> createRecurring(double monto, String descripcion, int categoryId, {int? diaSemana, int? diaMes}) async =>
+      fijosCreados.add({'monto': monto, 'descripcion': descripcion, 'dia_semana': diaSemana, 'dia_mes': diaMes});
 
   @override
   Future<List<Checkin>> checkins() async => [];
@@ -223,6 +297,7 @@ Future<List<Object>> _overrides(FakeApi api, TokenStorage storage) async {
     tokenStorageProvider.overrideWithValue(storage),
     sharedPreferencesProvider.overrideWithValue(prefs),
     deviceTimezoneProvider.overrideWithValue(() async => null),
+    smsSourceProvider.overrideWithValue(api.sms),
   ];
 }
 
@@ -243,6 +318,8 @@ Future<Widget> pantallaDePrueba(FakeApi api, Widget pantalla, {bool sinAnimacion
     retry: (_, _) => null,
     overrides: (await _overrides(api, storage)).cast(),
     child: MaterialApp(
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
       locale: const Locale('es'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
