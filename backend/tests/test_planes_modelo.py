@@ -9,13 +9,6 @@ from app.models.plan import LicenseCode, Organization, Subscription
 from app.models.user import User
 
 
-@pytest.fixture()
-def llaves_foraneas(db_engine):
-    """SQLite no las impone por defecto y Postgres sí: así se prueba el orden de los borrados."""
-    with db_engine.connect() as conexion:  # StaticPool: es la misma conexión que usa la app
-        conexion.exec_driver_sql("PRAGMA foreign_keys=ON")
-
-
 def _usuario(client, make_user, email):
     headers, _ = make_user(email)
     return headers, client.get("/auth/me", headers=headers).json()["id"]

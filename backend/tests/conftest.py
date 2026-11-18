@@ -40,6 +40,14 @@ def db_engine():
 
 
 @pytest.fixture()
+def llaves_foraneas(db_engine):
+    """SQLite no impone las llaves foráneas por defecto y Postgres sí: con esto se prueba el orden de los
+    borrados como lo haría producción."""
+    with db_engine.connect() as conexion:  # StaticPool: es la misma conexión que usa la app
+        conexion.exec_driver_sql("PRAGMA foreign_keys=ON")
+
+
+@pytest.fixture()
 def client(db_engine):
     def override_get_session():
         with Session(db_engine) as session:

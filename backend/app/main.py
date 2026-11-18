@@ -20,6 +20,7 @@ from app.routers import (
     gamification,
     goals,
     incomes,
+    plans,
     recurring_expenses,
     reports,
 )
@@ -47,6 +48,7 @@ app.include_router(checkins.router)
 app.include_router(coach.router)
 app.include_router(goals.router)
 app.include_router(gamification.router)
+app.include_router(plans.router)
 
 
 @app.exception_handler(RequestValidationError)
