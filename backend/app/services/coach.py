@@ -8,6 +8,7 @@ import logging
 import re
 from dataclasses import asdict
 from datetime import date
+from functools import partial
 
 from sqlmodel import Session, select
 
@@ -17,6 +18,7 @@ from app.models.coach import CoachMessage
 from app.models.expense import Expense
 from app.models.goal import Goal
 from app.models.user import User
+from app.services import ia_uso
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
 from app.services.groq_client import (
@@ -73,6 +75,10 @@ _RESPALDO = {
 
 
 def _respaldo(user: User, clave: str, **kwargs) -> str:
+    # Por aquí pasan los textos de respaldo del coach: se llama solo cuando ese texto es el que se muestra,
+    # y se anota en el registro de uso. La frase de redirección no es un respaldo: la mide `bloqueado_por`.
+    if clave != "fuera_de_alcance":
+        ia_uso.marcar_respaldo()
     return _RESPALDO.get(user.idioma, _RESPALDO["es"])[clave].format(**kwargs)
 
 
@@ -142,12 +148,13 @@ def contexto_financiero(session: Session, user: User, today: date, patrones: lis
 def reaccion_a_gasto(session: Session, user: User, expense: Expense, today: date) -> str:
     """Mensaje corto y sin culpa tras registrar un gasto (C-01)."""
     budget = get_active_budget_for_user(session, user.id, today)
+    # Perezoso: `_respaldo` se anota en el registro de uso, así que solo se llama si ese texto se muestra.
     if budget is None:
-        respaldo = _respaldo(user, "reaccion_sin_presupuesto")
+        respaldo = partial(_respaldo, user, "reaccion_sin_presupuesto")
         disponible = "Sin presupuesto activo."
     else:
         s = summary_for(session, budget, today)
-        respaldo = _respaldo(user, "reaccion", por_dia=fmt(s.disponible_por_dia))
+        respaldo = partial(_respaldo, user, "reaccion", por_dia=fmt(s.disponible_por_dia))
         disponible = f"Disponible por día: {fmt(s.disponible_por_dia)}. Días restantes: {s.dias_restantes}."
 
     categoria = session.get(Category, expense.category_id)
@@ -161,13 +168,14 @@ def reaccion_a_gasto(session: Session, user: User, expense: Expense, today: date
         ]
     )
 
-    try:
-        mensaje = generate_coach_text(build_coach_reaction_prompt(reglas_para(user), contexto))
-    except GroqServiceError:
-        return respaldo
-    # El disponible por día ya descuenta este gasto: si la IA resta o suma por su cuenta, el dato sale mal.
-    if not mensaje or rompe_guardrails(mensaje) or inventa_cifras(mensaje, contexto):
-        return respaldo
+    with ia_uso.usar(session, user, "reaccion"):
+        try:
+            mensaje = generate_coach_text(build_coach_reaction_prompt(reglas_para(user), contexto))
+        except GroqServiceError:
+            return respaldo()
+        # El disponible por día ya descuenta este gasto: si la IA resta o suma por su cuenta, el dato sale mal.
+        if not mensaje or rompe_guardrails(mensaje) or inventa_cifras(mensaje, contexto):
+            return respaldo()
     return mensaje
 
 
@@ -179,12 +187,14 @@ def _redactar_insights(user: User, patrones: list[Pattern]) -> list[str]:
     try:
         data = generate_coach_json(build_coach_insights_prompt(reglas_para(user)), numerados)
     except GroqServiceError:
+        ia_uso.marcar_respaldo()
         return respaldo
 
     mensajes = data.get("mensajes")
     if not isinstance(mensajes, list) or len(mensajes) != len(patrones):
+        ia_uso.marcar_respaldo()
         return respaldo
-    return [
+    redactados = [
         mensaje
         if isinstance(mensaje, str)
         and mensaje.strip()
@@ -193,6 +203,9 @@ def _redactar_insights(user: User, patrones: list[Pattern]) -> list[str]:
         else original
         for mensaje, original in zip(mensajes, respaldo, strict=True)
     ]
+    if any(redactado is original for redactado, original in zip(redactados, respaldo, strict=True)):
+        ia_uso.marcar_respaldo()
+    return redactados
 
 
 def insights_del_dia(session: Session, user: User, today: date, refresh: bool = False) -> list[dict]:
@@ -212,7 +225,11 @@ def insights_del_dia(session: Session, user: User, today: date, refresh: bool = 
             return guardado["insights"]
 
     patrones = detect_patterns(session, user, today)
-    mensajes = _redactar_insights(user, patrones) if patrones else []
+    if patrones:
+        with ia_uso.usar(session, user, "consejos"):
+            mensajes = _redactar_insights(user, patrones)
+    else:
+        mensajes = []
     insights = [
         {**asdict(patron), "mensaje": mensaje} for patron, mensaje in zip(patrones, mensajes, strict=True)
     ]
@@ -256,7 +273,8 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
 
     El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
     muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien."""
-    if marca_inyeccion(mensaje):
+    inyectado = marca_inyeccion(mensaje)
+    if inyectado:
         logger.warning("coach/chat: el mensaje parece un intento de inyección")
     # Lo que escribió la persona viaja siempre como dato, también el historial: una inyección guardada
     # antes no queda "viva" como instrucción.
@@ -269,37 +287,45 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
     contexto = contexto_financiero(session, user, today)
     prompt = build_coach_chat_prompt(reglas_para(user), contexto)
     turnos = [*previos, {"role": "user", "content": como_datos(mensaje)}]
-    raw = generate_coach_text(prompt, turnos)
-    # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
-    en_alcance, respuesta = _leer_turno(raw) or (True, "")
+    with ia_uso.usar(session, user, "chat"):
+        try:
+            raw = generate_coach_text(prompt, turnos)
+        finally:
+            if inyectado:
+                ia_uso.marcar_bloqueo("inyeccion")
+        # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
+        en_alcance, respuesta = _leer_turno(raw) or (True, "")
 
-    if not en_alcance:
-        respuesta = _respaldo(user, "fuera_de_alcance")
-    else:
-        # Si trae cifras que no salen ni de sus datos ni de lo conversado, se le pide una vez que responda sin
-        # ellas. No se descarta sin más: en el chat la persona puede haber pedido una cuenta.
-        conocido = "\n".join([contexto, *(t["content"] for t in turnos)])
-        if respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje):
-            turnos += [
-                {"role": "assistant", "content": raw},
-                {
-                    "role": "user",
-                    "content": "Repite tu respuesta, en el mismo formato JSON, sin proponer montos ni "
-                    "porcentajes que no estén en mi situación: describe el paso con palabras.",
-                },
-            ]
-            try:
-                nuevo = _leer_turno(generate_coach_text(prompt, turnos))
-            except GroqServiceError:
-                nuevo = None
-            if nuevo and nuevo[0] and nuevo[1]:
-                respuesta = nuevo[1]
+        if not en_alcance:
+            ia_uso.marcar_bloqueo("alcance")
+            respuesta = _respaldo(user, "fuera_de_alcance")
+        else:
+            # Si trae cifras que no salen ni de sus datos ni de lo conversado, se le pide una vez que responda
+            # sin ellas. No se descarta sin más: en el chat la persona puede haber pedido una cuenta.
+            conocido = "\n".join([contexto, *(t["content"] for t in turnos)])
+            if respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje):
+                turnos += [
+                    {"role": "assistant", "content": raw},
+                    {
+                        "role": "user",
+                        "content": "Repite tu respuesta, en el mismo formato JSON, sin proponer montos ni "
+                        "porcentajes que no estén en mi situación: describe el paso con palabras.",
+                    },
+                ]
+                try:
+                    nuevo = _leer_turno(generate_coach_text(prompt, turnos))
+                except GroqServiceError:
+                    nuevo = None
+                if nuevo and nuevo[0] and nuevo[1]:
+                    respuesta = nuevo[1]
 
-        regla_rota = rompe_guardrails(respuesta) if respuesta else "vacia"
-        if regla_rota == "inversion":
-            respuesta = _respaldo(user, "inversion")
-        elif regla_rota:
-            respuesta = _respaldo(user, "chat", contexto=contexto_financiero(session, user, today, patrones=[]))
+            regla_rota = rompe_guardrails(respuesta) if respuesta else "vacia"
+            if regla_rota == "inversion":
+                respuesta = _respaldo(user, "inversion")
+            elif regla_rota:
+                respuesta = _respaldo(
+                    user, "chat", contexto=contexto_financiero(session, user, today, patrones=[])
+                )
 
     session.add(CoachMessage(user_id=user.id, tipo="chat_user", contenido=mensaje, fecha=today))
     del_coach = CoachMessage(user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)

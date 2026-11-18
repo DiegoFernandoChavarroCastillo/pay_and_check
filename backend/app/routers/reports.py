@@ -9,6 +9,7 @@ from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.report import MonthlyWrappedResponse, TrendsResponse, WeeklyReportResponse
+from app.services import ia_uso
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.coach import inventa_cifras, rompe_guardrails
 from app.services.groq_client import GroqServiceError, generate_weekly_recommendations
@@ -34,19 +35,22 @@ def weekly_report(
     summary = build_weekly_summary(session, current_user.id, budget, today)
 
     resumen = summary_to_text(summary)
-    try:
-        recomendaciones = generate_weekly_recommendations(resumen)
-    except GroqServiceError:
-        # Un fallo de Groq no debe tumbar el resumen numérico, que sigue siendo útil.
-        recomendaciones = "No se pudieron generar recomendaciones de IA en este momento."
-    else:
-        # Mismas reglas que el resto del coach: sin culpa, sin inversiones y sin cifras inventadas.
-        if (
-            rompe_guardrails(recomendaciones)
-            or _MENCIONA_INVERSION.search(recomendaciones)
-            or inventa_cifras(recomendaciones, resumen)
-        ):
-            recomendaciones = resumen_de_respaldo(summary)
+    with ia_uso.usar(session, current_user, "reporte"):
+        try:
+            recomendaciones = generate_weekly_recommendations(resumen)
+        except GroqServiceError:
+            # Un fallo de Groq no debe tumbar el resumen numérico, que sigue siendo útil.
+            recomendaciones = "No se pudieron generar recomendaciones de IA en este momento."
+            ia_uso.marcar_respaldo()
+        else:
+            # Mismas reglas que el resto del coach: sin culpa, sin inversiones y sin cifras inventadas.
+            if (
+                rompe_guardrails(recomendaciones)
+                or _MENCIONA_INVERSION.search(recomendaciones)
+                or inventa_cifras(recomendaciones, resumen)
+            ):
+                recomendaciones = resumen_de_respaldo(summary)
+                ia_uso.marcar_respaldo()
 
     return WeeklyReportResponse(
         semana_inicio=summary.semana_inicio,

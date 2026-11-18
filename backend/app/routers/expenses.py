@@ -18,6 +18,7 @@ from app.schemas.expense import (
     ReceiptParseRequest,
     ReceiptParseResponse,
 )
+from app.services import ia_uso
 from app.services.budget_lookup import find_budget_for_date
 from app.services.category_lookup import validate_category_access
 from app.services.groq_client import (
@@ -104,7 +105,8 @@ def parse_expense(
     """Parsea el texto con IA y devuelve el JSON estructurado SIN guardar el gasto."""
     categorias = _categorias_disponibles(session, current_user.id)
     try:
-        data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
+        with ia_uso.usar(session, current_user, "registro"):
+            data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except GroqServiceError as exc:
@@ -122,7 +124,8 @@ def parse_receipt(
     el gasto: la app lo muestra para confirmar y luego usa POST /expenses."""
     categorias = _categorias_disponibles(session, current_user.id)
     try:
-        data = parse_receipt_text(payload.texto_ocr, [c.nombre for c in categorias], today_for(current_user))
+        with ia_uso.usar(session, current_user, "recibo"):
+            data = parse_receipt_text(payload.texto_ocr, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except GroqServiceError as exc:
@@ -139,7 +142,8 @@ def create_expense_from_text(
     """Parsea el texto con IA y guarda el gasto directamente en un solo paso."""
     categorias = _categorias_disponibles(session, current_user.id)
     try:
-        data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
+        with ia_uso.usar(session, current_user, "registro"):
+            data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except GroqServiceError as exc:

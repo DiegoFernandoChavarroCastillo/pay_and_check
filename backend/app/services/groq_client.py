@@ -4,12 +4,14 @@ módulo — aquí solo se habla con la API de Groq."""
 
 import json
 import logging
+import time
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from groq import Groq
 
 from app.core.config import settings
+from app.services import ia_uso
 from app.services.ia_seguridad import como_datos, marca_inyeccion, sanear_dato
 from app.services.prompts import (
     build_expense_parse_prompt,
@@ -62,13 +64,35 @@ def _chat(
     # de razonamiento (gpt-oss) el modo JSON de Groq hace que el modelo se quede
     # dando vueltas y devuelva vacío (400 json_validate_failed) de forma
     # intermitente. El JSON se pide en el prompt y se extrae con `_extraer_json`.
+    uso = ia_uso.actual()  # None si quien llama no abrió un `ia_uso.usar(...)`: no se registra nada
+    inicio = time.perf_counter()
     try:
         completion = _get_client().chat.completions.create(
             model=model, messages=messages, temperature=temperature, reasoning_effort=reasoning_effort
         )
-        return completion.choices[0].message.content
+        contenido = completion.choices[0].message.content
     except Exception as exc:  # errores de red / API de Groq
+        if uso is not None:
+            ia_uso.registrar(
+                uso, model, exito=False, latencia_ms=_ms_desde(inicio), uso_respaldo=True
+            )
         raise GroqServiceError(f"Error llamando a Groq: {exc}") from exc
+
+    if uso is not None:
+        tokens = getattr(completion, "usage", None)
+        ia_uso.registrar(
+            uso,
+            model,
+            exito=True,
+            latencia_ms=_ms_desde(inicio),
+            tokens_entrada=getattr(tokens, "prompt_tokens", None),
+            tokens_salida=getattr(tokens, "completion_tokens", None),
+        )
+    return contenido
+
+
+def _ms_desde(inicio: float) -> int:
+    return round((time.perf_counter() - inicio) * 1000)
 
 
 def _extraer_json(raw: str | None):
@@ -146,6 +170,18 @@ def _validar_gasto_saneado(raw: str, categorias: list[str], hoy: date) -> dict:
     return data
 
 
+def _chat_marcando_inyeccion(texto: str, messages: list[dict]) -> str:
+    """Llama a Groq y, si la heurística de entrada marcó el texto, lo anota en el registro de uso (sin el texto)."""
+    inyectado = marca_inyeccion(texto)
+    if inyectado:
+        logger.warning("expenses: el texto parece un intento de inyección")
+    try:
+        return _chat(messages)
+    finally:
+        if inyectado:
+            ia_uso.marcar_bloqueo("inyeccion")
+
+
 def parse_expense_text(texto: str, categorias: list[str], hoy: date) -> dict:
     """Extrae {tipo, monto, categoria, descripcion, fecha} de un texto libre.
     `tipo` es "gasto" o "ingreso"; un ingreso viene sin categoría.
@@ -153,13 +189,12 @@ def parse_expense_text(texto: str, categorias: list[str], hoy: date) -> dict:
     Lanza ExpenseParseError con un mensaje claro si el modelo no devuelve un
     JSON usable o no logra identificar un monto — nunca inventa un monto.
     """
-    if marca_inyeccion(texto):
-        logger.warning("expenses/parse: el texto parece un intento de inyección")
-    raw = _chat(
+    raw = _chat_marcando_inyeccion(
+        texto,
         [
             {"role": "system", "content": build_expense_parse_prompt(categorias, hoy.isoformat())},
             {"role": "user", "content": como_datos(texto)},
-        ]
+        ],
     )
     data = _validar_gasto_saneado(raw, categorias, hoy)
     data.pop("comercio")
@@ -170,13 +205,12 @@ def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date) -> dict
     """Extrae {monto, categoria, descripcion, fecha, comercio} del texto que el
     OCR del teléfono reconoció en un recibo. Mismas garantías que
     `parse_expense_text`."""
-    if marca_inyeccion(texto_ocr):
-        logger.warning("expenses/parse-receipt: el texto parece un intento de inyección")
-    raw = _chat(
+    raw = _chat_marcando_inyeccion(
+        texto_ocr,
         [
             {"role": "system", "content": build_receipt_parse_prompt(categorias, hoy.isoformat())},
             {"role": "user", "content": como_datos(texto_ocr)},
-        ]
+        ],
     )
     data = _validar_gasto_saneado(raw, categorias, hoy)
     if data.pop("tipo") != "gasto":

@@ -11,6 +11,7 @@ from app.core.security import (
 )
 from app.db.session import get_session
 from app.deps import get_current_user
+from app.models.ai_usage import AiUsage
 from app.models.budget import Budget
 from app.models.category import Category, CategoryLimit
 from app.models.coach import CoachMessage, EmotionalCheckin
@@ -152,6 +153,7 @@ def delete_me(
     user_id = current_user.id
     for modelo in (
         GoalContribution, Goal, Challenge, Achievement, PointEvent, EmotionalCheckin, CoachMessage, CategoryLimit,
+        AiUsage,
     ):  # fmt: skip
         session.exec(delete(modelo).where(modelo.user_id == user_id))
     session.exec(delete(Expense).where(Expense.user_id == user_id))

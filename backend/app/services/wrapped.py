@@ -14,6 +14,7 @@ from app.models.gamification import Achievement, PointEvent
 from app.models.goal import GoalContribution
 from app.models.income import Income
 from app.models.user import User
+from app.services import ia_uso
 from app.services.budget_totals import gasto_entre, ratio_ahorro
 from app.services.coach import reglas_para, rompe_guardrails
 from app.services.gamification import insignia_texto
@@ -136,11 +137,11 @@ def build_wrapped(session: Session, user: User, anio: int, mes: int, today: date
         "insignias": [insignia_texto(codigo, user.idioma)[0] for codigo in insignias],
         "animo_frecuente": animos.most_common(1)[0][0] if animos else None,
     }
-    wrapped["frase_coach"] = _frase_de_cierre(user, wrapped)
+    wrapped["frase_coach"] = _frase_de_cierre(session, user, wrapped)
     return wrapped
 
 
-def _frase_de_cierre(user: User, wrapped: dict) -> str:
+def _frase_de_cierre(session: Session, user: User, wrapped: dict) -> str:
     respaldo = _CIERRE.get(user.idioma, _CIERRE["es"]).format(
         n=wrapped["num_gastos"], dias=wrapped["dias_con_registro"]
     )
@@ -158,8 +159,13 @@ def _frase_de_cierre(user: User, wrapped: dict) -> str:
     if wrapped["variacion_vs_mes_anterior_pct"] is not None:
         lineas.append(f"Variación frente al mes anterior: {wrapped['variacion_vs_mes_anterior_pct']}%.")
 
-    try:
-        frase = generate_coach_text(build_coach_wrapped_prompt(reglas_para(user), "\n".join(lineas)))
-    except GroqServiceError:
-        return respaldo
-    return respaldo if not frase or rompe_guardrails(frase) else frase
+    with ia_uso.usar(session, user, "wrapped"):
+        try:
+            frase = generate_coach_text(build_coach_wrapped_prompt(reglas_para(user), "\n".join(lineas)))
+        except GroqServiceError:
+            ia_uso.marcar_respaldo()
+            return respaldo
+        if not frase or rompe_guardrails(frase):
+            ia_uso.marcar_respaldo()
+            return respaldo
+    return frase

@@ -1,3 +1,4 @@
+from app.models.ai_usage import AiUsage
 from app.models.budget import Budget
 from app.models.category import Category, CategoryLimit
 from app.models.coach import CoachMessage, EmotionalCheckin
@@ -25,4 +26,5 @@ __all__ = [
     "Challenge",
     "Achievement",
     "PointEvent",
+    "AiUsage",
 ]
