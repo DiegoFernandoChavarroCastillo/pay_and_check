@@ -122,14 +122,13 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
     }
 
 
-def parse_expense_text(texto: str, categorias: list[str], hoy: date | None = None) -> dict:
+def parse_expense_text(texto: str, categorias: list[str], hoy: date) -> dict:
     """Extrae {tipo, monto, categoria, descripcion, fecha} de un texto libre.
     `tipo` es "gasto" o "ingreso"; un ingreso viene sin categoría.
 
     Lanza ExpenseParseError con un mensaje claro si el modelo no devuelve un
     JSON usable o no logra identificar un monto — nunca inventa un monto.
     """
-    hoy = hoy or date.today()
     raw = _chat(
         [
             {"role": "system", "content": build_expense_parse_prompt(categorias, hoy.isoformat())},
@@ -141,11 +140,10 @@ def parse_expense_text(texto: str, categorias: list[str], hoy: date | None = Non
     return data
 
 
-def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date | None = None) -> dict:
+def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date) -> dict:
     """Extrae {monto, categoria, descripcion, fecha, comercio} del texto que el
     OCR del teléfono reconoció en un recibo. Mismas garantías que
     `parse_expense_text`."""
-    hoy = hoy or date.today()
     raw = _chat(
         [
             {"role": "system", "content": build_receipt_parse_prompt(categorias, hoy.isoformat())},

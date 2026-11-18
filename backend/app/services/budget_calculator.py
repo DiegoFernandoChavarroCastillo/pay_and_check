@@ -29,7 +29,8 @@ def calculate_budget_summary(
     budget: Budget,
     gastado_total: Decimal,
     ingresos_total: Decimal = Decimal("0"),
-    today: date | None = None,
+    *,
+    today: date,
     apartado_total: Decimal = Decimal("0"),
 ) -> BudgetSummary:
     """Calcula gastado/disponible total y por día/semana para un presupuesto.
@@ -46,7 +47,6 @@ def calculate_budget_summary(
       real de gasto desde `fecha_inicio` hasta hoy, si el dinero alcanza hasta
       `fecha_fin`.
     """
-    today = today or date.today()
     disponible_total = budget.monto_total + ingresos_total - gastado_total - apartado_total
 
     if today > budget.fecha_fin:

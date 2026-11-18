@@ -33,7 +33,7 @@ class WeeklySummary:
 
 
 def build_weekly_summary(
-    session: Session, user_id: int, budget: Budget, today: date | None = None
+    session: Session, user_id: int, budget: Budget, today: date
 ) -> WeeklySummary:
     """Agrega (no lista transacciones) el gasto de la semana calendario (lunes a
     domingo) que contiene `today`, y lo compara contra el ritmo esperado del
@@ -41,7 +41,6 @@ def build_weekly_summary(
     periodo — no el "disponible por semana" dinámico de budget_calculator,
     que mira hacia adelante desde hoy; este es un promedio fijo de referencia).
     """
-    today = today or date.today()
     semana_inicio = today - timedelta(days=today.weekday())
     semana_fin = semana_inicio + timedelta(days=6)
 
