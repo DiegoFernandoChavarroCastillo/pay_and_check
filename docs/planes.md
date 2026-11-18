@@ -58,7 +58,8 @@ tareas del mismo tipo de interacción:
 - **Reinicio:** el día 1 de cada mes a las 00:00 **en la zona horaria de la persona** (no la del servidor). No hay
   un *cron*: cada llamada queda marcada con su mes y el contador es `WHERE mes = <mes actual de la persona>`.
 - **Familiar compartido:** las 390 solicitudes se reparten entre todos los integrantes de la familia; la suma de
-  lo que usó cada uno no puede pasar de 390.
+  lo que usó cada uno no puede pasar de 390. El consumo de la familia es el de sus integrantes *actuales*: quien
+  sale se lleva su consumo y quien entra trae el suyo del mes.
 - **Al agotarse el cupo**, la IA no se llama y cada función usa su texto de respaldo:
   - el chat responde un texto fijo con la situación de la persona;
   - la reacción, los consejos, el reporte semanal y el *wrapped* usan su texto determinista;

@@ -11,7 +11,7 @@ import app.services.groq_client as groq_client
 from app.db.reporte_ia import formatear, promedios_por_tarea
 from app.models.ai_usage import AiUsage
 from app.models.user import User
-from app.services import ia_uso
+from app.services import ia_uso, planes
 
 MARZO = date(2026, 3, 31)
 GASTO = {"monto": 5000, "categoria": "comida", "descripcion": "café", "fecha": "2026-03-31"}
@@ -206,8 +206,11 @@ def test_el_reporte_promedia_solo_las_llamadas_exitosas(db_engine):
 # --- PS-22: tope mensual --------------------------------------------------------
 
 
-def _llenar(db_engine, n=ia_uso.CUPO_IA_MENSUAL, mes="2026-03", user_id=1, **campos):
-    """Siembra `n` llamadas exitosas del mes: es lo que ya gastó la persona."""
+CUPO_GRATIS = planes.CUPOS["gratis"]  # la cuenta de estas pruebas no tiene plan: es Gratis
+
+
+def _llenar(db_engine, n=CUPO_GRATIS, mes="2026-03", user_id=1, **campos):
+    """Siembra `n` llamadas exitosas del mes: es lo que ya gastó la persona (por defecto, todo su cupo)."""
     with Session(db_engine) as session:
         session.add_all(
             AiUsage(user_id=user_id, tarea="chat", modelo="m", mes=mes, **{"exito": True, **campos})
@@ -248,21 +251,21 @@ def test_con_el_tope_agotado_el_chat_responde_su_respaldo_sin_llamar_a_groq(
     assert len(client.get("/coach/chat", headers=auth_headers).json()) == 2
 
 
-def test_el_tope_es_de_300_y_la_llamada_bloqueada_no_suma(client, auth_headers, db_engine, groq, fijar_hoy):
+def test_el_tope_de_gratis_es_50_y_la_llamada_bloqueada_no_suma(client, auth_headers, db_engine, groq, fijar_hoy):
     fijar_hoy(MARZO)
     falso = groq(CHAT_OK)
-    _llenar(db_engine, n=ia_uso.CUPO_IA_MENSUAL - 1)
+    _llenar(db_engine, n=CUPO_GRATIS - 1)
 
-    # La 300 todavía pasa...
+    # La 50 todavía pasa...
     r = client.post("/coach/chat", json={"mensaje": "hola"}, headers=auth_headers)
     assert r.json()["contenido"] == CHAT_OK["respuesta"] and falso.llamadas == 1
-    # ...y la 301 no, por más veces que se insista: lo bloqueado no cuenta.
+    # ...y la 51 no, por más veces que se insista: lo bloqueado no cuenta.
     for _ in range(3):
         r = client.post("/coach/chat", json={"mensaje": "otra"}, headers=auth_headers)
         assert r.json()["contenido"].startswith("Este mes ya usaste")
     assert falso.llamadas == 1
     with Session(db_engine) as session:
-        assert ia_uso.usadas_en_el_mes(session, session.get(User, 1)) == ia_uso.CUPO_IA_MENSUAL
+        assert ia_uso.usadas_en_el_mes(session, session.get(User, 1)) == CUPO_GRATIS
 
 
 def test_sin_cupo_el_registro_por_texto_lleva_al_formulario_manual_con_402(

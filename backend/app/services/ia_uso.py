@@ -15,6 +15,7 @@ from sqlmodel import Session, func, select
 from app.core.time import today_for
 from app.models.ai_usage import AiUsage
 from app.models.user import User
+from app.services import planes
 
 logger = logging.getLogger(__name__)
 
@@ -51,36 +52,43 @@ def actual() -> _Contexto | None:
     return _actual.get()
 
 
-# Solicitudes de IA al mes por persona (planFinal §4.2). Por ahora es una constante; en PS-96 sale del plan.
-CUPO_IA_MENSUAL = 300
+def cupo_de(session: Session, user: User) -> int:
+    """Solicitudes de IA al mes de la persona: sale de su plan (docs/planes.md). En Familiar es un cupo
+    compartido por toda la familia."""
+    return planes.CUPOS[planes.plan_de(session, user)]
 
 
-def cupo_de(user: User) -> int:
-    return CUPO_IA_MENSUAL
+def _quienes_comparten(session: Session, user: User) -> list[int]:
+    """Quiénes gastan del mismo cupo: solo la familia comparte; en los demás planes es cada persona."""
+    if user.group_id is not None and planes.plan_de(session, user) == "familiar":
+        return list(session.exec(select(User.id).where(User.group_id == user.group_id)).all())
+    return [user.id]
 
 
-def _contar(session: Session, user_id: int, mes: str) -> int:
+def _contar(session: Session, user_ids: list[int], mes: str) -> int:
     # Solo las llamadas exitosas: ni las fallidas ni las bloqueadas por cupo gastan solicitudes. Lo servido
     # desde caché (los consejos del día) no llama a Groq, así que tampoco deja fila.
     return session.exec(
         select(func.count())
         .select_from(AiUsage)
-        .where(AiUsage.user_id == user_id)
+        .where(AiUsage.user_id.in_(user_ids))
         .where(AiUsage.mes == mes)
         .where(AiUsage.exito)
     ).one()
 
 
 def usadas_en_el_mes(session: Session, user: User) -> int:
-    """Solicitudes de IA del mes en curso del usuario (en su zona horaria). No hay un cron de reinicio: al
-    cambiar de mes simplemente se cuenta otro `mes`."""
-    return _contar(session, user.id, today_for(user).strftime("%Y-%m"))
+    """Solicitudes de IA del mes en curso (en la zona horaria de la persona) que cuentan contra su cupo: las
+    suyas, o las de toda la familia en el plan Familiar. No hay un cron de reinicio: al cambiar de mes
+    simplemente se cuenta otro `mes`."""
+    return _contar(session, _quienes_comparten(session, user), today_for(user).strftime("%Y-%m"))
 
 
 def cupo_agotado(contexto: _Contexto) -> bool:
     # La revisión y el registro no son atómicos: dos peticiones simultáneas pueden pasarse del tope por unas
     # pocas llamadas. Es aceptable para un tope de costo; no es un límite de seguridad.
-    return _contar(contexto.session, contexto.user_id, contexto.mes) >= cupo_de(contexto.user)
+    session, user = contexto.session, contexto.user
+    return _contar(session, _quienes_comparten(session, user), contexto.mes) >= cupo_de(session, user)
 
 
 def _guardar(contexto: _Contexto, fila: AiUsage) -> None:
