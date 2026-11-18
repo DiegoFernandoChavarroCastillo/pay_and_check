@@ -4,6 +4,7 @@ de guardrails y tiene un texto de respaldo determinista, así el coach nunca
 deja de responder ni rompe sus reglas aunque el modelo falle."""
 
 import json
+import logging
 import re
 from dataclasses import asdict
 from datetime import date
@@ -18,7 +19,14 @@ from app.models.goal import Goal
 from app.models.user import User
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
-from app.services.groq_client import GroqServiceError, _extraer_json, generate_coach_json, generate_coach_text
+from app.services.groq_client import (
+    MAX_DESCRIPCION,
+    GroqServiceError,
+    _extraer_json,
+    generate_coach_json,
+    generate_coach_text,
+)
+from app.services.ia_seguridad import como_datos, filtra_salida, marca_inyeccion, sanear_dato
 from app.services.patterns import Pattern, detect_patterns, fmt
 from app.services.prompts import (
     build_coach_chat_prompt,
@@ -28,6 +36,8 @@ from app.services.prompts import (
 )
 
 HISTORIAL_CHAT = 10
+
+logger = logging.getLogger(__name__)
 
 # Guardrails sobre la salida del modelo (en minúsculas). Si aparece alguno, el
 # mensaje se descarta y se usa el texto de respaldo.
@@ -71,12 +81,15 @@ def reglas_para(user: User) -> str:
 
 
 def rompe_guardrails(texto: str) -> str | None:
-    """Devuelve "culpa" o "inversion" si el texto rompe una regla del coach."""
+    """Devuelve "culpa", "inversion" o "salida" (fuga del prompt, URL, código o HTML, texto excesivo) si
+    el texto rompe una regla del coach."""
     minusculas = texto.lower()
     if any(frase in minusculas for frase in _LENGUAJE_CULPOSO):
         return "culpa"
     if any(frase in minusculas for frase in _ASESORIA_REGULADA):
         return "inversion"
+    if filtra_salida(texto):
+        return "salida"
     return None
 
 
@@ -117,7 +130,7 @@ def contexto_financiero(session: Session, user: User, today: date, patrones: lis
 
     metas = session.exec(select(Goal).where(Goal.user_id == user.id).where(Goal.estado == "activa")).all()
     for meta in metas:
-        lineas.append(f"Meta de ahorro activa: {meta.nombre} (objetivo {fmt(meta.monto_objetivo)}).")
+        lineas.append(f"Meta de ahorro activa: {sanear_dato(meta.nombre)} (objetivo {fmt(meta.monto_objetivo)}).")
 
     patrones = detect_patterns(session, user, today) if patrones is None else patrones
     if patrones:
@@ -141,10 +154,10 @@ def reaccion_a_gasto(session: Session, user: User, expense: Expense, today: date
     meta = session.exec(select(Goal).where(Goal.user_id == user.id).where(Goal.estado == "activa")).first()
     contexto = "\n".join(
         [
-            f"Gasto registrado: {expense.descripcion}, {fmt(expense.monto)}, "
-            f"categoría {categoria.nombre if categoria else 'otros'}.",
+            f"Gasto registrado: {sanear_dato(expense.descripcion, MAX_DESCRIPCION)}, {fmt(expense.monto)}, "
+            f"categoría {sanear_dato(categoria.nombre) if categoria else 'otros'}.",
             disponible,
-            f"Meta de ahorro activa: {meta.nombre}." if meta else "Sin meta de ahorro activa.",
+            f"Meta de ahorro activa: {sanear_dato(meta.nombre)}." if meta else "Sin meta de ahorro activa.",
         ]
     )
 
@@ -243,13 +256,19 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
 
     El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
     muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien."""
+    if marca_inyeccion(mensaje):
+        logger.warning("coach/chat: el mensaje parece un intento de inyección")
+    # Lo que escribió la persona viaja siempre como dato, también el historial: una inyección guardada
+    # antes no queda "viva" como instrucción.
     previos = [
-        {"role": "user" if m.tipo == "chat_user" else "assistant", "content": m.contenido}
+        {"role": "user", "content": como_datos(m.contenido)}
+        if m.tipo == "chat_user"
+        else {"role": "assistant", "content": m.contenido}
         for m in historial_chat(session, user.id, HISTORIAL_CHAT)
     ]
     contexto = contexto_financiero(session, user, today)
     prompt = build_coach_chat_prompt(reglas_para(user), contexto)
-    turnos = [*previos, {"role": "user", "content": mensaje}]
+    turnos = [*previos, {"role": "user", "content": como_datos(mensaje)}]
     raw = generate_coach_text(prompt, turnos)
     # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
     en_alcance, respuesta = _leer_turno(raw) or (True, "")

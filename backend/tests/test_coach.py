@@ -285,7 +285,12 @@ def test_chat_guarda_el_historial_y_lo_envia_como_contexto(client, auth_headers,
     assert (r.json()["rol"], r.json()["contenido"]) == ("coach", "respuesta 1")
     client.post("/coach/chat", json={"mensaje": "¿cómo voy?"}, headers=auth_headers)
 
-    assert [m["content"] for m in recibidos[1]] == ["hola", "respuesta 1", "¿cómo voy?"]
+    # Lo que escribió la persona viaja como dato, también el historial; lo del coach, tal cual.
+    assert [m["content"] for m in recibidos[1]] == [
+        "<datos_usuario>\nhola\n</datos_usuario>",
+        "respuesta 1",
+        "<datos_usuario>\n¿cómo voy?\n</datos_usuario>",
+    ]
     historial = client.get("/coach/chat", headers=auth_headers).json()
     assert [(m["rol"], m["contenido"]) for m in historial] == [
         ("usuario", "hola"), ("coach", "respuesta 1"), ("usuario", "¿cómo voy?"), ("coach", "respuesta 2"),

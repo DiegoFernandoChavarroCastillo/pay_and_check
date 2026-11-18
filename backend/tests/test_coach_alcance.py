@@ -48,7 +48,7 @@ class _ClienteFalso:
 
     def _create(self, *, messages, **_kwargs):
         self.llamadas += 1
-        ultimo = messages[-1]["content"]
+        ultimo = messages[-1]["content"].removeprefix("<datos_usuario>\n").removesuffix("\n</datos_usuario>")
         if ultimo in TEMAS_AJENOS:
             contenido = {"en_alcance": False, "respuesta": POEMA}
         else:

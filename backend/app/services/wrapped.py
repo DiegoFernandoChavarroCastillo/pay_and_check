@@ -18,6 +18,7 @@ from app.services.budget_totals import gasto_entre, ratio_ahorro
 from app.services.coach import reglas_para, rompe_guardrails
 from app.services.gamification import insignia_texto
 from app.services.groq_client import GroqServiceError, generate_coach_text
+from app.services.ia_seguridad import sanear_dato
 from app.services.patterns import fmt
 from app.services.prompts import build_coach_wrapped_prompt
 
@@ -153,7 +154,7 @@ def _frase_de_cierre(user: User, wrapped: dict) -> str:
     ]
     if wrapped["categoria_top"]:
         top = wrapped["categoria_top"]
-        lineas.append(f"Categoría principal: {top['categoria']} ({top['porcentaje']}% del gasto).")
+        lineas.append(f"Categoría principal: {sanear_dato(top['categoria'])} ({top['porcentaje']}% del gasto).")
     if wrapped["variacion_vs_mes_anterior_pct"] is not None:
         lineas.append(f"Variación frente al mes anterior: {wrapped['variacion_vs_mes_anterior_pct']}%.")
 

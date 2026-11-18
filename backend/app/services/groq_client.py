@@ -3,12 +3,14 @@ mapear categorías, etc.) vive en los routers/servicios que llaman a este
 módulo — aquí solo se habla con la API de Groq."""
 
 import json
-from datetime import date
+import logging
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from groq import Groq
 
 from app.core.config import settings
+from app.services.ia_seguridad import como_datos, marca_inyeccion, sanear_dato
 from app.services.prompts import (
     build_expense_parse_prompt,
     build_receipt_parse_prompt,
@@ -27,6 +29,13 @@ COACH_MODEL = MODEL
 # Extraer un gasto es mecánico y va con el razonamiento al mínimo (rápido y barato). Redactar no: con "low"
 # el modelo se limita a copiar el dato que recibe en vez de escribir el consejo con sus palabras.
 COACH_REASONING = "medium"
+
+# Topes sobre lo que el modelo extrae: un texto hostil no puede colar un monto o una fecha absurdos.
+MONTO_MAXIMO = Decimal("100000000")
+VENTANA_FECHA = timedelta(days=365)
+MAX_DESCRIPCION = 200
+
+logger = logging.getLogger(__name__)
 
 _client: Groq | None = None
 
@@ -72,9 +81,10 @@ def _extraer_json(raw: str | None):
     return json.loads(texto)
 
 
-def _validar_gasto(raw: str, categorias: list[str]) -> dict:
+def _validar_gasto(raw: str, categorias: list[str], hoy: date | None = None) -> dict:
     """Valida el JSON de un gasto devuelto por el modelo. Nunca inventa datos:
-    si falta algo o no es interpretable, lanza ExpenseParseError."""
+    si falta algo o no es interpretable, lanza ExpenseParseError. Con `hoy`, la fecha debe quedar a
+    menos de un año de ese día."""
     try:
         data = _extraer_json(raw)
     except ValueError as exc:
@@ -98,6 +108,8 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
         raise ExpenseParseError("No se pudo interpretar el monto como número.") from exc
     if monto <= 0:
         raise ExpenseParseError("El monto debe ser mayor que cero.")
+    if monto > MONTO_MAXIMO:
+        raise ExpenseParseError("El monto supera el máximo razonable.")
 
     # Un ingreso no lleva categoría: las categorías son de gasto.
     tipo = data.get("tipo", "gasto")
@@ -110,16 +122,28 @@ def _validar_gasto(raw: str, categorias: list[str]) -> dict:
         fecha = date.fromisoformat(str(data["fecha"]))
     except ValueError as exc:
         raise ExpenseParseError("La fecha devuelta por el modelo no es válida.") from exc
+    if hoy is not None and abs(fecha - hoy) > VENTANA_FECHA:
+        raise ExpenseParseError("La fecha devuelta por el modelo está fuera de un año alrededor de hoy.")
 
     comercio = data.get("comercio")
     return {
         "tipo": tipo,
         "monto": monto,
         "categoria": data["categoria"] if tipo == "gasto" else None,
-        "descripcion": str(data["descripcion"]),
+        "descripcion": str(data["descripcion"]).strip()[:MAX_DESCRIPCION],
         "fecha": fecha,
         "comercio": str(comercio).strip() if comercio else None,
     }
+
+
+def _validar_gasto_saneado(raw: str, categorias: list[str], hoy: date) -> dict:
+    """El prompt lleva los nombres de categoría saneados: el modelo devuelve ese nombre y aquí se
+    traduce al original."""
+    saneadas = {sanear_dato(c): c for c in categorias}
+    data = _validar_gasto(raw, list(saneadas), hoy)
+    if data["categoria"] is not None:
+        data["categoria"] = saneadas[data["categoria"]]
+    return data
 
 
 def parse_expense_text(texto: str, categorias: list[str], hoy: date) -> dict:
@@ -129,13 +153,15 @@ def parse_expense_text(texto: str, categorias: list[str], hoy: date) -> dict:
     Lanza ExpenseParseError con un mensaje claro si el modelo no devuelve un
     JSON usable o no logra identificar un monto — nunca inventa un monto.
     """
+    if marca_inyeccion(texto):
+        logger.warning("expenses/parse: el texto parece un intento de inyección")
     raw = _chat(
         [
             {"role": "system", "content": build_expense_parse_prompt(categorias, hoy.isoformat())},
-            {"role": "user", "content": texto},
+            {"role": "user", "content": como_datos(texto)},
         ]
     )
-    data = _validar_gasto(raw, categorias)
+    data = _validar_gasto_saneado(raw, categorias, hoy)
     data.pop("comercio")
     return data
 
@@ -144,13 +170,15 @@ def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date) -> dict
     """Extrae {monto, categoria, descripcion, fecha, comercio} del texto que el
     OCR del teléfono reconoció en un recibo. Mismas garantías que
     `parse_expense_text`."""
+    if marca_inyeccion(texto_ocr):
+        logger.warning("expenses/parse-receipt: el texto parece un intento de inyección")
     raw = _chat(
         [
             {"role": "system", "content": build_receipt_parse_prompt(categorias, hoy.isoformat())},
-            {"role": "user", "content": texto_ocr},
+            {"role": "user", "content": como_datos(texto_ocr)},
         ]
     )
-    data = _validar_gasto(raw, categorias)
+    data = _validar_gasto_saneado(raw, categorias, hoy)
     if data.pop("tipo") != "gasto":
         raise ExpenseParseError("El recibo no corresponde a un gasto.")
     return data

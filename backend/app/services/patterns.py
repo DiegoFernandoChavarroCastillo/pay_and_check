@@ -18,6 +18,7 @@ from app.models.user import User
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
 from app.services.category_lookup import limite_de, limites_propios
+from app.services.ia_seguridad import sanear_dato
 from app.services.weekly_report import build_weekly_summary
 
 VENTANA_DIAS = 28
@@ -144,7 +145,7 @@ def _fin_de_semana(idioma, gastos, categorias, desde: date, hasta: date) -> Patt
     return Pattern(
         tipo="fin_de_semana",
         descripcion=_t(
-            idioma, "fin_de_semana", categoria=categoria.nombre, fin=fmt(prom_fin), semana=fmt(prom_semana)
+            idioma, "fin_de_semana", categoria=sanear_dato(categoria.nombre), fin=fmt(prom_fin), semana=fmt(prom_semana)
         ),
         datos={
             "category_id": category_id,
@@ -181,7 +182,8 @@ def _variacion_semanal(idioma, gastos, categorias, today: date) -> Pattern | Non
     return Pattern(
         tipo="variacion_semanal",
         descripcion=_t(
-            idioma, "variacion_semanal", categoria=categoria.nombre, actual=fmt(monto), anterior=fmt(previo), pct=pct
+            idioma, "variacion_semanal", categoria=sanear_dato(categoria.nombre), actual=fmt(monto),
+            anterior=fmt(previo), pct=pct
         ),
         datos={"category_id": category_id, "categoria": categoria.nombre, "aumento_pct": pct},
         accion=_accion_reto(idioma, categoria, 20),
@@ -218,7 +220,9 @@ def _categoria_dominante(idioma, gastos, categorias, limites: dict, today: date)
 
     return Pattern(
         tipo="categoria_dominante",
-        descripcion=_t(idioma, "categoria_dominante", categoria=categoria.nombre, pct=pct, monto=fmt(monto)),
+        descripcion=_t(
+            idioma, "categoria_dominante", categoria=sanear_dato(categoria.nombre), pct=pct, monto=fmt(monto)
+        ),
         datos={"category_id": category_id, "categoria": categoria.nombre, "participacion_pct": pct},
         accion=accion,
     )
