@@ -22,6 +22,7 @@ from app.services import ia_uso
 from app.services.budget_lookup import find_budget_for_date
 from app.services.category_lookup import validate_category_access
 from app.services.groq_client import (
+    CupoIAAgotado,
     ExpenseParseError,
     GroqServiceError,
     parse_expense_text,
@@ -29,6 +30,11 @@ from app.services.groq_client import (
 )
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
+
+# 402 cuando se agota el cupo mensual de IA: la app lleva a la persona al formulario manual.
+SIN_CUPO_IA = (
+    "Llegaste al límite de solicitudes de IA de este mes. Registra el movimiento con el formulario manual."
+)
 
 
 def _categorias_disponibles(session: Session, user_id: int) -> list[Category]:
@@ -109,6 +115,8 @@ def parse_expense(
             data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    except CupoIAAgotado as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CUPO_IA) from exc
     except GroqServiceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     return ExpenseParseResponse(**data)
@@ -128,6 +136,8 @@ def parse_receipt(
             data = parse_receipt_text(payload.texto_ocr, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    except CupoIAAgotado as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CUPO_IA) from exc
     except GroqServiceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     return ReceiptParseResponse(**data)
@@ -146,6 +156,8 @@ def create_expense_from_text(
             data = parse_expense_text(payload.texto, [c.nombre for c in categorias], today_for(current_user))
     except ExpenseParseError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    except CupoIAAgotado as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CUPO_IA) from exc
     except GroqServiceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 

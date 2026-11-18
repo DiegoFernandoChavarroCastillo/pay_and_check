@@ -10,6 +10,8 @@ from sqlmodel import Session, select
 import app.services.groq_client as groq_client
 from app.db.reporte_ia import formatear, promedios_por_tarea
 from app.models.ai_usage import AiUsage
+from app.models.user import User
+from app.services import ia_uso
 
 MARZO = date(2026, 3, 31)
 GASTO = {"monto": 5000, "categoria": "comida", "descripcion": "café", "fecha": "2026-03-31"}
@@ -199,3 +201,141 @@ def test_el_reporte_promedia_solo_las_llamadas_exitosas(db_engine):
         texto = formatear(list(todo.values()))
         assert "chat" in texto and "registro" in texto
         assert formatear([]) == "Sin llamadas registradas en ese rango."
+
+
+# --- PS-22: tope mensual --------------------------------------------------------
+
+
+def _llenar(db_engine, n=ia_uso.CUPO_IA_MENSUAL, mes="2026-03", user_id=1, **campos):
+    """Siembra `n` llamadas exitosas del mes: es lo que ya gastó la persona."""
+    with Session(db_engine) as session:
+        session.add_all(
+            AiUsage(user_id=user_id, tarea="chat", modelo="m", mes=mes, **{"exito": True, **campos})
+            for _ in range(n)
+        )
+        session.commit()
+
+
+def test_usadas_en_el_mes_cuenta_solo_las_llamadas_exitosas(auth_headers, db_engine, fijar_hoy):
+    fijar_hoy(MARZO)
+    _llenar(db_engine, n=2)
+    _llenar(db_engine, n=3, exito=False, uso_respaldo=True)  # Groq falló
+    _llenar(db_engine, n=4, exito=False, uso_respaldo=True, bloqueado_por="cupo")  # tope agotado
+    _llenar(db_engine, n=5, mes="2026-02")  # otro mes
+    _llenar(db_engine, n=6, user_id=99)  # otra persona
+    _llenar(db_engine, n=1, uso_respaldo=True, bloqueado_por="alcance")  # sí gastó una solicitud
+
+    with Session(db_engine) as session:
+        assert ia_uso.usadas_en_el_mes(session, session.get(User, 1)) == 3
+
+
+def test_con_el_tope_agotado_el_chat_responde_su_respaldo_sin_llamar_a_groq(
+    client, auth_headers, db_engine, groq, fijar_hoy
+):
+    fijar_hoy(MARZO)
+    falso = groq(CHAT_OK)
+    _llenar(db_engine)
+
+    r = client.post("/coach/chat", json={"mensaje": "¿cómo voy?"}, headers=auth_headers)
+
+    assert r.status_code == 200
+    assert r.json()["contenido"].startswith("Este mes ya usaste todas tus solicitudes de IA")
+    assert falso.llamadas == 0
+    bloqueada = _filas(db_engine)[-1]
+    assert (bloqueada.exito, bloqueada.uso_respaldo, bloqueada.bloqueado_por) == (False, True, "cupo")
+    assert bloqueada.tokens_entrada is None
+    # El turno se guarda como cualquier otro.
+    assert len(client.get("/coach/chat", headers=auth_headers).json()) == 2
+
+
+def test_el_tope_es_de_300_y_la_llamada_bloqueada_no_suma(client, auth_headers, db_engine, groq, fijar_hoy):
+    fijar_hoy(MARZO)
+    falso = groq(CHAT_OK)
+    _llenar(db_engine, n=ia_uso.CUPO_IA_MENSUAL - 1)
+
+    # La 300 todavía pasa...
+    r = client.post("/coach/chat", json={"mensaje": "hola"}, headers=auth_headers)
+    assert r.json()["contenido"] == CHAT_OK["respuesta"] and falso.llamadas == 1
+    # ...y la 301 no, por más veces que se insista: lo bloqueado no cuenta.
+    for _ in range(3):
+        r = client.post("/coach/chat", json={"mensaje": "otra"}, headers=auth_headers)
+        assert r.json()["contenido"].startswith("Este mes ya usaste")
+    assert falso.llamadas == 1
+    with Session(db_engine) as session:
+        assert ia_uso.usadas_en_el_mes(session, session.get(User, 1)) == ia_uso.CUPO_IA_MENSUAL
+
+
+def test_sin_cupo_el_registro_por_texto_lleva_al_formulario_manual_con_402(
+    client, auth_headers, db_engine, categorias, groq, fijar_hoy
+):
+    fijar_hoy(MARZO)
+    falso = groq(GASTO)
+    _llenar(db_engine)
+
+    for ruta, cuerpo in (
+        ("/expenses/parse", {"texto": "café 5000"}),
+        ("/expenses/from-text", {"texto": "café 5000"}),
+        ("/expenses/parse-receipt", {"texto_ocr": "EXITO TOTAL 5.000"}),
+    ):
+        r = client.post(ruta, json=cuerpo, headers=auth_headers)
+        assert r.status_code == 402, ruta
+        assert r.json()["detail"] == (
+            "Llegaste al límite de solicitudes de IA de este mes. Registra el movimiento con el formulario manual."
+        )
+    assert falso.llamadas == 0
+    # El gasto manual sigue funcionando sin IA.
+    assert client.get("/expenses", headers=auth_headers).json() == []
+
+
+def test_sin_cupo_reaccion_y_reporte_semanal_usan_sus_textos_de_respaldo(
+    client, auth_headers, db_engine, categorias, presupuesto, gastar, fijar_hoy, groq
+):
+    fijar_hoy(MARZO)
+    presupuesto(MARZO - timedelta(days=10), MARZO + timedelta(days=9), monto="100000.00")
+    gasto = gastar(10000, MARZO)
+    falso = groq("¡Buen registro!")
+    _llenar(db_engine)
+
+    r = client.post("/coach/reaction", json={"expense_id": gasto["id"]}, headers=auth_headers)
+    assert r.status_code == 200 and "por día" in r.json()["mensaje"]
+
+    r = client.get("/reports/weekly", headers=auth_headers)
+    assert r.status_code == 200
+    assert "No se pudieron generar recomendaciones" not in r.json()["recomendaciones"]
+    assert falso.llamadas == 0
+
+
+def test_el_tope_se_reinicia_al_cambiar_de_mes_en_la_zona_del_usuario(
+    client, auth_headers, db_engine, groq, fijar_hoy
+):
+    falso = groq(CHAT_OK)
+    _llenar(db_engine, mes="2026-03")
+
+    fijar_hoy(MARZO)
+    r = client.post("/coach/chat", json={"mensaje": "hola"}, headers=auth_headers)
+    assert r.json()["contenido"].startswith("Este mes ya usaste") and falso.llamadas == 0
+
+    fijar_hoy(MARZO + timedelta(days=1))  # 1 de abril
+    r = client.post("/coach/chat", json={"mensaje": "hola"}, headers=auth_headers)
+    assert r.json()["contenido"] == CHAT_OK["respuesta"] and falso.llamadas == 1
+    assert _filas(db_engine)[-1].mes == "2026-04"
+
+
+def test_los_consejos_servidos_desde_cache_no_gastan_solicitudes(
+    client, auth_headers, db_engine, categorias, presupuesto, gastar, fijar_hoy, groq
+):
+    fijar_hoy(date(2026, 3, 30))
+    presupuesto(date(2026, 2, 1), date(2026, 4, 30))
+    for sabado in (date(2026, 3, 7), date(2026, 3, 14), date(2026, 3, 21), date(2026, 3, 28)):
+        gastar(40000, sabado, 3, "salida")
+    # Una respuesta con la forma equivocada basta: cuenta como llamada y los consejos caen al respaldo.
+    falso = groq({"mensajes": []})
+
+    primera = client.get("/coach/insights", headers=auth_headers).json()
+    segunda = client.get("/coach/insights", headers=auth_headers).json()
+
+    assert primera and segunda == primera
+    assert falso.llamadas == 1
+    assert [(f.tarea, f.uso_respaldo) for f in _filas(db_engine)] == [("consejos", True)]
+    with Session(db_engine) as session:
+        assert ia_uso.usadas_en_el_mes(session, session.get(User, 1)) == 1

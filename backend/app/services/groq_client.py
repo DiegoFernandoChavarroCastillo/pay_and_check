@@ -53,6 +53,11 @@ class GroqServiceError(Exception):
     """Error genérico llamando a Groq (red, API caída, etc.)."""
 
 
+class CupoIAAgotado(GroqServiceError):
+    """La persona usó todas sus solicitudes de IA del mes. Es un GroqServiceError a propósito: cada
+    llamador ya sabe responder con su texto de respaldo cuando la IA no está disponible."""
+
+
 class ExpenseParseError(GroqServiceError):
     """El modelo no devolvió un JSON válido o no pudo extraer un monto."""
 
@@ -64,7 +69,10 @@ def _chat(
     # de razonamiento (gpt-oss) el modo JSON de Groq hace que el modelo se quede
     # dando vueltas y devuelva vacío (400 json_validate_failed) de forma
     # intermitente. El JSON se pide en el prompt y se extrae con `_extraer_json`.
-    uso = ia_uso.actual()  # None si quien llama no abrió un `ia_uso.usar(...)`: no se registra nada
+    uso = ia_uso.actual()  # None si quien llama no abrió un `ia_uso.usar(...)`: ni se registra ni hay tope
+    if uso is not None and ia_uso.cupo_agotado(uso):
+        ia_uso.registrar(uso, model, exito=False, uso_respaldo=True, bloqueado_por="cupo")
+        raise CupoIAAgotado("Se agotó el cupo mensual de solicitudes de IA.")
     inicio = time.perf_counter()
     try:
         completion = _get_client().chat.completions.create(

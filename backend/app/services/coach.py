@@ -23,6 +23,7 @@ from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
 from app.services.groq_client import (
     MAX_DESCRIPCION,
+    CupoIAAgotado,
     GroqServiceError,
     _extraer_json,
     generate_coach_json,
@@ -61,6 +62,8 @@ _RESPALDO = {
         "puedo hacer es ayudarte a organizar tu presupuesto y tus metas de ahorro.",
         "fuera_de_alcance": "Solo puedo ayudarte con tus finanzas dentro de Pay&Check: tu presupuesto, tus gastos "
         "y tus metas de ahorro. ¿Quieres que revisemos alguno de ellos?",
+        "sin_cupo": "Este mes ya usaste todas tus solicitudes de IA, así que no puedo responder con detalle. "
+        "Esto es lo esencial: {contexto}",
     },
     "en": {
         "reaccion": "Logged! Tracking every expense is what keeps you in charge. You have {por_dia} left per day.",
@@ -70,6 +73,8 @@ _RESPALDO = {
         "is help you organize your budget and your savings goals.",
         "fuera_de_alcance": "I can only help you with your finances inside Pay&Check: your budget, your expenses "
         "and your savings goals. Want to go over any of them?",
+        "sin_cupo": "You've used all your AI requests for this month, so I can't answer in detail. "
+        "Here is the essential: {contexto}",
     },
 }
 
@@ -290,13 +295,17 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
     with ia_uso.usar(session, user, "chat"):
         try:
             raw = generate_coach_text(prompt, turnos)
+        except CupoIAAgotado:
+            raw = None
         finally:
             if inyectado:
                 ia_uso.marcar_bloqueo("inyeccion")
         # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
-        en_alcance, respuesta = _leer_turno(raw) or (True, "")
+        en_alcance, respuesta = _leer_turno(raw or "") or (True, "")
 
-        if not en_alcance:
+        if raw is None:
+            respuesta = _respaldo(user, "sin_cupo", contexto=contexto_financiero(session, user, today, patrones=[]))
+        elif not en_alcance:
             ia_uso.marcar_bloqueo("alcance")
             respuesta = _respaldo(user, "fuera_de_alcance")
         else:

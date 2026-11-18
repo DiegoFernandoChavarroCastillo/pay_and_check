@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 
-from sqlmodel import Session
+from sqlmodel import Session, func, select
 
 from app.core.time import today_for
 from app.models.ai_usage import AiUsage
@@ -49,6 +49,38 @@ def usar(session: Session, user: User, tarea: str) -> Iterator[None]:
 
 def actual() -> _Contexto | None:
     return _actual.get()
+
+
+# Solicitudes de IA al mes por persona (planFinal §4.2). Por ahora es una constante; en PS-96 sale del plan.
+CUPO_IA_MENSUAL = 300
+
+
+def cupo_de(user: User) -> int:
+    return CUPO_IA_MENSUAL
+
+
+def _contar(session: Session, user_id: int, mes: str) -> int:
+    # Solo las llamadas exitosas: ni las fallidas ni las bloqueadas por cupo gastan solicitudes. Lo servido
+    # desde caché (los consejos del día) no llama a Groq, así que tampoco deja fila.
+    return session.exec(
+        select(func.count())
+        .select_from(AiUsage)
+        .where(AiUsage.user_id == user_id)
+        .where(AiUsage.mes == mes)
+        .where(AiUsage.exito)
+    ).one()
+
+
+def usadas_en_el_mes(session: Session, user: User) -> int:
+    """Solicitudes de IA del mes en curso del usuario (en su zona horaria). No hay un cron de reinicio: al
+    cambiar de mes simplemente se cuenta otro `mes`."""
+    return _contar(session, user.id, today_for(user).strftime("%Y-%m"))
+
+
+def cupo_agotado(contexto: _Contexto) -> bool:
+    # La revisión y el registro no son atómicos: dos peticiones simultáneas pueden pasarse del tope por unas
+    # pocas llamadas. Es aceptable para un tope de costo; no es un límite de seguridad.
+    return _contar(contexto.session, contexto.user_id, contexto.mes) >= cupo_de(contexto.user)
 
 
 def _guardar(contexto: _Contexto, fila: AiUsage) -> None:

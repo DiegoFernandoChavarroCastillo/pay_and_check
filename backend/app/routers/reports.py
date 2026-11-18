@@ -12,7 +12,7 @@ from app.schemas.report import MonthlyWrappedResponse, TrendsResponse, WeeklyRep
 from app.services import ia_uso
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.coach import inventa_cifras, rompe_guardrails
-from app.services.groq_client import GroqServiceError, generate_weekly_recommendations
+from app.services.groq_client import CupoIAAgotado, GroqServiceError, generate_weekly_recommendations
 from app.services.trends import build_trends
 from app.services.weekly_report import build_weekly_summary, resumen_de_respaldo, summary_to_text
 from app.services.wrapped import build_wrapped
@@ -38,6 +38,10 @@ def weekly_report(
     with ia_uso.usar(session, current_user, "reporte"):
         try:
             recomendaciones = generate_weekly_recommendations(resumen)
+        except CupoIAAgotado:
+            # Sin cupo el resumen numérico sigue y las recomendaciones son las deterministas.
+            recomendaciones = resumen_de_respaldo(summary)
+            ia_uso.marcar_respaldo()
         except GroqServiceError:
             # Un fallo de Groq no debe tumbar el resumen numérico, que sigue siendo útil.
             recomendaciones = "No se pudieron generar recomendaciones de IA en este momento."
