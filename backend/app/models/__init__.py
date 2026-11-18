@@ -7,6 +7,7 @@ from app.models.gamification import Achievement, Challenge, PointEvent
 from app.models.goal import Goal, GoalContribution
 from app.models.group import Group
 from app.models.income import Income
+from app.models.plan import LicenseCode, Organization, Subscription
 from app.models.recurring_expense import RecurringExpense
 from app.models.user import User
 
@@ -27,4 +28,7 @@ __all__ = [
     "Achievement",
     "PointEvent",
     "AiUsage",
+    "Organization",
+    "LicenseCode",
+    "Subscription",
 ]

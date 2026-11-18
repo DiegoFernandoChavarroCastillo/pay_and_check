@@ -30,6 +30,7 @@ from app.schemas.auth import (
 )
 from app.schemas.user import UserResponse, UserUpdate
 from app.services.google_auth import GoogleTokenError, verify_google_token
+from app.services.planes import salir_del_plan
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -151,6 +152,8 @@ def delete_me(
     """Borra la cuenta y todos sus datos. El orden respeta las llaves foráneas:
     los gastos apuntan a presupuestos, categorías y gastos fijos."""
     user_id = current_user.id
+    # Antes que todo lo demás: si era el titular de una familia, esta se disuelve y todos vuelven a Gratis.
+    salir_del_plan(session, current_user)
     for modelo in (
         GoalContribution, Goal, Challenge, Achievement, PointEvent, EmotionalCheckin, CoachMessage, CategoryLimit,
         AiUsage,
