@@ -18,7 +18,7 @@ from app.models.goal import Goal
 from app.models.user import User
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
-from app.services.groq_client import GroqServiceError, generate_coach_json, generate_coach_text
+from app.services.groq_client import GroqServiceError, _extraer_json, generate_coach_json, generate_coach_text
 from app.services.patterns import Pattern, detect_patterns, fmt
 from app.services.prompts import (
     build_coach_chat_prompt,
@@ -47,6 +47,8 @@ _RESPALDO = {
         "chat": "Ahora mismo no puedo responder con detalle, pero aquí va lo esencial: {contexto}",
         "inversion": "Sobre inversiones solo puedo darte educación general, no asesoría financiera. Lo que sí "
         "puedo hacer es ayudarte a organizar tu presupuesto y tus metas de ahorro.",
+        "fuera_de_alcance": "Solo puedo ayudarte con tus finanzas dentro de Pay&Check: tu presupuesto, tus gastos "
+        "y tus metas de ahorro. ¿Quieres que revisemos alguno de ellos?",
     },
     "en": {
         "reaccion": "Logged! Tracking every expense is what keeps you in charge. You have {por_dia} left per day.",
@@ -54,6 +56,8 @@ _RESPALDO = {
         "chat": "I can't answer in detail right now, but here is the essential: {contexto}",
         "inversion": "On investments I can only offer general education, not financial advice. What I can do "
         "is help you organize your budget and your savings goals.",
+        "fuera_de_alcance": "I can only help you with your finances inside Pay&Check: your budget, your expenses "
+        "and your savings goals. Want to go over any of them?",
     },
 }
 
@@ -221,9 +225,24 @@ def historial_chat(session: Session, user_id: int, limite: int = 50) -> list[Coa
     return list(reversed(mensajes))
 
 
+def _leer_turno(raw: str) -> tuple[bool, str] | None:
+    """Lee el contrato {"en_alcance", "respuesta"} del chat. None si el modelo no lo cumplió."""
+    try:
+        data = _extraer_json(raw)
+    except ValueError:
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("en_alcance"), bool):
+        return None
+    respuesta = data.get("respuesta")
+    return data["en_alcance"], respuesta.strip() if isinstance(respuesta, str) else ""
+
+
 def responder_chat(session: Session, user: User, mensaje: str, today: date) -> CoachMessage:
     """Responde un turno del chat y guarda ambos mensajes. Lanza
-    GroqServiceError si la IA no está disponible (no se guarda nada)."""
+    GroqServiceError si la IA no está disponible (no se guarda nada).
+
+    El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
+    muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien."""
     previos = [
         {"role": "user" if m.tipo == "chat_user" else "assistant", "content": m.contenido}
         for m in historial_chat(session, user.id, HISTORIAL_CHAT)
@@ -231,30 +250,37 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
     contexto = contexto_financiero(session, user, today)
     prompt = build_coach_chat_prompt(reglas_para(user), contexto)
     turnos = [*previos, {"role": "user", "content": mensaje}]
-    respuesta = generate_coach_text(prompt, turnos)
+    raw = generate_coach_text(prompt, turnos)
+    # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
+    en_alcance, respuesta = _leer_turno(raw) or (True, "")
 
-    # Si trae cifras que no salen ni de sus datos ni de lo conversado, se le pide una vez que responda sin
-    # ellas. No se descarta sin más: en el chat la persona puede haber pedido una cuenta.
-    conocido = "\n".join([contexto, *(t["content"] for t in turnos)])
-    if respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje):
-        turnos += [
-            {"role": "assistant", "content": respuesta},
-            {
-                "role": "user",
-                "content": "Repite tu respuesta sin proponer montos ni porcentajes que no estén en mi "
-                "situación: describe el paso con palabras.",
-            },
-        ]
-        try:
-            respuesta = generate_coach_text(prompt, turnos) or respuesta
-        except GroqServiceError:
-            pass
+    if not en_alcance:
+        respuesta = _respaldo(user, "fuera_de_alcance")
+    else:
+        # Si trae cifras que no salen ni de sus datos ni de lo conversado, se le pide una vez que responda sin
+        # ellas. No se descarta sin más: en el chat la persona puede haber pedido una cuenta.
+        conocido = "\n".join([contexto, *(t["content"] for t in turnos)])
+        if respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje):
+            turnos += [
+                {"role": "assistant", "content": raw},
+                {
+                    "role": "user",
+                    "content": "Repite tu respuesta, en el mismo formato JSON, sin proponer montos ni "
+                    "porcentajes que no estén en mi situación: describe el paso con palabras.",
+                },
+            ]
+            try:
+                nuevo = _leer_turno(generate_coach_text(prompt, turnos))
+            except GroqServiceError:
+                nuevo = None
+            if nuevo and nuevo[0] and nuevo[1]:
+                respuesta = nuevo[1]
 
-    regla_rota = rompe_guardrails(respuesta) if respuesta else "vacia"
-    if regla_rota == "inversion":
-        respuesta = _respaldo(user, "inversion")
-    elif regla_rota:
-        respuesta = _respaldo(user, "chat", contexto=contexto_financiero(session, user, today, patrones=[]))
+        regla_rota = rompe_guardrails(respuesta) if respuesta else "vacia"
+        if regla_rota == "inversion":
+            respuesta = _respaldo(user, "inversion")
+        elif regla_rota:
+            respuesta = _respaldo(user, "chat", contexto=contexto_financiero(session, user, today, patrones=[]))
 
     session.add(CoachMessage(user_id=user.id, tipo="chat_user", contenido=mensaje, fecha=today))
     del_coach = CoachMessage(user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)

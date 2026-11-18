@@ -1,5 +1,6 @@
 """Fases 3 y 4 de plan-app-movil.md: recibos por OCR, check-ins, patrones y coach."""
 
+import json
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -276,7 +277,7 @@ def test_chat_guarda_el_historial_y_lo_envia_como_contexto(client, auth_headers,
 
     def _ia(_prompt, mensajes=None):
         recibidos.append(mensajes)
-        return f"respuesta {len(recibidos)}"
+        return json.dumps({"en_alcance": True, "respuesta": f"respuesta {len(recibidos)}"})
 
     monkeypatch.setattr(coach_service, "generate_coach_text", _ia)
 
@@ -292,7 +293,11 @@ def test_chat_guarda_el_historial_y_lo_envia_como_contexto(client, auth_headers,
 
 
 def test_chat_no_da_asesoria_de_inversion_y_no_guarda_nada_si_la_ia_cae(client, auth_headers, monkeypatch):
-    monkeypatch.setattr(coach_service, "generate_coach_text", lambda *_a: "Te recomiendo invertir en Bitcoin ya.")
+    monkeypatch.setattr(
+        coach_service,
+        "generate_coach_text",
+        lambda *_a: json.dumps({"en_alcance": True, "respuesta": "Te recomiendo invertir en Bitcoin ya."}),
+    )
     r = client.post("/coach/chat", json={"mensaje": "¿en qué invierto?"}, headers=auth_headers)
     assert r.status_code == 200
     assert "bitcoin" not in r.json()["contenido"].lower()
@@ -311,6 +316,7 @@ def test_las_reglas_del_coach_incluyen_tono_idioma_y_guardrails():
     reglas = build_coach_rules("Ana", "humoristico", "en")
     assert "Ana" in reglas and "humor amable" in reglas and "inglés" in reglas
     assert "Cero culpa" in reglas and "No das asesoría de inversión" in reglas
+    assert "Alcance: solo hablas de las finanzas personales" in reglas
 
     assert coach_service.rompe_guardrails("Vas muy bien, sigue así.") is None
     assert coach_service.rompe_guardrails("Eso fue irresponsable.") == "culpa"

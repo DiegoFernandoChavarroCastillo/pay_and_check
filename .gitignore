@@ -223,3 +223,5 @@ __marimo__/
 # Flutter (mobile/): la plantilla de Python de arriba ignora "lib/", que en
 # Flutter es justo donde vive el código de la app.
 !mobile/lib/
+.idea/
+Claude outputs/
