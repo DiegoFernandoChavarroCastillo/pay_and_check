@@ -50,7 +50,8 @@ def weekly_report(
         else:
             # Mismas reglas que el resto del coach: sin culpa, sin inversiones y sin cifras inventadas.
             if (
-                rompe_guardrails(recomendaciones)
+                not recomendaciones
+                or rompe_guardrails(recomendaciones)
                 or _MENCIONA_INVERSION.search(recomendaciones)
                 or inventa_cifras(recomendaciones, resumen)
             ):

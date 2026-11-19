@@ -16,7 +16,6 @@ from app.schemas.coach import (
     ReactionRequest,
 )
 from app.services import coach as coach_service
-from app.services.groq_client import GroqServiceError
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
@@ -70,10 +69,6 @@ def chat(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> ChatMessageResponse:
-    try:
-        respuesta = coach_service.responder_chat(
-            session, current_user, payload.mensaje, today_for(current_user)
-        )
-    except GroqServiceError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "El coach no está disponible en este momento.") from exc
+    # Sin Groq el servicio responde su texto de respaldo (y no guarda el turno): aquí nunca hay un 5xx.
+    respuesta = coach_service.responder_chat(session, current_user, payload.mensaje, today_for(current_user))
     return _a_respuesta(respuesta)

@@ -32,10 +32,12 @@ from app.services.groq_client import (
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
-# 402 cuando se agota el cupo mensual de IA: la app lleva a la persona al formulario manual.
+# 402 cuando se agota el cupo mensual de IA y 503 cuando Groq está caído o limitado: en ambos casos la app lleva
+# a la persona al formulario manual, que no usa IA.
 SIN_CUPO_IA = (
     "Llegaste al límite de solicitudes de IA de este mes. Registra el movimiento con el formulario manual."
 )
+SIN_IA = "El registro con IA no está disponible en este momento. Registra el movimiento con el formulario manual."
 
 
 def _categorias_disponibles(session: Session, user_id: int) -> list[Category]:
@@ -119,7 +121,7 @@ def parse_expense(
     except CupoIAAgotado as exc:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CUPO_IA) from exc
     except GroqServiceError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, SIN_IA) from exc
     return ExpenseParseResponse(**data)
 
 
@@ -140,7 +142,7 @@ def parse_receipt(
     except CupoIAAgotado as exc:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CUPO_IA) from exc
     except GroqServiceError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, SIN_IA) from exc
     return ReceiptParseResponse(**data)
 
 
@@ -165,7 +167,7 @@ def create_expense_from_text(
     except CupoIAAgotado as exc:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CUPO_IA) from exc
     except GroqServiceError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, SIN_IA) from exc
 
     if data.get("tipo") == "ingreso":
         raise HTTPException(

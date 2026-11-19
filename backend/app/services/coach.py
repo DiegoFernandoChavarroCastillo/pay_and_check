@@ -39,6 +39,8 @@ from app.services.prompts import (
 )
 
 HISTORIAL_CHAT = 10
+# `id` de un mensaje del chat que no se guardó. Es el mismo valor con el que la app marca sus mensajes locales.
+SIN_GUARDAR = -1
 
 logger = logging.getLogger(__name__)
 
@@ -273,8 +275,9 @@ def _leer_turno(raw: str) -> tuple[bool, str] | None:
 
 
 def responder_chat(session: Session, user: User, mensaje: str, today: date) -> CoachMessage:
-    """Responde un turno del chat y guarda ambos mensajes. Lanza
-    GroqServiceError si la IA no está disponible (no se guarda nada).
+    """Responde un turno del chat y guarda ambos mensajes. Nunca lanza GroqServiceError: si Groq está caído,
+    limitado o no responde, contesta con el texto de respaldo pero NO guarda el turno. El historial se reenvía
+    al modelo y no debe llevar textos de respaldo; el mensaje devuelto trae `id` = SIN_GUARDAR.
 
     El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
     muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien."""
@@ -293,17 +296,26 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
     prompt = build_coach_chat_prompt(reglas_para(user), contexto)
     turnos = [*previos, {"role": "user", "content": como_datos(mensaje)}]
     with ia_uso.usar(session, user, "chat"):
+        sin_cupo = caida = False
         try:
             raw = generate_coach_text(prompt, turnos)
         except CupoIAAgotado:
-            raw = None
+            raw, sin_cupo = None, True
+        except GroqServiceError:
+            raw, caida = None, True
         finally:
             if inyectado:
                 ia_uso.marcar_bloqueo("inyeccion")
+        caida = caida or (raw is not None and not raw)  # Groq respondió, pero sin nada
+
+        if caida:
+            respuesta = _respaldo(user, "chat", contexto=contexto_financiero(session, user, today, patrones=[]))
+            return CoachMessage(id=SIN_GUARDAR, user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)
+
         # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
         en_alcance, respuesta = _leer_turno(raw or "") or (True, "")
 
-        if raw is None:
+        if sin_cupo:
             respuesta = _respaldo(user, "sin_cupo", contexto=contexto_financiero(session, user, today, patrones=[]))
         elif not en_alcance:
             ia_uso.marcar_bloqueo("alcance")

@@ -32,6 +32,9 @@ COACH_MODEL = MODEL
 # el modelo se limita a copiar el dato que recibe en vez de escribir el consejo con sus palabras.
 COACH_REASONING = "medium"
 
+GROQ_TIMEOUT_S = 15.0
+GROQ_MAX_REINTENTOS = 0
+
 # Topes sobre lo que el modelo extrae: un texto hostil no puede colar un monto o una fecha absurdos.
 MONTO_MAXIMO = Decimal("100000000")
 VENTANA_FECHA = timedelta(days=365)
@@ -45,7 +48,9 @@ _client: Groq | None = None
 def _get_client() -> Groq:
     global _client
     if _client is None:
-        _client = Groq(api_key=settings.GROQ_API_KEY)
+        # Sin reintentos y con un timeout corto: si Groq no responde, la persona recibe el respaldo en
+        # segundos en vez de esperar al timeout y los reintentos por defecto del SDK (más de un minuto).
+        _client = Groq(api_key=settings.GROQ_API_KEY, timeout=GROQ_TIMEOUT_S, max_retries=GROQ_MAX_REINTENTOS)
     return _client
 
 
@@ -228,17 +233,19 @@ def parse_receipt_text(texto_ocr: str, categorias: list[str], hoy: date) -> dict
 
 def generate_weekly_recommendations(resumen: str) -> str:
     """Devuelve 2-3 recomendaciones en texto natural a partir de un resumen agregado."""
-    return _chat([{"role": "system", "content": build_weekly_report_prompt(resumen)}], temperature=0.4).strip()
+    # `or ""`: Groq puede devolver content=None (el modelo solo "razonó") y un `.strip()` sobre None sería un 500.
+    return (_chat([{"role": "system", "content": build_weekly_report_prompt(resumen)}], temperature=0.4) or "").strip()
 
 
 def generate_coach_text(system_prompt: str, messages: list[dict] | None = None) -> str:
     """Respuesta en texto del coach. `messages` son los turnos previos del chat."""
-    return _chat(
+    contenido = _chat(
         [{"role": "system", "content": system_prompt}, *(messages or [])],
         model=COACH_MODEL,
         temperature=0.6,
         reasoning_effort=COACH_REASONING,
-    ).strip()
+    )
+    return (contenido or "").strip()  # content=None no debe ser un 500: los llamadores ya tratan "" como respaldo
 
 
 def generate_coach_json(system_prompt: str, contenido: str) -> dict:

@@ -129,7 +129,7 @@ Pasos:
 
 1. **Captura** en el dispositivo. El OCR y la voz ocurren en el teléfono; al backend solo llega texto.
 2. **Parseo** (`/expenses/parse`, `/expenses/parse-receipt`): Groq devuelve JSON; `_validar_gasto` rechaza
-   lo no interpretable (`ExpenseParseError` → 422; error de red/API → `GroqServiceError` → 502). El campo
+   lo no interpretable (`ExpenseParseError` → 422; error de red/API → `GroqServiceError` → 503). El campo
    `tipo` distingue `gasto` de `ingreso`.
 3. **Confirmación** humana y `POST /expenses`: se valida la categoría (`validate_category_access`) y que la fecha
    caiga en un presupuesto propio (`find_budget_for_date`, si no 400). `/expenses/from-text` hace parseo y

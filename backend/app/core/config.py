@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     # Opcionales para que el backend arranque sin ellas: sin GROQ_API_KEY el
-    # parseo con IA responde 502 y el coach usa sus textos de respaldo; sin
+    # parseo con IA responde 503 y el coach usa sus textos de respaldo; sin
     # GOOGLE_CLIENT_ID el login con Google queda deshabilitado (401).
     GROQ_API_KEY: str = ""
     GOOGLE_CLIENT_ID: str = ""

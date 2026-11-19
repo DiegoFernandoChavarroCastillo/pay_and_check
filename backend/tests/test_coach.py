@@ -50,7 +50,7 @@ def test_parse_receipt_devuelve_comercio_sin_guardar(client, auth_headers, categ
     assert client.get("/expenses", headers=auth_headers).json() == []
 
 
-def test_parse_receipt_ilegible_da_422_y_groq_caido_502(client, auth_headers, categorias, monkeypatch):
+def test_parse_receipt_ilegible_da_422_y_groq_caido_503(client, auth_headers, categorias, monkeypatch):
     def _ilegible(*_args):
         raise ExpenseParseError("No se pudo identificar un monto en el texto.")
 
@@ -63,7 +63,7 @@ def test_parse_receipt_ilegible_da_422_y_groq_caido_502(client, auth_headers, ca
 
     monkeypatch.setattr(expenses_router, "parse_receipt_text", _caido)
     r = client.post("/expenses/parse-receipt", json={"texto_ocr": "TOTAL 5000"}, headers=auth_headers)
-    assert r.status_code == 502
+    assert r.status_code == 503
 
 
 def test_un_consejo_no_puede_traer_cifras_que_no_esten_en_el_dato():
@@ -312,8 +312,11 @@ def test_chat_no_da_asesoria_de_inversion_y_no_guarda_nada_si_la_ia_cae(client, 
         raise GroqServiceError("sin red")
 
     monkeypatch.setattr(coach_service, "generate_coach_text", _caido)
+    # Con la IA caída el chat responde su respaldo, pero el turno no se guarda: el historial se reenvía al modelo.
     r = client.post("/coach/chat", json={"mensaje": "hola"}, headers=auth_headers)
-    assert r.status_code == 502
+    assert r.status_code == 200
+    assert r.json()["contenido"].startswith("Ahora mismo no puedo responder con detalle")
+    assert r.json()["id"] == coach_service.SIN_GUARDAR
     assert len(client.get("/coach/chat", headers=auth_headers).json()) == 2
 
 

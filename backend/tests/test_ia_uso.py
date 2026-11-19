@@ -96,10 +96,10 @@ def test_un_parseo_que_falla_deja_su_fila(client, auth_headers, db_engine, categ
     [fila] = _filas(db_engine)
     assert (fila.tarea, fila.exito, fila.tokens_entrada) == ("registro", True, 120)
 
-    # 502: Groq cayó. Queda registrada como fallida y como respaldo, sin tokens.
+    # 503: Groq cayó. Queda registrada como fallida y como respaldo, sin tokens.
     groq(RuntimeError("sin red"))
     r = client.post("/expenses/parse", json={"texto": "algo"}, headers=auth_headers)
-    assert r.status_code == 502
+    assert r.status_code == 503
     fallida = _filas(db_engine)[-1]
     assert (fallida.exito, fallida.uso_respaldo, fallida.tokens_entrada) == (False, True, None)
     assert fallida.latencia_ms is not None

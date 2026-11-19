@@ -16,7 +16,7 @@ Definidas en `backend/app/core/config.py`; plantilla en `backend/.env.example`.
 | `JWT_ALGORITHM` | no | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | no | `60` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | no | `30` |
-| `GROQ_API_KEY` | no | Sin ella, el parseo con IA responde 502 y el coach usa textos de respaldo |
+| `GROQ_API_KEY` | no | Sin ella, el parseo con IA responde 503 y el coach usa textos de respaldo |
 | `GOOGLE_CLIENT_ID` | no | Client ID *web*; sin él, `/auth/google` responde 401 |
 | `CORS_ORIGINS` | no | Orígenes separados por coma (`http://localhost:5173`) |
 

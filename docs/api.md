@@ -9,7 +9,10 @@ en `backend/app/main.py`. JSON en español (`monto`, `fecha`, `categoria`…).
   `/auth/google`, `/auth/refresh`. Sin cabecera → 401 (`HTTPBearer(auto_error=False)`).
 - **Aislamiento**: un recurso de otro usuario responde 404.
 - **Errores**: 422 `{"error": "validation_error", "detail": [...]}`; 500 `{"error": "internal_server_error", "detail": ...}`;
-  400 fecha fuera de todo presupuesto; 502 Groq no disponible; 422 si el texto no es interpretable.
+  400 fecha fuera de todo presupuesto; 422 si el texto no es interpretable; 503 si Groq no está disponible
+  (el registro con IA lleva al formulario manual; el chat responde su texto de respaldo, sin guardar el turno);
+  402 si se agotó el cupo mensual de IA; 429 con `Retry-After` si se pasan 20 solicitudes de IA por minuto o 10
+  intentos de login fallidos en 5 minutos.
 - **CORS**: orígenes de `CORS_ORIGINS` (coma-separados).
 - **Healthcheck**: `GET /health` ejecuta `SELECT 1` (lo usa Render).
 

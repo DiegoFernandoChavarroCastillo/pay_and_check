@@ -133,5 +133,5 @@ flowchart LR
 | UC20–UC22 | `/goals`, `/challenges`, `/gamification/profile` |
 | UC23–UC25 | `/reports/trends`, `/reports/weekly`, `/reports/monthly-wrapped` |
 
-Cuando Groq falla o no hay `GROQ_API_KEY`: el parseo (UC9–UC11) responde 502 y se usa el formulario manual; el
+Cuando Groq falla o no hay `GROQ_API_KEY`: el parseo (UC9–UC11) responde 503 y se usa el formulario manual; el
 coach y el reporte semanal usan textos de respaldo deterministas.

@@ -52,7 +52,7 @@ def test_parse_sin_monto_claro_da_422_no_500(client, auth_headers, db_engine, mo
     assert r.status_code == 422
 
 
-def test_parse_error_de_red_da_502_no_500(client, auth_headers, db_engine, monkeypatch):
+def test_parse_error_de_red_da_503_no_500(client, auth_headers, db_engine, monkeypatch):
     with Session(db_engine) as session:
         seed_default_categories(session)
 
@@ -62,7 +62,8 @@ def test_parse_error_de_red_da_502_no_500(client, auth_headers, db_engine, monke
     monkeypatch.setattr(expenses_router, "parse_expense_text", _raise)
 
     r = client.post("/expenses/parse", json={"texto": "algo"}, headers=auth_headers)
-    assert r.status_code == 502
+    assert r.status_code == 503
+    assert "formulario manual" in r.json()["detail"]
 
 
 def test_from_text_guarda_el_gasto_y_actualiza_el_summary(client, auth_headers, db_engine, monkeypatch):
