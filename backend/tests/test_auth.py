@@ -1,20 +1,29 @@
 import app.routers.auth as auth_router
+from tests.conftest import ACEPTA_POLITICA
 
 
 def test_registro_devuelve_201_sin_hash(client):
-    r = client.post("/auth/register", json={"email": "ana@test.com", "password": "secret123", "nombre": "Ana"})
+    r = client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "secret123", "nombre": "Ana"}
+    )
     assert r.status_code == 201
     assert "hashed_password" not in r.json()
 
 
 def test_registro_duplicado_con_password_falla(client):
-    client.post("/auth/register", json={"email": "ana@test.com", "password": "secret123", "nombre": "Ana"})
-    r = client.post("/auth/register", json={"email": "ana@test.com", "password": "x", "nombre": "Ana2"})
+    client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "secret123", "nombre": "Ana"}
+    )
+    r = client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "x", "nombre": "Ana2"}
+    )
     assert r.status_code == 400
 
 
 def test_login_correcto_e_incorrecto(client):
-    client.post("/auth/register", json={"email": "ana@test.com", "password": "secret123", "nombre": "Ana"})
+    client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "secret123", "nombre": "Ana"}
+    )
 
     r = client.post("/auth/login", json={"email": "ana@test.com", "password": "secret123"})
     assert r.status_code == 200
@@ -70,7 +79,9 @@ def test_google_no_duplica_usuario_existente(client, monkeypatch):
 
 
 def test_google_asocia_cuenta_existente_por_email_sin_duplicar(client, monkeypatch):
-    client.post("/auth/register", json={"email": "ana@test.com", "password": "secret123", "nombre": "Ana"})
+    client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "secret123", "nombre": "Ana"}
+    )
 
     monkeypatch.setattr(
         auth_router,
@@ -96,7 +107,9 @@ def test_registro_sobre_cuenta_solo_google_agrega_password(client, monkeypatch):
     )
     client.post("/auth/google", json={"id_token": "whatever"})
 
-    r = client.post("/auth/register", json={"email": "beto@test.com", "password": "newpass", "nombre": "Beto"})
+    r = client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "beto@test.com", "password": "newpass", "nombre": "Beto"}
+    )
     assert r.status_code == 201
 
     r = client.post("/auth/login", json={"email": "beto@test.com", "password": "newpass"})
@@ -104,19 +117,24 @@ def test_registro_sobre_cuenta_solo_google_agrega_password(client, monkeypatch):
 
 
 def test_el_correo_no_distingue_mayusculas(client):
-    r = client.post("/auth/register", json={"email": "Juan.Ramirez@Test.com", "password": "secret123", "nombre": "J"})
+    r = client.post(
+        "/auth/register",
+        json={**ACEPTA_POLITICA, "email": "Juan.Ramirez@Test.com", "password": "secret123", "nombre": "J"},
+    )
     assert r.status_code in (200, 201)
 
     r = client.post("/auth/login", json={"email": "juan.ramirez@test.com", "password": "secret123"})
     assert r.status_code == 200
     # Y no se puede registrar "otra" cuenta que solo cambie las mayúsculas.
-    r = client.post("/auth/register", json={"email": "JUAN.RAMIREZ@test.com", "password": "x", "nombre": "Otro"})
+    r = client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "JUAN.RAMIREZ@test.com", "password": "x", "nombre": "Otro"}
+    )
     assert r.status_code == 400
 
 
 def test_la_cuenta_nace_en_el_idioma_del_telefono(client):
     datos = {"email": "kim@test.com", "password": "secret123", "nombre": "Kim", "idioma": "en"}
-    client.post("/auth/register", json=datos)
+    client.post("/auth/register", json={**datos, **ACEPTA_POLITICA})
     token = client.post("/auth/login", json=datos).json()["access_token"]
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).json()["idioma"] == "en"
 

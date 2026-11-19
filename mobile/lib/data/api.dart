@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
+import '../core/config/app_config.dart';
 import 'models.dart';
 
 final apiProvider = Provider<Api>((ref) => Api(ref.watch(dioProvider)));
@@ -23,10 +24,25 @@ class Api {
   Future<Json> login(String email, String password) =>
       _json(_dio.post('/auth/login', data: {'email': email, 'password': password}));
 
+  /// Solo se llama con la casilla de la política marcada: el backend responde 422 sin ella.
   Future<void> register(String nombre, String email, String password, {String? idioma}) => _dio.post(
         '/auth/register',
-        data: {'nombre': nombre, 'email': email, 'password': password, 'idioma': ?idioma},
+        data: {
+          'nombre': nombre,
+          'email': email,
+          'password': password,
+          'idioma': ?idioma,
+          'acepta_politica': true,
+          'politica_version': politicaVersion,
+        },
       );
+
+  Future<User> acceptPolicy() async => User.fromJson(
+        await _json(_dio.put('/auth/me/consent', data: {'politica_version': politicaVersion})),
+      );
+
+  Future<User> setSmsConsent(bool acepta) async =>
+      User.fromJson(await _json(_dio.put('/auth/me/consent/sms', data: {'acepta': acepta})));
 
   Future<Json> loginWithGoogle(String idToken) => _json(_dio.post('/auth/google', data: {'id_token': idToken}));
 

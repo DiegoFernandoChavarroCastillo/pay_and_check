@@ -520,5 +520,41 @@
   "smsEmpty": "Estás al día: no hay movimientos por revisar.",
   "smsUnavailable": "La lectura de SMS no está disponible en este dispositivo.",
   "smsDismiss": "Descartar",
-  "smsRegister": "Registrar"
+  "smsRegister": "Registrar",
+  "policyTitle": "Política de privacidad",
+  "policyAcceptPrefix": "He leído y acepto la ",
+  "policyAcceptLink": "política de privacidad y el tratamiento de mis datos",
+  "policyRequired": "Para crear tu cuenta debes aceptar la política de privacidad.",
+  "policyRead": "Leer la política completa",
+  "policyVersion": "Versión {version}",
+  "@policyVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "consentTitle": "Antes de seguir",
+  "consentBody": "Para usar Pay&Check necesitamos que leas y aceptes nuestra política de privacidad. Explica qué datos guardamos, qué se envía al servicio de IA y cómo borrar tu cuenta.",
+  "consentUpdated": "Actualizamos la política de privacidad. Léela y acéptala para seguir usando la app.",
+  "consentAccept": "Acepto",
+  "consentDecline": "No acepto, cerrar sesión",
+  "smsConsentTitle": "Leer los SMS de tu banco",
+  "smsConsentBody": "Si lo permites, la app lee en tu teléfono los SMS de los últimos 14 días para encontrar los que parecen movimientos bancarios.",
+  "smsConsentPoint1": "Los SMS se leen en tu teléfono y no se guardan en nuestro servidor.",
+  "smsConsentPoint2": "Solo cuando eliges registrar un movimiento, su texto se envía al servicio de IA para llenar el formulario, y tú confirmas antes de guardar.",
+  "smsConsentPoint3": "Puedes quitar el permiso cuando quieras en los ajustes de Android.",
+  "smsConsentAccept": "Permitir",
+  "smsConsentDecline": "Ahora no",
+  "deleteAccountConfirmTitle": "Confirma que quieres borrar tu cuenta",
+  "deleteAccountConfirmBody": "Escribe {palabra} para confirmar. Esta acción no se puede deshacer.",
+  "@deleteAccountConfirmBody": {
+    "placeholders": {
+      "palabra": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountWord": "BORRAR",
+  "deleteAccountDone": "Tu cuenta y tus datos fueron borrados."
 }

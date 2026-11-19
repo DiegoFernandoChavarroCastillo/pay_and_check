@@ -7,6 +7,7 @@ import 'core/theme.dart';
 import 'core/widgets.dart';
 import 'data/session.dart';
 import 'features/auth/auth_screens.dart';
+import 'features/auth/privacy_policy.dart';
 import 'features/coach/coach_widgets.dart';
 import 'features/shell/shell_screen.dart';
 import 'l10n/gen/app_localizations.dart';
@@ -21,6 +22,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/consent', builder: (_, _) => const ConsentScreen()),
     ],
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
@@ -29,8 +31,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (session.isLoading || session.hasError) return ruta == '/splash' ? null : '/splash';
 
       final publica = ruta == '/login' || ruta == '/register';
-      if (session.value == null) return publica ? null : '/login';
-      return publica || ruta == '/splash' ? '/' : null;
+      final user = session.value;
+      if (user == null) return publica ? null : '/login';
+      // Con sesión pero sin la política vigente aceptada (Google, o una versión anterior): solo el consentimiento.
+      if (!user.politicaVigente) return ruta == '/consent' ? null : '/consent';
+      return publica || ruta == '/splash' || ruta == '/consent' ? '/' : null;
     },
   );
   ref.listen(sessionProvider, (_, _) => router.refresh());

@@ -20,7 +20,10 @@ class User {
         nombre = j['nombre'] as String,
         coachTone = j['coach_tone'] as String,
         idioma = j['idioma'] as String,
-        zonaHoraria = j['zona_horaria'] as String;
+        zonaHoraria = j['zona_horaria'] as String,
+        politicaVigente = j['politica_vigente'] as bool? ?? false,
+        aceptoPoliticaAntes = j['politica_version'] != null,
+        smsConsentido = j['sms_consent_at'] != null;
 
   final int id;
   final String email;
@@ -28,6 +31,16 @@ class User {
   final String coachTone;
   final String idioma;
   final String zonaHoraria;
+
+  /// Aceptó la versión vigente de la política. Si es false la app solo deja
+  /// ver la pantalla de consentimiento.
+  final bool politicaVigente;
+
+  /// Aceptó alguna versión: distingue "la política cambió" de "nunca la aceptó".
+  final bool aceptoPoliticaAntes;
+
+  /// Dio el permiso aparte para leer los SMS del banco.
+  final bool smsConsentido;
 }
 
 class Budget {

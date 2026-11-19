@@ -12,6 +12,17 @@ class RegisterRequest(BaseModel):
     password: str
     nombre: str
     idioma: Literal["es", "en"] | None = None
+    # Sin aceptar la política vigente no hay cuenta: la app no deja enviar el formulario sin la casilla.
+    acepta_politica: bool
+    politica_version: str
+
+
+class ConsentimientoRequest(BaseModel):
+    politica_version: str
+
+
+class ConsentimientoSmsRequest(BaseModel):
+    acepta: bool
 
 
 class LoginRequest(BaseModel):

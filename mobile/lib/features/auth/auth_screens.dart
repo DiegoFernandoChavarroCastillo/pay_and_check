@@ -6,6 +6,7 @@ import '../../core/config/app_config.dart';
 import '../../core/widgets.dart';
 import '../coach/coach_widgets.dart';
 import '../../data/session.dart';
+import 'privacy_policy.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -80,6 +81,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _aceptaPolitica = false;
 
   @override
   void dispose() {
@@ -117,6 +119,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _EmailField(controller: _email),
         const SizedBox(height: 12),
         _PasswordField(controller: _password, onSubmitted: _register, minLength: 8),
+        const SizedBox(height: 12),
+        // Sin aceptar la política no hay cuenta: el formulario no valida y el backend respondería 422.
+        PolicyCheckbox(value: _aceptaPolitica, onChanged: (v) => setState(() => _aceptaPolitica = v)),
         const SizedBox(height: 20),
         SaveButton(saving: _busy, onPressed: _register, label: l.registerAction),
         const SizedBox(height: 12),

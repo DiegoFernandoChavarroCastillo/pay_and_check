@@ -16,8 +16,12 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.core import rate_limit
+from app.core.config import POLITICA_VERSION
 from app.db.session import get_session
 from app.main import app
+
+# Lo que manda la app al registrarse con la casilla de la política marcada.
+ACEPTA_POLITICA = {"acepta_politica": True, "politica_version": POLITICA_VERSION}
 
 
 @pytest.fixture(autouse=True)
@@ -71,7 +75,9 @@ def make_user(client):
     """Registra + loguea un usuario y devuelve sus headers de Authorization."""
 
     def _make_user(email: str = "user@test.com", password: str = "secret123", nombre: str = "Test User"):
-        r = client.post("/auth/register", json={"email": email, "password": password, "nombre": nombre})
+        r = client.post(
+            "/auth/register", json={"email": email, "password": password, "nombre": nombre, **ACEPTA_POLITICA}
+        )
         assert r.status_code == 201, r.text
         r = client.post("/auth/login", json={"email": email, "password": password})
         assert r.status_code == 200, r.text

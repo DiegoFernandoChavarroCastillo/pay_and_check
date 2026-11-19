@@ -8,6 +8,7 @@ import '../../core/widgets.dart';
 import '../../data/providers.dart';
 import '../../data/session.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../auth/privacy_policy.dart';
 import '../budget/budget_screen.dart';
 import '../reports/analytics_screen.dart';
 import '../reports/report_screens.dart';
@@ -245,8 +246,10 @@ class ProfileScreen extends ConsumerWidget {
           leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
           title: Text(l.deleteAccount, style: TextStyle(color: theme.colorScheme.error)),
           onTap: () async {
+            // Dos pasos: el aviso de lo que se pierde y luego escribir la palabra de confirmación.
             if (!await confirm(context, title: l.deleteAccount, body: l.deleteAccountBody, action: l.delete)) return;
-            if (context.mounted) await guarded(context, session.deleteAccount);
+            if (!context.mounted || !await confirmarBorrado(context)) return;
+            if (context.mounted && await guarded(context, session.deleteAccount)) showSnack(l.deleteAccountDone);
           },
         ),
       ]),
@@ -295,6 +298,71 @@ List<Widget> _agrupar(List<Widget> items) {
   return salida;
 }
 
+/// Segundo paso para borrar la cuenta: escribir "BORRAR" (o "DELETE"). Así un
+/// toque accidental en el primer diálogo no borra nada.
+Future<bool> confirmarBorrado(BuildContext context) async {
+  final l = context.l;
+  final palabra = l.deleteAccountWord;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => _ConfirmarBorrado(palabra: palabra),
+  );
+  return ok ?? false;
+}
+
+class _ConfirmarBorrado extends StatefulWidget {
+  const _ConfirmarBorrado({required this.palabra});
+
+  final String palabra;
+
+  @override
+  State<_ConfirmarBorrado> createState() => _ConfirmarBorradoState();
+}
+
+class _ConfirmarBorradoState extends State<_ConfirmarBorrado> {
+  final _texto = TextEditingController();
+
+  @override
+  void dispose() {
+    _texto.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    final theme = Theme.of(context);
+    final coincide = _texto.text.trim().toUpperCase() == widget.palabra;
+    return AlertDialog(
+      title: Text(l.deleteAccountConfirmTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.deleteAccountConfirmBody(widget.palabra)),
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey('delete-confirm-field'),
+            controller: _texto,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(hintText: widget.palabra),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
+          onPressed: coincide ? () => Navigator.pop(context, true) : null,
+          child: Text(l.delete),
+        ),
+      ],
+    );
+  }
+}
+
 /// Qué datos usa la app y para qué, en lenguaje claro.
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
@@ -317,7 +385,16 @@ class PrivacyScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Text(l.privacyIntro, style: theme.textTheme.bodyLarge),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => PrivacyPolicyScreen.abrir(context),
+              icon: const Icon(Icons.description_outlined),
+              label: Text(l.policyRead),
+            ),
+          ),
+          const SizedBox(height: 8),
           ...staggered([
             for (final (icono, titulo, cuerpo) in puntos)
               SectionCard(

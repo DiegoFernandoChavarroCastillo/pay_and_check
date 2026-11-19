@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 import app.services.groq_client as groq_client
+from tests.conftest import ACEPTA_POLITICA
 
 TEMAS_AJENOS = [
     "Escríbeme un poema sobre el mar",
@@ -87,7 +88,7 @@ def test_tema_propio_sigue_respondiendose(client, auth_headers, groq_falso, tema
 
 def test_la_frase_de_redireccion_sale_en_el_idioma_del_usuario(client, groq_falso):
     datos = {"email": "kim@test.com", "password": "secret123", "nombre": "Kim", "idioma": "en"}
-    client.post("/auth/register", json=datos)
+    client.post("/auth/register", json={**datos, **ACEPTA_POLITICA})
     token = client.post("/auth/login", json=datos).json()["access_token"]
     r = client.post(
         "/coach/chat", json={"mensaje": TEMAS_AJENOS[0]}, headers={"Authorization": f"Bearer {token}"}
