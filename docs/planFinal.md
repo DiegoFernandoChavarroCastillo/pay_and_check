@@ -6,7 +6,7 @@
 >
 > **Qué no pude verificar desde el repo:** Jira (solo tengo el texto pegado), la organización de GitHub y sus ramas
 > protegidas, los secretos de Actions, Render, Neon, la consola de Google, ni lo que hay dentro de las imágenes de
-> `docs/Diagrams/`. Esos puntos van marcados *(verificar)*.
+> `docs/diagramas/`. Esos puntos van marcados *(verificar)*.
 
 ---
 
@@ -107,7 +107,7 @@ cupo mensual por plan con degradación a texto de respaldo y una pantalla de pla
 ## 3. Épicas y tickets nuevos para el Jira
 
 > No tengo acceso a Jira: los IDs son provisionales (`N-xx`). Hay un CSV listo para importar en
-> `docs/jira-import-nuevos.csv`. Las **ampliaciones** a tickets existentes van en §3.4.
+> `docs/historico/jira-import-nuevos.csv`. Las **ampliaciones** a tickets existentes van en §3.4.
 
 ### 3.1 Épica nueva — EP-09 · Planes y suscripción
 
@@ -478,7 +478,7 @@ negocio sin planes en la app no se puede defender).
 
 ## 9. Cómo importar los tickets nuevos al Jira
 
-1. Abrir `docs/jira-import-nuevos.csv` (Resumen, Tipo, Épica, Responsable, Prioridad, Estimación, Descripción).
+1. Abrir `docs/historico/jira-import-nuevos.csv` (Resumen, Tipo, Épica, Responsable, Prioridad, Estimación, Descripción).
 2. Jira → Configuración → Sistema → **Importación externa → CSV**; mapear columnas; crear primero las épicas
    EP-09, EP-10 y EP-11.
 3. Asignar los 16 tickets al Sprint 2 o 3 según el cronograma (§6): N-01…N-04, N-10, N-11, N-13 al Sprint 2; el
