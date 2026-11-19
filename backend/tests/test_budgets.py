@@ -85,3 +85,55 @@ def test_patch_actualiza_y_summary_lo_refleja_al_instante(client, auth_headers):
 def test_budgets_requiere_autenticacion(client):
     r = client.get("/budgets/active")
     assert r.status_code == 401
+
+
+# --- "¿Me alcanza?" -------------------------------------------------------------------------------------
+
+def test_simular_una_compra_no_guarda_nada(client, auth_headers, categorias, presupuesto, gastar, fijar_hoy):
+    from datetime import date
+
+    hoy = date(2026, 3, 30)
+    fijar_hoy(hoy)
+    presupuesto(date(2026, 3, 16), date(2026, 4, 12), monto="280000.00")  # quedan 14 días
+    gastar(40000, hoy)
+
+    r = client.post("/budgets/active/simulate", json={"monto": "100000"}, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["alcanza"] is True
+    assert data["disponible_por_dia_antes"] == "17142.86"
+    assert data["disponible_por_dia_despues"] == "10000.00"
+    assert data["meta"] is None
+    assert len(client.get("/expenses", headers=auth_headers).json()) == 1
+
+
+def test_simular_dice_a_cuantos_dias_de_la_meta_equivale(client, auth_headers, categorias, presupuesto, fijar_hoy):
+    from datetime import date
+
+    hoy = date(2026, 3, 30)
+    fijar_hoy(hoy)
+    presupuesto(date(2026, 3, 16), date(2026, 4, 12), monto="280000.00")
+    r = client.post(
+        "/goals",
+        json={"nombre": "Viaje", "monto_objetivo": "100000.00", "fecha_limite": "2026-04-09"},
+        headers=auth_headers,
+    )
+    assert r.status_code == 201, r.text
+
+    data = client.post("/budgets/active/simulate", json={"monto": "30000"}, headers=auth_headers).json()
+    # 100.000 en 10 días: 10.000 por día; 30.000 equivalen a 3 días de ahorro.
+    assert data["meta"] == {"nombre": "Viaje", "dias_equivalentes": 3, "aporte_por_dia": "10000"}
+
+
+def test_simular_una_compra_que_no_cabe(client, auth_headers, categorias, presupuesto, fijar_hoy):
+    from datetime import date
+
+    fijar_hoy(date(2026, 3, 30))
+    presupuesto(date(2026, 3, 16), date(2026, 4, 12), monto="100000.00")
+    data = client.post("/budgets/active/simulate", json={"monto": "150000"}, headers=auth_headers).json()
+    assert data["alcanza"] is False
+    assert data["disponible_total_despues"] == "-50000.00"
+
+
+def test_simular_sin_presupuesto_da_404(client, auth_headers):
+    assert client.post("/budgets/active/simulate", json={"monto": "1000"}, headers=auth_headers).status_code == 404

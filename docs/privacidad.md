@@ -28,11 +28,16 @@ datos personales, conforme a la Ley 1581 de 2012 (habeas data) y al Decreto 1377
 - **La voz:** tu teléfono la convierte en texto; la app solo recibe el texto.
 - **Las fotos de recibos:** el texto se reconoce en tu teléfono. La foto nunca se sube.
 - **Los SMS del banco:** solo si lo permites aparte. Se leen en tu teléfono y no se guardan en nuestro servidor.
+- **Las notificaciones de tus apps de pago (Nequi, Daviplata, Bancolombia, Nu…):** solo si activas el acceso en
+  los ajustes de Android, con el mismo consentimiento de los SMS. La app solo mira las notificaciones de una lista
+  fija de apps financieras (`BankNotificationListener.kt`), las guarda en tu teléfono (las últimas 300) y nada
+  sale de él hasta que eliges registrar un movimiento.
 
 ## Qué se envía al servicio de IA
 
 Para entender lo que escribes y redactar los mensajes del coach usamos Groq, un servicio de IA con servidores en
-Estados Unidos (transferencia internacional de datos). Enviamos:
+Estados Unidos (transferencia internacional de datos). Si Groq no responde y el respaldo está configurado, la misma
+solicitud va a DeepInfra, también en Estados Unidos, con el mismo modelo (`AI_FALLBACK_*`). Enviamos:
 
 - tu nombre de pila;
 - el texto que escribes o dictas para registrar un movimiento;
@@ -64,7 +69,8 @@ capas que impiden que la IA obedezca instrucciones escondidas en tus datos.
 Puedes conocer, actualizar, rectificar y suprimir tus datos y revocar esta autorización cuando quieras:
 
 - edita tu perfil;
-- quita el permiso de SMS en los ajustes de Android;
+- quita el permiso de SMS en los ajustes de Android, y el acceso a notificaciones en Ajustes → Acceso a
+  notificaciones;
 - borra tu cuenta en **Perfil › Eliminar mi cuenta**.
 
 Si no quedas conforme con nuestra respuesta, puedes presentar una queja ante la Superintendencia de Industria y
@@ -93,3 +99,25 @@ Si esta política cambia, la app te mostrará la nueva versión y te pedirá ace
 | Consentimiento antes del permiso de SMS | `mobile/lib/features/sms/sms_inbox_screen.dart` (`permitirSms`), `PUT /auth/me/consent/sms` |
 | Versión y fecha aceptadas | `users.politica_version`, `users.politica_aceptada_at`, `users.sms_consent_at` |
 | Borrar la cuenta en dos pasos y sin dejar filas | `profile_screen.dart` (`confirmarBorrado`), `tests/test_consentimiento.py` |
+
+## Apoyos de la universidad y plan Familiar
+
+- **Apoyos:** con plan Institucional, la app muestra los apoyos que ofrece tu universidad y te los sugiere solo
+  cuando tus cifras lo justifican (el presupuesto no alcanza o marcaste ansiedad o preocupación 3 o más días en
+  dos semanas). Ese cálculo se hace en nuestro servidor con tus datos y no se le comunica a nadie. Si tocas «Me
+  interesa», la universidad solo ve cuántos estudiantes se interesaron en cada apoyo (y solo si son 5 o más),
+  nunca quién. El contacto lo haces tú.
+- **Plan Familiar:** quien paga el plan puede ver tu progreso agregado (racha, constancia, cuántas metas tienes
+  y qué tan avanzadas van, y si tu presupuesto alcanza) **solo si tú lo activas** en Mi plan. Nunca ve tus
+  gastos, tus montos ni tus check-ins. Lo puedes apagar cuando quieras.
+- **Vacas:** los nombres de las personas que te deben se guardan como texto en tu cuenta; no se les escribe ni
+  se crean cuentas para ellas. El mensaje de cobro lo envías tú desde tu teléfono.
+
+## Panel de Bienestar Universitario
+
+La universidad que paga el plan Institucional ve un panel web (`GET /panel/{id}?token=…`) con **solo cifras
+agregadas y anónimas** de sus estudiantes: uso de la app, porcentaje con presupuesto en riesgo, con meta de ahorro
+y con señales de estrés financiero (3 o más check-ins de ansiedad o preocupación en dos semanas), distribución de
+ánimo, categorías de gasto y tendencia semanal. Ningún indicador se calcula sobre menos de 5 estudiantes
+(anonimato k ≥ 5) y el panel nunca muestra nombres, correos, descripciones ni montos individuales
+(`backend/app/services/panel.py`, pruebas en `tests/test_panel.py`).

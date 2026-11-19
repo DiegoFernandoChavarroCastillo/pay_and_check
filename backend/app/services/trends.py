@@ -96,7 +96,13 @@ def build_trends(session: Session, user_id: int, today: date, semanas: int = 8) 
         for dia in (inicio_dias + timedelta(days=n) for n in range(14))
     ]
 
-    actual, anterior = resultado[-1].total, resultado[-2].total
+    # Semana en curso contra los mismos días de la anterior (de lunes a hoy): comparar una semana a medias
+    # con una completa siempre diría "gastaste menos".
+    transcurridos = (today - inicio_actual).days + 1
+    actual = _redondear(sum((por_dia[inicio_actual + timedelta(days=n)] for n in range(transcurridos)), CERO))
+    anterior = _redondear(
+        sum((por_dia[inicio_actual - timedelta(weeks=1) + timedelta(days=n)] for n in range(transcurridos)), CERO)
+    )
     variacion = None if anterior <= 0 else int(round((actual - anterior) / anterior * 100))
 
     return Trends(

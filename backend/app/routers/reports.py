@@ -9,8 +9,9 @@ from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.user import User
+from app.schemas.extras import RepeatedSpendResponse
 from app.schemas.report import MonthlyWrappedResponse, TrendsResponse, WeeklyReportResponse
-from app.services import ia_uso
+from app.services import hormiga, ia_uso
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.coach import inventa_cifras, rompe_guardrails
 from app.services.groq_client import CupoIAAgotado, GroqServiceError, generate_weekly_recommendations
@@ -95,3 +96,15 @@ def monthly_wrapped(
     else:
         anio, numero = (int(parte) for parte in mes.split("-"))
     return build_wrapped(session, current_user, anio, numero, today)
+
+
+@router.get("/repeated", response_model=list[RepeatedSpendResponse])
+def gastos_repetidos(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[RepeatedSpendResponse]:
+    """Gastos hormiga y suscripciones de los últimos 90 días, con cuánto cuestan al mes y al semestre. Sin IA."""
+    return [
+        RepeatedSpendResponse(**asdict(r))
+        for r in hormiga.detectar(session, current_user.id, today_for(current_user))
+    ]

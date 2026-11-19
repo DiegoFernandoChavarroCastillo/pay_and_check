@@ -33,7 +33,8 @@ def test_trends_agrupa_por_semana_y_rellena_con_cero(
     assert [c["categoria"] for c in semanas[-1]["por_categoria"]] == ["comida", "transporte"]
 
     assert Decimal(data["promedio_semanal"]) == Decimal("10750.00")
-    assert data["variacion_vs_semana_anterior_pct"] == 150
+    # El domingo pasado queda después del "miércoles" de la semana anterior: no hay con qué comparar.
+    assert data["variacion_vs_semana_anterior_pct"] is None
 
     # Pidiendo más semanas de las que la persona lleva registrando, el promedio no cambia:
     # las semanas anteriores a su primer gasto no cuentan como semanas de cero.
@@ -82,3 +83,16 @@ def test_trends_no_mezcla_usuarios(client, make_user, categorias, presupuesto, g
 def test_trends_valida_el_numero_de_semanas(client, auth_headers):
     assert client.get("/reports/trends?semanas=1", headers=auth_headers).status_code == 422
     assert client.get("/reports/trends?semanas=27", headers=auth_headers).status_code == 422
+
+
+def test_la_variacion_compara_los_mismos_dias_de_la_semana_anterior(
+    client, auth_headers, categorias, presupuesto, gastar, fijar_hoy
+):
+    fijar_hoy(HOY)
+    presupuesto(date(2026, 9, 1), date(2026, 10, 31))
+    gastar("10000.00", LUNES - timedelta(weeks=1))  # lunes pasado: cuenta
+    gastar("90000.00", LUNES - timedelta(days=2))  # sábado pasado: después del miércoles, no cuenta
+    gastar("25000.00", HOY)
+
+    data = client.get("/reports/trends?semanas=4", headers=auth_headers).json()
+    assert data["variacion_vs_semana_anterior_pct"] == 150

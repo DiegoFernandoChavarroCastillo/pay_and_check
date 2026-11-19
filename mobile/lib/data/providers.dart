@@ -27,6 +27,13 @@ final trendsProvider = FutureProvider<Trends>((ref) => _api(ref).trends());
 final plansProvider = FutureProvider<List<Plan>>((ref) => _api(ref).plans());
 final subscriptionProvider = FutureProvider<Subscription>((ref) => _api(ref).subscription());
 final weeklyReportProvider = FutureProvider.autoDispose<WeeklyReport?>((ref) => _api(ref).weeklyReport());
+final supportProvider = FutureProvider<SupportList>((ref) => _api(ref).support());
+final plannedProvider = FutureProvider<List<PlannedExpense>>((ref) => _api(ref).planned());
+final receivablesProvider = FutureProvider<ReceivableSummary>((ref) => _api(ref).receivables());
+final repeatedProvider = FutureProvider.autoDispose<List<RepeatedSpend>>((ref) => _api(ref).repeated());
+final familyProgressProvider = FutureProvider.autoDispose<List<FamilyMemberProgress>>(
+  (ref) => _api(ref).familyProgress(),
+);
 final wrappedProvider = FutureProvider.autoDispose.family<Wrapped, (int, int)>(
   (ref, mes) => _api(ref).wrapped(mes.$1, mes.$2),
 );
@@ -47,5 +54,8 @@ void refreshData(WidgetRef ref) {
     ..invalidate(challengesProvider)
     ..invalidate(suggestionsProvider)
     ..invalidate(gamificationProvider)
-    ..invalidate(trendsProvider);
+    ..invalidate(trendsProvider)
+    ..invalidate(supportProvider)
+    ..invalidate(plannedProvider)
+    ..invalidate(receivablesProvider);
 }

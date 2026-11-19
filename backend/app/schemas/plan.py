@@ -12,6 +12,7 @@ class PlanResponse(BaseModel):
     paga: str
     estado_demo: str
     max_integrantes: int | None
+    funciones: list[str]
 
 
 class FamiliaResponse(BaseModel):
@@ -19,6 +20,8 @@ class FamiliaResponse(BaseModel):
     integrantes: int
     max_integrantes: int
     es_titular: bool
+    # Si esta persona deja que el titular vea su progreso agregado.
+    comparte_progreso: bool = False
 
 
 class SuscripcionResponse(BaseModel):

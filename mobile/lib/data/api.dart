@@ -86,6 +86,44 @@ class Api {
       );
 
   // --- Categorías ---
+  Future<AffordCheck> simulate(double monto) async =>
+      AffordCheck.fromJson(await _json(_dio.post('/budgets/active/simulate', data: {'monto': monto})));
+
+  Future<CreditCheck> simulateCredit(double monto, int cuotas, double tasaEa) async => CreditCheck.fromJson(
+        await _json(_dio.post('/budgets/simulate-credit', data: {'monto': monto, 'cuotas': cuotas, 'tasa_ea': tasaEa})),
+      );
+
+  // --- Apoyos de la universidad, gastos previstos, vacas, gastos repetidos y familia ---
+  Future<SupportList> support() async => SupportList.fromJson(await _json(_dio.get('/support')));
+
+  Future<void> supportInterest(int id) => _dio.post('/support/$id/interest');
+
+  Future<List<PlannedExpense>> planned() => _lista(_dio.get('/planned-expenses'), PlannedExpense.fromJson);
+
+  Future<void> createPlanned(String descripcion, double monto, DateTime fecha) => _dio.post(
+        '/planned-expenses',
+        data: {'descripcion': descripcion, 'monto': monto, 'fecha': isoDate(fecha)},
+      );
+
+  Future<void> plannedDone(int id) => _dio.post('/planned-expenses/$id/done');
+
+  Future<void> deletePlanned(int id) => _dio.delete('/planned-expenses/$id');
+
+  /// Una vaca: registra la parte propia y deja la de los demás por cobrar. Devuelve el id del gasto creado.
+  Future<int> splitExpense(Json datos) async => (await _json(_dio.post('/expenses/split', data: datos)))['expense_id'] as int;
+
+  Future<ReceivableSummary> receivables() async => ReceivableSummary.fromJson(await _json(_dio.get('/receivables')));
+
+  Future<void> receivablePaid(int id) => _dio.post('/receivables/$id/paid');
+
+  Future<List<RepeatedSpend>> repeated() => _lista(_dio.get('/reports/repeated'), RepeatedSpend.fromJson);
+
+  Future<void> shareProgress(bool comparte) =>
+      _dio.put('/me/subscription/share-progress', data: {'comparte': comparte});
+
+  Future<List<FamilyMemberProgress>> familyProgress() =>
+      _lista(_dio.get('/me/family/progress'), FamilyMemberProgress.fromJson);
+
   Future<List<Category>> categories() => _lista(_dio.get('/categories'), Category.fromJson);
 
   Future<void> createCategory(String nombre, String tipo, double? limite) =>

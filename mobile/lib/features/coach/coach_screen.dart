@@ -8,6 +8,8 @@ import '../../core/widgets.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
+import '../progress/goal_dialogs.dart';
+import '../transactions/expense_form_screen.dart';
 import 'coach_widgets.dart';
 
 /// Coach: consejos accionables del día y chat.
@@ -202,7 +204,23 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
                   itemCount: mensajes.length + (_enviando ? 1 : 0),
                   itemBuilder: (context, i) {
                     if (i == mensajes.length) return const _Bubble(delCoach: true, child: _Typing());
-                    final burbuja = _Bubble(texto: mensajes[i].contenido, delCoach: mensajes[i].esDelCoach);
+                    final accion = mensajes[i].accion;
+                    final Widget burbuja = accion == null
+                        ? _Bubble(texto: mensajes[i].contenido, delCoach: mensajes[i].esDelCoach)
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _Bubble(texto: mensajes[i].contenido, delCoach: true),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => ejecutarAccionDeChat(context, ref, accion),
+                                  icon: Icon(accion.tipo == 'crear_meta' ? Icons.flag_outlined : Icons.add),
+                                  label: Text(accion.etiqueta),
+                                ),
+                              ),
+                            ],
+                          );
                     // Solo lo recién dicho entra animado; el historial ya estaba ahí.
                     return i >= mensajes.length - 2 ? FadeSlideIn(key: ValueKey(mensajes[i]), child: burbuja) : burbuja;
                   },
@@ -235,6 +253,30 @@ class _ChatState extends ConsumerState<_Chat> with AutomaticKeepAliveClientMixin
         ),
       ],
     );
+  }
+}
+
+/// La acción de un toque que acompaña una respuesta del chat. Las cifras ya vienen calculadas por el backend:
+/// aquí solo se abre el formulario lleno para que la persona lo revise y confirme.
+Future<void> ejecutarAccionDeChat(BuildContext context, WidgetRef ref, InsightAction accion) async {
+  final p = accion.payload;
+  switch (accion.tipo) {
+    case 'crear_meta':
+      final limite = p['fecha_limite'] as String?;
+      await showGoalDialog(
+        context,
+        ref,
+        nombreInicial: p['nombre'] as String?,
+        objetivoInicial: double.tryParse('${p['monto_objetivo']}'),
+        limiteInicial: limite == null ? null : DateTime.parse(limite),
+      );
+    case 'registrar_gasto':
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => ExpenseFormScreen(draft: ExpenseDraft(monto: double.tryParse('${p['monto']}'))),
+        ),
+      );
   }
 }
 

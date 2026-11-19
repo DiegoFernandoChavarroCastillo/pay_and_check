@@ -12,6 +12,12 @@ DEFAULT_CATEGORIES = {
     "salud": "fijo",
     "servicios": "fijo",
     "otros": "opcional",
+    # Añadidas tras la auditoría de noviembre: con solo seis, "compra de ropa" caía en "otros" y "otros" se
+    # llevaba el 89 % del gasto, así que el análisis no decía nada. Van al final para no mover los id.
+    "compras": "opcional",
+    "estudio": "fijo",
+    "vivienda": "fijo",
+    "deudas": "fijo",
 }
 
 

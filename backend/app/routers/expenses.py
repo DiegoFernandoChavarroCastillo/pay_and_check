@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, or_, select
+from sqlmodel import Session, delete, or_, select
 
 from app.core.rate_limit import limite_ia
 from app.core.time import today_for
@@ -9,6 +9,7 @@ from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.category import Category
 from app.models.expense import Expense
+from app.models.receivable import Receivable
 from app.models.user import User
 from app.schemas.expense import (
     ExpenseCreate,
@@ -19,7 +20,7 @@ from app.schemas.expense import (
     ReceiptParseRequest,
     ReceiptParseResponse,
 )
-from app.services import ia_uso
+from app.services import ia_uso, planes
 from app.services.budget_lookup import find_budget_for_date
 from app.services.category_lookup import validate_category_access
 from app.services.groq_client import (
@@ -28,6 +29,10 @@ from app.services.groq_client import (
     GroqServiceError,
     parse_expense_text,
     parse_receipt_text,
+)
+
+SIN_CAPTURA_AUTOMATICA = (
+    "La captura desde SMS y notificaciones del banco está en los planes Premium, Familiar e Institucional."
 )
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -61,6 +66,9 @@ def create_expense(
     current_user: User = Depends(get_current_user),
 ) -> Expense:
     validate_category_access(session, current_user.id, payload.category_id)
+    if payload.source == "sms" and not planes.tiene_funcion(session, current_user, "captura_automatica"):
+        # La captura automática (SMS y notificaciones del banco) es de los planes pagos (docs/planes.md).
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CAPTURA_AUTOMATICA)
 
     budget = find_budget_for_date(session, current_user.id, payload.fecha)
     if budget is None:
@@ -182,19 +190,27 @@ def create_expense_from_text(
             "La fecha del gasto no cae dentro de ningún presupuesto tuyo.",
         )
 
-    categoria = next(c for c in categorias if c.nombre == data["categoria"])
-
-    expense = Expense(
-        user_id=current_user.id,
-        budget_id=budget.id,
-        category_id=categoria.id,
-        monto=data["monto"],
-        descripcion=data["descripcion"],
-        texto_original=payload.texto,
-        source="texto",
-        fecha=data["fecha"],
-    )
-    session.add(expense)
+    # Se guardan todos los gastos de la frase que caigan en algún presupuesto; la respuesta es el primero.
+    expense = None
+    for mov in [data, *data.get("adicionales", [])]:
+        if mov.get("tipo") == "ingreso":
+            continue
+        destino = budget if mov is data else find_budget_for_date(session, current_user.id, mov["fecha"])
+        if destino is None:
+            continue
+        categoria = next(c for c in categorias if c.nombre == mov["categoria"])
+        nuevo = Expense(
+            user_id=current_user.id,
+            budget_id=destino.id,
+            category_id=categoria.id,
+            monto=mov["monto"],
+            descripcion=mov["descripcion"],
+            texto_original=payload.texto,
+            source="texto",
+            fecha=mov["fecha"],
+        )
+        session.add(nuevo)
+        expense = expense or nuevo
     session.commit()
     session.refresh(expense)
     return expense
@@ -240,5 +256,7 @@ def delete_expense(
     current_user: User = Depends(get_current_user),
 ) -> None:
     expense = _get_owned_expense(session, current_user.id, expense_id)
+    # Si era una vaca, sus cobros pendientes se van con ella.
+    session.exec(delete(Receivable).where(Receivable.expense_id == expense.id))
     session.delete(expense)
     session.commit()

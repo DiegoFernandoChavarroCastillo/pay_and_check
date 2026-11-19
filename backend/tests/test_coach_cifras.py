@@ -155,3 +155,48 @@ def test_pide_la_cuenta_detecta_respuestas_que_no_responden(texto):
 
 def test_pide_la_cuenta_no_marca_respuestas_concretas():
     assert not pide_la_cuenta("Puedes gastar 120.000 por semana; tus gastos se dividen sobre todo en comida.")
+
+
+# --- Simulaciones (auditoría: "quiero ahorrar 2 millones…" respondía "faltan 418.000") ----------------------
+
+META = "quiero ahorrar 2 millones para un viaje en junio, como lo logro?"
+
+
+def test_la_meta_se_calcula_en_el_backend_y_propone_crearla(client, auth_headers, situacion, ia):
+    from decimal import Decimal
+
+    from app.services.simulador import plan_de_meta
+
+    plan = plan_de_meta(Decimal("2000000"), Decimal("0"), date(2026, 6, 30), HOY)
+    # El modelo insiste en restar el presupuesto como si fuera ahorro: no se acepta.
+    llamadas = ia(_turno("Necesitas ahorrar los 1.760.000 que faltan."))
+    r = _chat(client, auth_headers, META)
+
+    assert "1.760.000" not in r["contenido"]
+    assert f"{int(plan.por_semana):,}".replace(",", ".") + " por semana" in r["contenido"]
+    assert r["accion"]["tipo"] == "crear_meta"
+    assert r["accion"]["payload"] == {"nombre": "Viaje", "monto_objetivo": "2000000", "fecha_limite": "2026-06-30"}
+    assert "Simulación ya calculada" in llamadas[0]["prompt"]
+
+
+def test_la_meta_redactada_con_las_cifras_calculadas_se_muestra(client, auth_headers, situacion, ia):
+    ia(_turno("Aparta 152.174 por semana y llegas al viaje. ¡Tú puedes!"))
+    r = _chat(client, auth_headers, META)
+    assert r["contenido"] == "Aparta 152.174 por semana y llegas al viaje. ¡Tú puedes!"
+    assert r["accion"]["tipo"] == "crear_meta"
+
+
+def test_simular_una_compra_con_groq_caido(client, auth_headers, situacion, ia):
+    ia(GroqServiceError("caído"))
+    r = _chat(client, auth_headers, "si compro 100000 en ropa, me alcanza?")
+    # 240.000 − 100.000 = 140.000 en 14 días.
+    assert "baja de 17.143 a 10.000" in r["contenido"]
+    assert r["accion"] == {
+        "tipo": "registrar_gasto", "etiqueta": "Registrar este gasto", "payload": {"monto": "100000"},
+    }
+
+
+def test_una_compra_que_no_cabe_lo_dice(client, auth_headers, situacion, ia):
+    ia(GroqServiceError("caído"))
+    r = _chat(client, auth_headers, "puedo comprar 300 mil hoy?")
+    assert "te pasarías 60.000" in r["contenido"]

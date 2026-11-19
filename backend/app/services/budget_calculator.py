@@ -5,6 +5,8 @@ from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from app.models.budget import Budget
 
 CENTAVOS = Decimal("0.01")
+# Días mínimos sobre los que se mide el ritmo de gasto para proyectar el agotamiento.
+VENTANA_MINIMA_RITMO = 7
 
 
 @dataclass
@@ -32,6 +34,7 @@ def calculate_budget_summary(
     *,
     today: date,
     apartado_total: Decimal = Decimal("0"),
+    gasto_fijo_total: Decimal = Decimal("0"),
 ) -> BudgetSummary:
     """Calcula gastado/disponible total y por día/semana para un presupuesto.
 
@@ -66,7 +69,11 @@ def calculate_budget_summary(
         else Decimal("0.00")
     )
 
-    en_riesgo, fecha_proyectada = _proyectar_agotamiento(budget, gastado_total, disponible_total, today)
+    # Los gastos fijos programados (arriendo, celular) se pagan una vez: no son ritmo diario. Sin esto, el
+    # arriendo del día 1 hacía creer que el dinero se acababa en una semana.
+    en_riesgo, fecha_proyectada = _proyectar_agotamiento(
+        budget, max(gastado_total - gasto_fijo_total, Decimal("0")), disponible_total, today
+    )
 
     return BudgetSummary(
         gastado_total=_redondear(gastado_total),
@@ -90,7 +97,13 @@ def _proyectar_agotamiento(
         return False, None  # el presupuesto aún no empieza
 
     dias_transcurridos = max((referencia - budget.fecha_inicio).days + 1, 1)
-    ritmo_diario_real = gastado_total / dias_transcurridos
+    # Con uno o dos días de datos, una sola compra grande se extrapola a todo el periodo y dispara una alarma
+    # falsa ("se acaba el 28 nov" el día que empezó el presupuesto). El ritmo se mide sobre al menos una
+    # semana (o el periodo entero si es más corto). Si el gasto ya pasó del total, igual sale en riesgo
+    # porque el disponible es negativo.
+    periodo = (budget.fecha_fin - budget.fecha_inicio).days + 1
+    ventana = max(dias_transcurridos, min(VENTANA_MINIMA_RITMO, periodo))
+    ritmo_diario_real = gastado_total / ventana
 
     if ritmo_diario_real <= 0:
         return False, None  # sin gasto no hay ritmo que proyectar

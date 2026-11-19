@@ -43,7 +43,7 @@ void main() {
 
     expect(find.text('Esta semana'), findsOneWidget);
     expect(find.byType(PieChart), findsOneWidget);
-    expect(find.text('50% más que la semana anterior'), findsOneWidget);
+    expect(find.text('50% más que a esta altura de la semana pasada'), findsOneWidget);
 
     // Al centro de la pantalla: en el borde inferior quedaría debajo de la barra flotante.
     await Scrollable.ensureVisible(tester.element(find.text('Ver análisis')), alignment: 0.5);
@@ -63,7 +63,7 @@ void main() {
     expect(find.text(r'40% · $ 24.000'), findsOneWidget);
     expect(find.text('Otras'), findsOneWidget);
     expect(find.text('regalos'), findsNothing);
-    expect(find.text('50% más que la semana anterior'), findsOneWidget);
+    expect(find.text('50% más que a esta altura de la semana pasada'), findsOneWidget);
     expect(find.text(r'Promedio semanal: $ 33.333'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Semana anterior'));

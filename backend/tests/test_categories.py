@@ -1,9 +1,9 @@
 from sqlmodel import Session
 
-from app.db.seed import seed_default_categories
+from app.db.seed import DEFAULT_CATEGORIES, seed_default_categories
 from tests.conftest import ACEPTA_POLITICA
 
-DEFAULT_NAMES = {"comida", "transporte", "entretenimiento", "salud", "servicios", "otros"}
+DEFAULT_NAMES = set(DEFAULT_CATEGORIES)
 
 
 def test_usuario_nuevo_ve_categorias_por_defecto(client, auth_headers, db_engine):

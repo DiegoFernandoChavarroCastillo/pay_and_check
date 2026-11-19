@@ -33,16 +33,20 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
         '• Voice: your phone turns it into text; the app only receives the text.\n'
             '• Receipt photos: the text is recognized on your phone. The photo is never uploaded.\n'
             '• Bank SMS: only if you allow it separately. They are read on your phone and are not stored on our '
-            'server.',
+            'server.\n'
+            '• Notifications from your payment apps (Nequi, Daviplata, your bank): only if you turn on access in '
+            'Android settings. The app only looks at a fixed list of financial apps, keeps them on your phone and '
+            'nothing leaves it until you choose to log a transaction.',
       ),
       (
         'What is sent to the AI service',
         'To understand what you write and draft the coach\'s messages we use Groq, an AI service whose servers '
-            'are in the United States (international data transfer). We send: your first name, the text you '
+            'are in the United States (international data transfer). If Groq does not respond, the same request '
+            'may go to DeepInfra, also in the United States, with the same model. We send: your first name, the text you '
             'type or dictate to log a transaction, the text of an SMS or receipt you choose to log, your chat '
             'messages (with the last 10 turns) and a summary of your figures (available amount, totals, '
             'categories, expense descriptions and goal names).\n'
-            'We never send your email, password, Google ID, location, photos or the SMS you did not choose. '
+            'We never send your email, password, Google ID, location, photos or the SMS or notifications you did not choose. '
             'The AI does not save anything by itself: you confirm every transaction before it is stored.',
       ),
       (
@@ -101,17 +105,21 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
       '• La voz: tu teléfono la convierte en texto; la app solo recibe el texto.\n'
           '• Las fotos de recibos: el texto se reconoce en tu teléfono. La foto nunca se sube.\n'
           '• Los SMS del banco: solo si lo permites aparte. Se leen en tu teléfono y no se guardan en nuestro '
-          'servidor.',
+          'servidor.\n'
+          '• Las notificaciones de tus apps de pago (Nequi, Daviplata, tu banco): solo si activas el acceso en los '
+          'ajustes de Android. La app solo mira una lista fija de apps financieras, las guarda en tu teléfono y '
+          'nada sale de él hasta que eliges registrar un movimiento.',
     ),
     (
       'Qué se envía al servicio de IA',
       'Para entender lo que escribes y redactar los mensajes del coach usamos Groq, un servicio de IA con '
-          'servidores en Estados Unidos (transferencia internacional de datos). Enviamos: tu nombre de pila, el '
+          'servidores en Estados Unidos (transferencia internacional de datos). Si Groq no responde, la misma '
+          'solicitud puede ir a DeepInfra, también en Estados Unidos, con el mismo modelo. Enviamos: tu nombre de pila, el '
           'texto que escribes o dictas para registrar un movimiento, el texto del SMS o del recibo que eliges '
           'registrar, tus mensajes del chat (con los últimos 10 turnos) y un resumen de tus cifras (disponible, '
           'totales, categorías, descripciones de gastos y nombres de metas).\n'
           'Nunca enviamos tu correo, tu contraseña, tu identificador de Google, tu ubicación, tus fotos ni los SMS '
-          'que no elegiste. La IA no guarda nada por su cuenta: tú confirmas cada movimiento antes de guardarlo.',
+          'o notificaciones que no elegiste. La IA no guarda nada por su cuenta: tú confirmas cada movimiento antes de guardarlo.',
     ),
     (
       'Para qué los usamos',

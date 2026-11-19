@@ -19,6 +19,21 @@ String planLabel(AppLocalizations l, String codigo) => switch (codigo) {
 /// Mi plan (PS-97): el plan actual, cuánto queda del cupo de IA del mes, los
 /// otros planes (Premium y Familiar se cambian sin cobro: es una simulación) y
 /// el canje de un código de convenio o familiar.
+/// Nombre para mostrar de una función de plan (`services/planes.py`). Null si la app no la conoce aún.
+String? nombreFuncion(AppLocalizations l, String codigo) => switch (codigo) {
+      'registro' => l.featRegistro,
+      'numero_diario' => l.featNumeroDiario,
+      'simulador' => l.featSimulador,
+      'metas_retos' => l.featMetasRetos,
+      'coach' => l.featCoach,
+      'reportes' => l.featReportes,
+      'captura_automatica' => l.featCapturaAutomatica,
+      'ia_ampliada' => l.featIaAmpliada,
+      'progreso_familiar' => l.featProgresoFamiliar,
+      'apoyos_universidad' => l.featApoyos,
+      _ => null,
+    };
+
 class PlanScreen extends ConsumerWidget {
   const PlanScreen({super.key});
 
@@ -43,13 +58,15 @@ class PlanScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _PlanActual(s),
+              if (s.familia case final f?) _Familia(familia: f),
               const _Canje(),
               if (planes.value case final lista?) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
                   child: Text(l.planOtherPlans, style: Theme.of(context).textTheme.titleMedium),
                 ),
-                for (final p in lista.where((p) => p.codigo != s.plan)) _OtroPlan(p),
+                for (final p in lista.where((p) => p.codigo != s.plan))
+                  _OtroPlan(p, base: p.codigo == 'gratis' ? const [] : _funcionesGratis(lista)),
               ],
             ],
           ),
@@ -116,10 +133,15 @@ class _PlanActual extends StatelessWidget {
   }
 }
 
+/// Lo que trae el plan Gratis: los demás planes lo resumen en una línea.
+List<String> _funcionesGratis(List<Plan> planes) =>
+    planes.where((p) => p.codigo == 'gratis').firstOrNull?.funciones ?? const [];
+
 class _OtroPlan extends ConsumerStatefulWidget {
-  const _OtroPlan(this.plan);
+  const _OtroPlan(this.plan, {this.base = const []});
 
   final Plan plan;
+  final List<String> base;
 
   @override
   ConsumerState<_OtroPlan> createState() => _OtroPlanState();
@@ -166,8 +188,28 @@ class _OtroPlanState extends ConsumerState<_OtroPlan> {
               Text(precio, style: theme.textTheme.titleSmall),
             ],
           ),
+          const SizedBox(height: 8),
+          // Lo que se puede hacer, primero; el cupo de IA es un detalle.
+          if (widget.base.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(l.planEverythingInFree, style: theme.textTheme.bodyMedium),
+            ),
+          for (final f in p.funciones.where((f) => !widget.base.contains(f)))
+            if (nombreFuncion(l, f) case final nombre?)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 18, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(nombre, style: theme.textTheme.bodyMedium)),
+                  ],
+                ),
+              ),
           const SizedBox(height: 4),
-          Text(cupo, style: theme.textTheme.bodyMedium),
+          Text(cupo, style: theme.textTheme.bodySmall),
           if (p.estadoDemo == 'simulado') Text(l.planSimulated, style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
           // Institucional solo se activa con el código de convenio: no se puede elegir aquí.
@@ -242,6 +284,90 @@ class _CanjeState extends ConsumerState<_Canje> {
           const SizedBox(width: 12),
           FilledButton(onPressed: _busy ? null : _canjear, child: Text(l.redeemAction)),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Plan Familiar con sentido para quien paga: el titular ve el progreso agregado de quien lo comparte; cada
+/// integrante decide si lo comparte. Nunca se ven gastos, montos ni check-ins.
+class _Familia extends ConsumerWidget {
+  const _Familia({required this.familia});
+
+  final Family familia;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l;
+    final theme = Theme.of(context);
+    if (!familia.esTitular) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: SectionCard(
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: familia.comparteProgreso,
+            title: Text(l.familyShareToggle),
+            subtitle: Text(l.familyShareHint),
+            onChanged: (v) async {
+              if (await guarded(context, () => ref.read(apiProvider).shareProgress(v))) {
+                ref.invalidate(subscriptionProvider);
+              }
+            },
+          ),
+        ),
+      );
+    }
+    final progreso = ref.watch(familyProgressProvider);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SectionCard(
+        title: l.familyProgressTitle,
+        child: AsyncView<List<FamilyMemberProgress>>(
+          value: progreso,
+          onRetry: () => ref.invalidate(familyProgressProvider),
+          builder: (lista) {
+            if (lista.isEmpty) return Text(l.familyProgressEmpty, style: theme.textTheme.bodyMedium);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final m in lista)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(m.nombre, style: theme.textTheme.titleMedium),
+                        if (!m.comparte)
+                          Text(l.familyNotShared, style: theme.textTheme.bodySmall)
+                        else ...[
+                          Text(
+                            [
+                              l.familyStreak(m.racha ?? 0),
+                              l.familyConsistency(((m.constancia ?? 0) * 100).round()),
+                              if (m.presupuestoAlcanza != null)
+                                m.presupuestoAlcanza! ? l.familyBudgetOk : l.familyBudgetTight,
+                            ].join(' · '),
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          if (m.progresoMetas != null) ...[
+                            const SizedBox(height: 6),
+                            LabeledProgress(
+                              label: l.familyGoals(m.metasActivas ?? 0),
+                              value: '${((m.progresoMetas ?? 0) * 100).round()} %',
+                              progress: m.progresoMetas ?? 0,
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ),
+                Text(l.familyPrivacy, style: theme.textTheme.bodySmall),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -105,7 +105,12 @@ def summary_to_text(summary: WeeklySummary) -> str:
         f"Semana: {fmt_fecha(summary.semana_inicio)} a {fmt_fecha(summary.semana_fin)}",
         f"Gasto total de la semana: {fmt(summary.gasto_total_semana)}",
         f"Ritmo esperado semanal del presupuesto: {fmt(summary.ritmo_esperado_semanal)}",
-        f"Diferencia (gasto de la semana - ritmo esperado): {fmt(summary.diferencia_vs_ritmo)}",
+        # Nunca una cifra negativa ("diferencia de -108.316"): el sentido va en palabras.
+        (
+            f"Margen: {fmt(-summary.diferencia_vs_ritmo)} por debajo del ritmo esperado"
+            if summary.diferencia_vs_ritmo <= 0
+            else f"Exceso: {fmt(summary.diferencia_vs_ritmo)} por encima del ritmo esperado"
+        ),
         "Gasto por categoría esta semana:",
     ]
     if summary.gasto_por_categoria:

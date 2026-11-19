@@ -14,6 +14,7 @@ import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../../data/session.dart';
+import '../profile/plan_screen.dart';
 import '../transactions/add_sheet.dart';
 import '../transactions/expense_form_screen.dart';
 
@@ -35,7 +36,9 @@ class SmsMessage {
 /// igual lo revisa la persona antes de guardarse.
 final _monto = RegExp(r'\$\s?\d|\d{1,3}([.,]\d{3})+|\b(cop|usd)\b', caseSensitive: false);
 final _transaccion = RegExp(
-  r'compra|pago|pagaste|retiro|transacci|transferencia|d[ée]bito|consumo|purchase|payment|withdrawal|charged',
+  // "Recibiste", "te envió", "enviaste": así hablan las notificaciones de Nequi y Daviplata.
+  r'compra|pago|pagaste|retiro|transacci|transferencia|d[ée]bito|consumo|recibiste|te envi|enviaste|abono'
+  r'|purchase|payment|withdrawal|charged|received|sent you',
   caseSensitive: false,
 );
 
@@ -59,16 +62,34 @@ class SmsSource {
     );
     return (crudos ?? const []).map(SmsMessage.fromMap).toList();
   }
+
+  /// Si la persona activó el acceso a notificaciones (Ajustes de Android) para leer las de Nequi, Daviplata…
+  Future<bool> notifHasAccess() async => await _channel.invokeMethod<bool>('notifHasAccess') ?? false;
+
+  Future<void> openNotifSettings() => _channel.invokeMethod<void>('openNotifSettings');
+
+  /// Notificaciones de apps de pago guardadas en el teléfono por `BankNotificationListener.kt`; el remitente es
+  /// el nombre del banco.
+  Future<List<SmsMessage>> readNotifications(DateTime desde) async {
+    final crudos = await _channel.invokeListMethod<Map<Object?, Object?>>(
+      'readNotifications',
+      {'since': desde.millisecondsSinceEpoch},
+    );
+    return (crudos ?? const []).map(SmsMessage.fromMap).toList();
+  }
 }
 
 final smsSourceProvider = Provider<SmsSource>((ref) => const SmsSource());
 
 /// Movimientos bancarios detectados en los SMS y todavía sin revisar.
 class SmsInboxState {
-  const SmsInboxState({this.permiso, this.mensajes = const [], this.error});
+  const SmsInboxState({this.permiso, this.notificaciones, this.mensajes = const [], this.error});
 
   /// null mientras no se sabe; false si la persona no ha dado el permiso.
   final bool? permiso;
+
+  /// Acceso a las notificaciones de apps de pago: null mientras no se sabe.
+  final bool? notificaciones;
   final List<SmsMessage> mensajes;
   final Object? error;
 }
@@ -98,14 +119,19 @@ class SmsInbox extends Notifier<SmsInboxState> {
       var permiso = consentido && await fuente.hasPermission();
       if (consentido && !permiso && pedirPermiso) permiso = await fuente.requestPermission();
 
-      var mensajes = const <SmsMessage>[];
-      if (permiso) {
-        final revisados = _ids;
-        mensajes = (await fuente.read(DateTime.now().subtract(const Duration(days: _diasAtras))))
-            .where((m) => pareceMovimientoBancario(m.cuerpo) && !revisados.contains('${m.id}'))
-            .toList();
+      // Las notificaciones de Nequi, Daviplata y bancos van con el mismo consentimiento y a la misma bandeja.
+      final notificaciones = consentido && await fuente.notifHasAccess();
+
+      final desde = DateTime.now().subtract(const Duration(days: _diasAtras));
+      final revisados = _ids;
+      bool pendiente(SmsMessage m) => pareceMovimientoBancario(m.cuerpo) && !revisados.contains('${m.id}');
+      final sms = permiso ? (await fuente.read(desde)).where(pendiente).toList() : <SmsMessage>[];
+      final avisos = notificaciones ? (await fuente.readNotifications(desde)).where(pendiente).toList() : <SmsMessage>[];
+      // Los SMS ya llegan del más reciente al más antiguo; las notificaciones se intercalan por fecha.
+      final mensajes = avisos.isEmpty ? sms : ([...sms, ...avisos]..sort((a, b) => b.fecha.compareTo(a.fecha)));
+      if (ref.mounted) {
+        state = SmsInboxState(permiso: permiso, notificaciones: notificaciones, mensajes: mensajes);
       }
-      if (ref.mounted) state = SmsInboxState(permiso: permiso, mensajes: mensajes);
     } catch (e) {
       // Sin canal nativo (otra plataforma) no hay bandeja; no es un error que mostrar en el inicio.
       if (ref.mounted) state = SmsInboxState(error: e);
@@ -117,6 +143,7 @@ class SmsInbox extends Notifier<SmsInboxState> {
     ref.read(sharedPreferencesProvider).setStringList(_revisados, [..._ids, '${mensaje.id}']);
     state = SmsInboxState(
       permiso: state.permiso,
+      notificaciones: state.notificaciones,
       mensajes: state.mensajes.where((m) => m.id != mensaje.id).toList(),
     );
   }
@@ -128,20 +155,39 @@ final smsInboxProvider = NotifierProvider<SmsInbox, SmsInboxState>(SmsInbox.new)
 /// lee, dónde queda y cómo revocarlo. Si la persona no acepta, no se pide el
 /// permiso de Android y la app sigue funcionando sin SMS.
 Future<void> permitirSms(BuildContext context, WidgetRef ref) async {
-  final session = ref.read(sessionProvider);
-  if (!(session.value?.smsConsentido ?? false)) {
-    final acepta = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => const _ConsentimientoSms(),
-    );
-    if (acepta != true || !context.mounted) return;
-    final ok = await guarded(context, () => ref.read(sessionProvider.notifier).setSmsConsent(true));
-    if (!ok) return;
-  }
+  if (!await _asegurarConsentimiento(context, ref)) return;
   await ref.read(smsInboxProvider.notifier).cargar(pedirPermiso: true);
 }
+
+/// El consentimiento de la app (PS-48) antes de cualquier permiso de Android. True si ya está dado.
+Future<bool> _asegurarConsentimiento(BuildContext context, WidgetRef ref) async {
+  if (ref.read(sessionProvider).value?.smsConsentido ?? false) return true;
+  final acepta = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => const _ConsentimientoSms(),
+  );
+  if (acepta != true || !context.mounted) return false;
+  return guarded(context, () => ref.read(sessionProvider.notifier).setSmsConsent(true));
+}
+
+/// Abre Ajustes → Acceso a notificaciones, tras el consentimiento. Al volver a la app se recarga la bandeja.
+Future<void> permitirNotificaciones(BuildContext context, WidgetRef ref) async {
+  if (!await _asegurarConsentimiento(context, ref)) return;
+  final control = ref.read(smsInboxProvider.notifier);
+  late final AppLifecycleListener escucha;
+  escucha = AppLifecycleListener(
+    onResume: () {
+      escucha.dispose();
+      control.cargar();
+    },
+  );
+  await ref.read(smsSourceProvider).openNotifSettings();
+}
+
+/// La captura automática es de los planes pagos (docs/planes.md); el backend también lo exige.
+bool capturaBloqueada(WidgetRef ref) => ref.watch(subscriptionProvider).value?.plan == 'gratis';
 
 class _ConsentimientoSms extends StatelessWidget {
   const _ConsentimientoSms();
@@ -155,8 +201,9 @@ class _ConsentimientoSms extends StatelessWidget {
       (Icons.auto_awesome_outlined, l.smsConsentPoint2),
       (Icons.settings_outlined, l.smsConsentPoint3),
     ];
+    // Desplazable: en pantallas bajas (o con letra grande) el texto no cabe entero.
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -235,26 +282,56 @@ class NotificationsScreen extends ConsumerWidget {
     final pagos = ref.watch(pendingPaymentsProvider).value ?? const <PendingPayment>[];
     final titulo = Theme.of(context).textTheme.titleMedium;
 
+    final bloqueada = capturaBloqueada(ref);
+    // Arriba de todo, lo que falta para que la captura funcione: el plan o el acceso a las notificaciones.
+    final Widget? aviso = bloqueada
+        ? _AvisoCaptura(
+            icono: Icons.lock_outline,
+            texto: l.captureLocked,
+            accion: l.seePlans,
+            onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const PlanScreen())),
+          )
+        : bandeja.notificaciones == false
+            ? _AvisoCaptura(
+                icono: Icons.notifications_active_outlined,
+                titulo: l.notifAccessTitle,
+                texto: l.notifAccessBody,
+                accion: l.notifAccessAction,
+                onPressed: () => permitirNotificaciones(context, ref),
+              )
+            : null;
+    final mensajes = bloqueada ? const <SmsMessage>[] : bandeja.mensajes;
+
     final Widget cuerpo;
-    if (pagos.isEmpty && bandeja.mensajes.isEmpty) {
+    if (pagos.isEmpty && mensajes.isEmpty) {
       // Nada por revisar: se explica el estado de los SMS (sin permiso, no disponible o al día).
-      if (bandeja.permiso == false) {
-        cuerpo = Center(
-          child: EmptyView(
-            icon: Icons.sms_outlined,
-            text: l.smsExplain,
-            action: FilledButton(onPressed: () => permitirSms(context, ref), child: Text(l.smsAllow)),
-          ),
+      final Widget vacio;
+      if (bloqueada) {
+        vacio = const SizedBox.shrink();
+      } else if (bandeja.permiso == false) {
+        vacio = EmptyView(
+          icon: Icons.sms_outlined,
+          text: l.smsExplain,
+          action: FilledButton(onPressed: () => permitirSms(context, ref), child: Text(l.smsAllow)),
         );
       } else if (bandeja.permiso == null && bandeja.error == null) {
-        cuerpo = const Center(child: CircularProgressIndicator());
+        vacio = const CircularProgressIndicator();
       } else {
-        cuerpo = Center(child: EmptyView(icon: Icons.mark_email_read_outlined, text: l.smsEmpty));
+        vacio = EmptyView(icon: Icons.mark_email_read_outlined, text: l.smsEmpty);
       }
+      cuerpo = ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          ?aviso,
+          const SizedBox(height: 24),
+          Center(child: vacio),
+        ],
+      );
     } else {
       cuerpo = ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          ?aviso,
           if (pagos.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 12),
@@ -262,12 +339,12 @@ class NotificationsScreen extends ConsumerWidget {
             ),
             for (final p in pagos) _PaymentCard(key: ValueKey('pago-${p.recurringId}-${p.fecha}'), pago: p),
           ],
-          if (bandeja.mensajes.isNotEmpty) ...[
+          if (mensajes.isNotEmpty) ...[
             Padding(
               padding: EdgeInsets.only(left: 4, bottom: 12, top: pagos.isEmpty ? 0 : 8),
               child: Text(l.notifDetected, style: titulo),
             ),
-            for (final m in bandeja.mensajes) _SmsCard(key: ValueKey(m.id), mensaje: m),
+            for (final m in mensajes) _SmsCard(key: ValueKey(m.id), mensaje: m),
           ],
         ],
       );
@@ -288,6 +365,53 @@ class NotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: cuerpo,
+    );
+  }
+}
+
+/// Tarjeta que explica qué falta para la captura automática (plan o acceso a notificaciones).
+class _AvisoCaptura extends StatelessWidget {
+  const _AvisoCaptura({required this.icono, this.titulo, required this.texto, required this.accion, required this.onPressed});
+
+  final IconData icono;
+  final String? titulo;
+  final String texto;
+  final String accion;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final acento = context.tokens.coach;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: SectionCard(
+        color: acento.container,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icono, color: acento.onContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    titulo ?? texto,
+                    style: (titulo == null ? theme.textTheme.bodyMedium : theme.textTheme.titleSmall)
+                        ?.copyWith(color: acento.onContainer),
+                  ),
+                ),
+              ],
+            ),
+            if (titulo != null) ...[
+              const SizedBox(height: 8),
+              Text(texto, style: theme.textTheme.bodyMedium?.copyWith(color: acento.onContainer)),
+            ],
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onPressed, child: Text(accion)),
+          ],
+        ),
+      ),
     );
   }
 }

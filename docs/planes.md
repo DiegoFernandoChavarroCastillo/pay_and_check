@@ -9,10 +9,13 @@
 | # | Decisión | Qué significa |
 |---|---|---|
 | D1 | **Cobro simulado** | En el piloto no hay pasarela de pago. Cambiar a Premium o Familiar solo cambia el plan y el cupo, y la app avisa que no hay cobro real. Google Play Billing queda fuera del alcance (la demo es por APK). |
-| D2 | **El plan Gratis incluye 50 solicitudes de IA al mes** | El modelo financiero cuenta "usuarios gratis" en el costo de IA pero nunca fijaba su cupo. **Por validar** con el modelo. |
+| D2 | **El plan Gratis incluye 150 solicitudes de IA al mes** (antes 50) | Con una reacción del coach por cada gasto, 50 se agotaban en la primera semana de uso real (auditoría del 18 nov). Con el costo medido (≈ $0,56 por solicitud con respaldo, reintentos y margen de seguridad), un usuario gratis activo cuesta unos $45 al mes con uso típico y $84 si agota el cupo. Ya está en la hoja `Costo_IA` del Excel v2. |
 | D3 | **Familiar: 390 solicitudes compartidas** por cuenta familiar, hasta 3 integrantes | Se simula con un solo grupo. |
 | — | **La cuenta nueva nace en Gratis** | "Sin suscripción" equivale a Gratis: no hay fila hasta que la persona cambia de plan. |
 | — | **El código de convenio activa Institucional** | La universidad paga; la persona canjea el código que le entregan. |
+| D7 | **Los planes se venden por funciones, no por solicitudes** | A la persona le importa qué puede hacer. Gratis cubre el hábito completo, chat y reportes incluidos; los pagos añaden la captura automática, el doble de IA y lo propio de cada plan (§2.1). |
+| D8 | **Licencia de plataforma por convenio** | $1.000.000 netos al mes por universidad, además del precio por estudiante (§2.2). |
+| D9 | **Proveedor de respaldo de IA** | El mismo gpt-oss-20b en otro proveedor compatible con OpenAI (DeepInfra recomendado), configurable con `AI_FALLBACK_URL`. Reemplaza el supuesto de Gemini como respaldo. |
 
 ## 2. Los planes
 
@@ -20,10 +23,40 @@ Precios en pesos colombianos, con IVA.
 
 | Plan | Quién paga | Precio | Cupo de IA al mes | Cómo se activa | Estado en el piloto |
 |---|---|---|---|---|---|
-| **Gratis** | nadie | $0 | **50** | Es el plan de toda cuenta nueva | Real |
+| **Gratis** | nadie | $0 | **150** | Es el plan de toda cuenta nueva | Real |
 | **Institucional** | la universidad | $4.998 por estudiante activo | **300** por persona | Canjeando un **código de convenio** (ej. ECI) | Real, por código |
 | **Premium** | la persona | $9.990 | **300** por persona | `PUT /me/subscription` | Simulado, sin cobro |
 | **Familiar** | la familia | $19.990 (hasta 3 jóvenes) | **390 compartidas** | `PUT /me/subscription` crea la familia y da un **código familiar** que los demás canjean | Simulado, sin cobro |
+
+### 2.1 Qué incluye cada plan
+
+Lo que muestra la pantalla "Mi plan" sale de `Plan.funciones` (`backend/app/services/planes.py`). Decisión del
+19 nov 2026 (`docs/analisis-financiero-nov-2026.md`): el chat y los reportes **no** se cierran en Gratis porque
+cuestan menos de un peso por solicitud y son los que crean el hábito y la viralidad.
+
+| Función | Código | Gratis | Premium | Familiar | Institucional |
+|---|---|:-:|:-:|:-:|:-:|
+| Registro manual, por voz y por foto | `registro` | ✓ | ✓ | ✓ | ✓ |
+| Número del día | `numero_diario` | ✓ | ✓ | ✓ | ✓ |
+| «¿Me alcanza?» de contado y a cuotas (sin IA) | `simulador` | ✓ | ✓ | ✓ | ✓ |
+| Metas, retos e insignias | `metas_retos` | ✓ | ✓ | ✓ | ✓ |
+| Coach con consejos del día y chat (dentro del cupo) | `coach` | ✓ | ✓ | ✓ | ✓ |
+| Reporte semanal y resumen del mes | `reportes` | ✓ | ✓ | ✓ | ✓ |
+| Captura automática de notificaciones y SMS | `captura_automatica` | | ✓ | ✓ | ✓ |
+| El doble de IA (300 solicitudes al mes) | `ia_ampliada` | | ✓ | ✓ | ✓ |
+| Progreso compartido con quien paga | `progreso_familiar` | | | ✓ | |
+| Apoyos de la universidad y panel de Bienestar | `apoyos_universidad` | | | | ✓ |
+
+El backend exige el plan en la captura automática: `POST /expenses` con `source = "sms"` responde 402 en Gratis.
+Lo demás se controla con el cupo mensual de IA (al agotarse, el coach responde con textos fijos y el registro
+pasa al formulario manual).
+
+### 2.2 Licencia de plataforma para la universidad (nuevo)
+
+Además del precio por estudiante activo, cada convenio paga una **licencia de plataforma de $1.190.000 al mes con
+IVA** ($1.000.000 netos), que cubre el panel de Bienestar, los apoyos de la universidad y la gestión de códigos.
+Es lo que mueve el punto de equilibrio del mes 14 al 12 (ver el análisis financiero). Se factura directo a la
+universidad, sin tienda, en un contrato semestral. Todavía no está en el código: es una condición comercial.
 
 ## 3. Qué cuenta como una "solicitud"
 

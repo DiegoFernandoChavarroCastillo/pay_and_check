@@ -416,6 +416,8 @@ def test_insignias_por_usar_la_app_de_verdad(client, auth_headers, categorias, p
     nuevas = {"sms", "primer_ingreso", "primer_limite", "previsor", "primer_aporte", "fin_de_periodo"}
     assert not nuevas & obtenidas()
 
+    # La captura automática es de los planes pagos.
+    assert client.put("/me/subscription", json={"plan": "premium"}, headers=auth_headers).status_code == 200
     gastar(8000, LUNES, source="sms")
     client.post("/incomes", json={"monto": "50000", "descripcion": "mesada", "fecha": LUNES.isoformat()},
                 headers=auth_headers)  # fmt: skip

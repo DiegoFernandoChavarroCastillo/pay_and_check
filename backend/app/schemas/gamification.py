@@ -64,6 +64,9 @@ class MetricsResponse(BaseModel):
     ratio_ahorro: Decimal | None
     consistencia: Decimal
     mejora_mensual: Decimal | None
+    # Para mostrar "3 de 5 días" mientras la cuenta es nueva: un "100 %" el primer día no dice nada.
+    dias_activos: int = 0
+    dias_ventana: int = 0
 
 
 class GamificationProfileResponse(BaseModel):

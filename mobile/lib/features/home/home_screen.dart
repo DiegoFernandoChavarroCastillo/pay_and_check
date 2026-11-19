@@ -15,6 +15,9 @@ import '../budget/budget_screen.dart';
 import '../coach/coach_widgets.dart';
 import '../reports/analytics_screen.dart';
 import '../sms/sms_inbox_screen.dart';
+import '../support/support_screen.dart';
+import '../transactions/receivables_screen.dart';
+import 'afford_sheet.dart';
 
 /// Dashboard: cuánto se puede gastar hoy, el check-in y lo que propone el coach.
 class HomeScreen extends ConsumerWidget {
@@ -156,6 +159,13 @@ class _Dashboard extends ConsumerWidget {
                         '${l.availableTotal(money(summary.disponibleTotal))} · ${l.daysLeft(summary.diasRestantes)}',
                         style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer),
                       ),
+                      const SizedBox(height: 12),
+                      // Decidir antes de gastar: el corazón de la app, a un toque del número del día.
+                      FilledButton.tonalIcon(
+                        onPressed: () => showAffordSheet(context),
+                        icon: const Icon(Icons.calculate_outlined),
+                        label: Text(l.affordTitle),
+                      ),
                     ],
                   ),
                 ),
@@ -166,9 +176,18 @@ class _Dashboard extends ConsumerWidget {
                     progress: periodo <= 0 ? 0 : 1 - summary.diasRestantes / periodo,
                     color: scheme.primary,
                     track: scheme.onPrimaryContainer.withValues(alpha: 0.12),
-                    child: AnimatedCount(
-                      value: summary.diasRestantes,
-                      style: theme.textTheme.titleLarge?.copyWith(color: scheme.onPrimaryContainer),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedCount(
+                          value: summary.diasRestantes,
+                          style: theme.textTheme.titleLarge?.copyWith(color: scheme.onPrimaryContainer, height: 1),
+                        ),
+                        Text(
+                          l.daysUnit(summary.diasRestantes),
+                          style: theme.textTheme.labelSmall?.copyWith(color: scheme.onPrimaryContainer),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -211,6 +230,10 @@ class _Dashboard extends ConsumerWidget {
                 icon: Icons.shopping_bag_outlined,
                 large: true,
                 progress: bolsa <= 0 ? null : summary.gastadoTotal / bolsa,
+                // "de cuánto": sin esto la barra no dice qué mide.
+                caption: bolsa <= 0
+                    ? null
+                    : l.spentOf(money(bolsa), (summary.gastadoTotal * 100 / bolsa).round()),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -230,6 +253,9 @@ class _Dashboard extends ConsumerWidget {
             ],
           ),
         ),
+        // Apoyos de la universidad (solo si las cifras lo justifican) y lo que le deben por vacas.
+        const SupportSuggestionCard(),
+        const ReceivablesCard(),
         if (tendencias != null) _WeekCard(trends: tendencias),
         const CheckinCard(),
         if (insights.isNotEmpty) ...[
@@ -392,6 +418,7 @@ class _Stat extends StatelessWidget {
     this.accent,
     this.large = false,
     this.progress,
+    this.caption,
   });
 
   final String label;
@@ -402,6 +429,9 @@ class _Stat extends StatelessWidget {
 
   /// Parte del dinero del periodo que representa este monto.
   final double? progress;
+
+  /// Texto bajo la barra ("de $1.750.000 · 9 %").
+  final String? caption;
 
   @override
   Widget build(BuildContext context) {
@@ -448,6 +478,13 @@ class _Stat extends StatelessWidget {
                         minHeight: 8,
                         borderRadius: BorderRadius.circular(4),
                       ),
+                    ),
+                  ],
+                  if (caption != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      caption!,
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ],

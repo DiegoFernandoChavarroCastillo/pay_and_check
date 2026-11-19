@@ -18,6 +18,8 @@ class Organization(SQLModel, table=True):
     nombre: str = Field(unique=True, index=True)
     activa: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utcnow)
+    # Abre el panel agregado de Bienestar Universitario (`GET /panel/{id}?token=…`). Sin token no hay panel.
+    panel_token: str | None = Field(default=None)
 
 
 class LicenseCode(SQLModel, table=True):
@@ -66,4 +68,7 @@ class Subscription(SQLModel, table=True):
     organization_id: int | None = Field(default=None, foreign_key="organizations.id")
     license_code_id: int | None = Field(default=None, foreign_key="license_codes.id")
     es_titular: bool = Field(default=False)
+    # En el plan Familiar: si la persona deja que el titular vea su progreso agregado (constancia, metas, si el
+    # presupuesto alcanza). Nunca sus gastos. Apagado hasta que la persona lo active.
+    comparte_progreso: bool = Field(default=False)
     iniciada_en: datetime = Field(default_factory=utcnow)

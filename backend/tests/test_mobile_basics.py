@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 import app.core.time as time_module
 import app.routers.expenses as expenses_router
-from app.db.seed import seed_default_categories
+from app.db.seed import DEFAULT_CATEGORIES, seed_default_categories
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.expense import Expense
@@ -101,8 +101,8 @@ def test_borrar_cuenta_elimina_solo_los_datos_del_usuario(client, make_user, db_
         assert len(session.exec(select(User)).all()) == 1
         assert len(session.exec(select(Budget)).all()) == 1
         assert len(session.exec(select(Expense)).all()) == 1
-        # Quedan las 6 por defecto + la propia del usuario B.
-        assert len(session.exec(select(Category)).all()) == 7
+        # Quedan las de por defecto + la propia del usuario B.
+        assert len(session.exec(select(Category)).all()) == len(DEFAULT_CATEGORIES) + 1
 
     assert len(client.get("/expenses", headers=headers_b).json()) == 1
 

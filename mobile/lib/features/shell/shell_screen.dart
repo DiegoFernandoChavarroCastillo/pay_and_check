@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format.dart';
 import '../../core/motion.dart';
+import '../../core/native.dart';
 import '../../core/notifications.dart';
 import '../../core/settings.dart';
 import '../../core/theme.dart';
@@ -10,6 +12,7 @@ import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../coach/coach_screen.dart';
 import '../home/home_screen.dart';
+import '../home/share_card.dart';
 import '../profile/profile_screen.dart';
 import '../progress/progress_screen.dart';
 import '../sms/sms_inbox_screen.dart';
@@ -39,7 +42,33 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _ciclo;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _sincronizarRecordatorio());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sincronizarRecordatorio();
+      // Abierta desde el botón "+ Registrar" del widget: directo a la hoja de registro.
+      NativeBridge.launchAction().then(_accionDelWidget);
+    });
+    NativeBridge.onWidgetAction(_accionDelWidget);
+  }
+
+  Future<void> _accionDelWidget(String? accion) async {
+    if (accion != 'registrar' || !mounted) return;
+    // Hace falta un presupuesto para registrar; se espera a que cargue el resumen.
+    final summary = await ref.read(summaryProvider.future).catchError((_) => null);
+    if (summary != null && mounted) showAddSheet(context);
+  }
+
+  /// El widget de la pantalla de inicio muestra el número del día; se actualiza cada vez que carga el resumen.
+  void _actualizarWidget(BudgetSummary? summary) {
+    final l = context.l;
+    if (summary == null) {
+      NativeBridge.updateWidget(monto: '—', etiqueta: l.availablePerDay, detalle: l.widgetNoBudget);
+      return;
+    }
+    NativeBridge.updateWidget(
+      monto: money(summary.disponiblePorDia),
+      etiqueta: l.availablePerDay,
+      detalle: l.daysLeft(summary.diasRestantes),
+    );
   }
 
   /// El aviso programado en el teléfono debe ser el de la cuenta que acaba de entrar, no el de la anterior.
@@ -91,6 +120,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
     ref.listen(gamificationProvider, (_, actual) {
       final perfil = actual.value;
       if (perfil != null && !actual.isLoading) _celebrar(perfil);
+    });
+
+    ref.listen(summaryProvider, (_, actual) {
+      if (actual.hasValue && !actual.isLoading) _actualizarWidget(actual.value);
     });
 
     // Cada vez que cambian los gastos fijos (o se paga uno), se reprograman sus avisos.
@@ -186,7 +219,20 @@ class _BadgeDialog extends StatelessWidget {
           title: Text(l.badgeUnlocked, textAlign: TextAlign.center),
           content: Text(insignias.join('\n'), textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
           actionsAlignment: MainAxisAlignment.center,
-          actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(l.great))],
+          actions: [
+            // Lo compartible: una tarjeta con el logro, sin montos.
+            OutlinedButton.icon(
+              onPressed: () => showShareCard(
+                context,
+                titulo: l.shareBadgeTitle,
+                destacado: insignias.first,
+                lineas: insignias.skip(1).toList(),
+              ),
+              icon: const Icon(Icons.ios_share),
+              label: Text(l.share),
+            ),
+            FilledButton(onPressed: () => Navigator.pop(context), child: Text(l.great)),
+          ],
         ),
         Positioned.fill(
           child: ConfettiBurst(

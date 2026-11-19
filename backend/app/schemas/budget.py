@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class BudgetCreate(BaseModel):
@@ -53,3 +53,28 @@ class BudgetSummaryResponse(BaseModel):
     en_riesgo: bool
     fecha_proyectada_agotamiento: date | None
     desglose_por_categoria: list[CategoriaDesgloseResponse]
+
+
+class SimulateRequest(BaseModel):
+    monto: Decimal = Field(gt=0, le=Decimal("100000000"))
+
+
+class SimulateGoalImpact(BaseModel):
+    nombre: str
+    # A cuántos días del ahorro que pide la meta (para llegar a tiempo) equivale la compra.
+    dias_equivalentes: int
+    aporte_por_dia: Decimal
+
+
+class SimulateResponse(BaseModel):
+    """ "¿Me alcanza?": cómo quedaría el presupuesto si hoy se gastara `monto`. No guarda nada ni usa IA."""
+
+    monto: Decimal
+    alcanza: bool
+    disponible_por_dia_antes: Decimal
+    disponible_por_dia_despues: Decimal
+    disponible_total_despues: Decimal
+    dias_restantes: int
+    en_riesgo_despues: bool
+    fecha_agotamiento_despues: date | None
+    meta: SimulateGoalImpact | None = None

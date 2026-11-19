@@ -81,3 +81,36 @@ def test_ritmo_bajo_no_dispara_en_riesgo():
     budget = _budget(monto_total="1000000.00", inicio=date(2026, 1, 1), fin=date(2026, 3, 31))
     s = calculate_budget_summary(budget, Decimal("1000.00"), today=date(2026, 1, 10))
     assert s.en_riesgo is False
+
+
+def test_una_compra_grande_el_primer_dia_no_dispara_alarma():
+    # Caso de la auditoría: 1.600.000 para 38 días y 150.000 de ropa el día 1. Extrapolar un solo día
+    # decía "se acaba en 10 días"; con la ventana mínima de una semana el ritmo es razonable.
+    budget = _budget(monto_total="1600000.00", inicio=date(2026, 11, 18), fin=date(2026, 12, 25))
+    s = calculate_budget_summary(budget, Decimal("168000.00"), today=date(2026, 11, 18))
+    assert s.en_riesgo is False
+
+
+def test_gastar_todo_el_primer_dia_si_dispara_alarma():
+    budget = _budget(monto_total="100000.00", inicio=date(2026, 1, 1), fin=date(2026, 3, 31))
+    s = calculate_budget_summary(budget, Decimal("100000.00"), today=date(2026, 1, 1))
+    assert s.en_riesgo is True
+
+
+def test_presupuesto_corto_usa_su_propio_periodo_como_ventana():
+    # 5 días con 80 % gastado en 2 días: la ventana no puede ser mayor que el periodo.
+    budget = _budget(monto_total="100000.00", inicio=date(2026, 1, 1), fin=date(2026, 1, 5))
+    s = calculate_budget_summary(budget, Decimal("80000.00"), today=date(2026, 1, 2))
+    assert s.en_riesgo is True
+
+
+def test_los_gastos_fijos_programados_no_cuentan_como_ritmo():
+    # Arriendo de 600.000 el día 1 de un mes de 1.400.000: no es "ritmo diario".
+    budget = _budget(monto_total="1400000.00", inicio=date(2026, 11, 1), fin=date(2026, 11, 30))
+    con_arriendo = calculate_budget_summary(budget, Decimal("700000.00"), today=date(2026, 11, 10))
+    assert con_arriendo.en_riesgo is True  # sin saber que era fijo, parece que el dinero no alcanza
+    s = calculate_budget_summary(
+        budget, Decimal("700000.00"), today=date(2026, 11, 10), gasto_fijo_total=Decimal("600000.00")
+    )
+    assert s.en_riesgo is False
+    assert s.disponible_total == Decimal("700000.00")  # el disponible sí lo descuenta

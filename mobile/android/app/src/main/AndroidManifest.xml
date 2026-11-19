@@ -38,6 +38,23 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Lee las notificaciones de Nequi, Daviplata y bancos (solo si la persona lo activa en Ajustes). -->
+        <service
+            android:name=".BankNotificationListener"
+            android:label="Pay &amp; Check: pagos de Nequi, Daviplata y bancos"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService"/>
+            </intent-filter>
+        </service>
+        <!-- Widget de la pantalla de inicio con el número del día. -->
+        <receiver android:name=".DailyWidget" android:exported="false" android:label="Pay &amp; Check: tu día">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_widget_info"/>
+        </receiver>
         <!-- Reprograma el recordatorio tras reiniciar el teléfono o actualizar la app. -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
@@ -59,6 +76,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Apps de pago que la app puede abrir para apartar dinero ("Apartar en Nequi"). -->
+        <package android:name="com.nequi.MobileApp"/>
+        <package android:name="com.davivienda.daviplataapp"/>
+        <package android:name="co.com.bancolombia.personas.superapp"/>
+        <package android:name="com.nu.production"/>
         <!-- Servicio de reconocimiento de voz del teléfono (speech_to_text). -->
         <intent>
             <action android:name="android.speech.RecognitionService"/>

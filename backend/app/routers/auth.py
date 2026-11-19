@@ -23,7 +23,10 @@ from app.models.expense import Expense
 from app.models.gamification import Achievement, Challenge, PointEvent
 from app.models.goal import Goal, GoalContribution
 from app.models.income import Income
+from app.models.planned_expense import PlannedExpense
+from app.models.receivable import Receivable
 from app.models.recurring_expense import RecurringExpense
+from app.models.support import SupportInterest
 from app.models.user import User
 from app.schemas.auth import (
     ConsentimientoRequest,
@@ -222,6 +225,8 @@ def delete_me(
         GoalContribution, Goal, Challenge, Achievement, PointEvent, EmotionalCheckin, CoachMessage, CategoryLimit,
         AiUsage,
     ):  # fmt: skip
+        session.exec(delete(modelo).where(modelo.user_id == user_id))
+    for modelo in (SupportInterest, PlannedExpense, Receivable):
         session.exec(delete(modelo).where(modelo.user_id == user_id))
     session.exec(delete(Expense).where(Expense.user_id == user_id))
     session.exec(delete(Income).where(Income.user_id == user_id))

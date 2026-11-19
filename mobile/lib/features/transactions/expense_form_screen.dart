@@ -13,15 +13,57 @@ import '../../data/api.dart';
 import '../coach/coach_widgets.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
+import 'add_sheet.dart' show IncomeFormScreen;
+import 'receivables_screen.dart' show compartirCobroGrupal;
+
+/// La pantalla que confirma un borrador de la IA: gasto o ingreso. Si la frase traía varios movimientos
+/// ("almuerzo 18 mil y un uber de 12.500"), al guardar uno se abre el siguiente.
+Widget pantallaDeBorrador(ExpenseDraft draft, {List<ExpenseDraft>? siguientes, int posicion = 1, int? total}) {
+  final cola = siguientes ?? draft.adicionales;
+  final cuantos = total ?? cola.length + 1;
+  return draft.esIngreso
+      ? IncomeFormScreen(draft: draft, siguientes: cola, posicion: posicion, total: cuantos)
+      : ExpenseFormScreen(draft: draft, siguientes: cola, posicion: posicion, total: cuantos);
+}
+
+/// Tras guardar un borrador: abre el siguiente de la frase, o cierra. Devuelve true si abrió otro.
+bool abrirSiguienteBorrador(BuildContext context, List<ExpenseDraft> siguientes, int posicion, int total) {
+  if (siguientes.isEmpty) return false;
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute<void>(
+      builder: (_) => pantallaDeBorrador(
+        siguientes.first,
+        siguientes: siguientes.skip(1).toList(),
+        posicion: posicion + 1,
+        total: total,
+      ),
+    ),
+    result: true,
+  );
+  return true;
+}
 
 /// Alta, edición y confirmación de un gasto. Todo gasto que propone la IA
 /// (texto, voz, recibo, SMS) pasa por aquí como `draft` antes de guardarse:
 /// la persona siempre ve y corrige lo que se va a registrar.
 class ExpenseFormScreen extends ConsumerStatefulWidget {
-  const ExpenseFormScreen({super.key, this.draft, this.existing});
+  const ExpenseFormScreen({
+    super.key,
+    this.draft,
+    this.existing,
+    this.siguientes = const [],
+    this.posicion = 1,
+    this.total = 1,
+  });
 
   final ExpenseDraft? draft;
   final Expense? existing;
+
+  /// Los movimientos que vienen después en la misma frase, y en cuál va (para el "1 de 2").
+  final List<ExpenseDraft> siguientes;
+  final int posicion;
+  final int total;
 
   @override
   ConsumerState<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
@@ -36,13 +78,17 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   int? _categoryId;
   bool _saving = false;
 
+  /// Vaca: "lo pagué por varias personas". Solo al crear un gasto.
+  bool _vaca = false;
+  final _personas = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     final draft = widget.draft;
     final existing = widget.existing;
     final monto = existing?.monto ?? draft?.monto;
-    _monto = TextEditingController(text: monto == null ? '' : monto.round().toString());
+    _monto = TextEditingController(text: MilesFormatter.agrupar(monto == null ? '' : monto.round().toString()));
     _descripcion = TextEditingController(text: existing?.descripcion ?? draft?.descripcion ?? '');
     _comercio = TextEditingController(text: existing?.comercio ?? draft?.comercio ?? '');
     _fecha = existing?.fecha ?? draft?.fecha ?? today();
@@ -54,6 +100,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     _monto.dispose();
     _descripcion.dispose();
     _comercio.dispose();
+    _personas.dispose();
     super.dispose();
   }
 
@@ -78,6 +125,12 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       'comercio': comercio.isEmpty ? null : comercio,
     };
 
+    final personas = _personas.text.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+    if (_vaca && widget.existing == null && personas.isNotEmpty) {
+      await _guardarVaca(datos, personas);
+      return;
+    }
+
     Expense? creado;
     final ok = await guarded(context, () async {
       final existing = widget.existing;
@@ -98,10 +151,41 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     unawaited(HapticFeedback.lightImpact());
     refreshData(ref);
     ref.invalidate(subscriptionProvider);
+    // Si la frase traía más movimientos, se confirma el siguiente; la reacción del coach va al final.
+    if (abrirSiguienteBorrador(context, widget.siguientes, widget.posicion, widget.total)) return;
     Navigator.pop(context, true);
     // El mensaje del coach llega después y sin bloquear: registrar nunca espera a la IA.
     final nuevo = creado;
     if (nuevo != null) unawaited(api.reaction(nuevo.id).then(showSnack, onError: (_) {}));
+  }
+
+  /// La parte propia queda como gasto y la de los demás por cobrar; luego se comparte el cobro.
+  Future<void> _guardarVaca(Map<String, Object?> datos, List<String> personas) async {
+    final l = context.l;
+    final api = ref.read(apiProvider);
+    final total = datos['monto']! as double;
+    int? gastoId;
+    final ok = await guarded(context, () async {
+      gastoId = await api.splitExpense({
+        'monto_total': total,
+        'category_id': datos['category_id'],
+        'descripcion': datos['descripcion'],
+        'fecha': datos['fecha'],
+        'personas': personas,
+      });
+    });
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (!ok) return;
+    unawaited(HapticFeedback.lightImpact());
+    refreshData(ref);
+    final parte = (total / (personas.length + 1)).floorToDouble();
+    final descripcion = datos['descripcion']! as String;
+    Navigator.pop(context, true);
+    showSnack(l.splitSaved(money(parte * personas.length)));
+    unawaited(compartirCobroGrupal(l, descripcion: descripcion, parte: parte));
+    final id = gastoId;
+    if (id != null) unawaited(api.reaction(id).then((_) {}, onError: (_) {}));
   }
 
   Future<void> _delete() async {
@@ -121,7 +205,15 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     final esConfirmacion = widget.draft != null && widget.draft!.source != 'manual';
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existing != null ? l.editExpense : (esConfirmacion ? l.confirmExpense : l.newExpense)),
+        title: Text(
+          widget.existing != null
+              ? l.editExpense
+              : esConfirmacion
+                  ? (widget.total > 1
+                      ? '${l.confirmExpense} · ${l.draftPosition(widget.posicion, widget.total)}'
+                      : l.confirmExpense)
+                  : l.newExpense,
+        ),
         actions: [
           if (widget.existing != null)
             IconButton(tooltip: l.delete, icon: const Icon(Icons.delete_outline), onPressed: _delete),
@@ -211,6 +303,24 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(labelText: l.merchantOptional),
                 ),
+                // La vaca solo al registrar a mano: la confirmación de lo que entendió la IA se mantiene corta.
+                if (widget.existing == null && !esConfirmacion) ...[
+                  const SizedBox(height: 4),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _vaca,
+                    onChanged: (v) => setState(() => _vaca = v),
+                    title: Text(l.splitToggle),
+                    subtitle: Text(l.splitToggleHint),
+                  ),
+                  if (_vaca)
+                    TextFormField(
+                      controller: _personas,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(labelText: l.splitPeople, hintText: l.splitPeopleHint),
+                      validator: (v) => _vaca && (v ?? '').trim().isEmpty ? l.requiredField : null,
+                    ),
+                ],
                 const SizedBox(height: 24),
                 SaveButton(
                   saving: _saving,

@@ -1,4 +1,4 @@
-"""PS-96: el cupo mensual de IA sale del plan (Gratis 50, Premium 300, Institucional 300, Familiar 390 compartidas)."""
+"""PS-96: el cupo mensual de IA sale del plan (Gratis 150, Premium 300, Institucional 300, Familiar 390 compartidas)."""
 
 from datetime import date
 
@@ -64,7 +64,7 @@ def _pasar_a(plan):
 
 
 @pytest.mark.parametrize(
-    ("plan", "cupo"), [("gratis", 50), ("premium", 300), ("institucional", 300), ("familiar", 390)]
+    ("plan", "cupo"), [("gratis", 150), ("premium", 300), ("institucional", 300), ("familiar", 390)]
 )
 def test_cada_plan_se_agota_en_su_cupo(client, make_user, db_engine, groq, plan, cupo):
     headers, user_id = _persona(client, make_user, "a@t.com")
@@ -81,7 +81,7 @@ def test_cada_plan_se_agota_en_su_cupo(client, make_user, db_engine, groq, plan,
 
 def test_subir_de_plan_libera_el_cupo_al_instante(client, make_user, db_engine, groq):
     headers, user_id = _persona(client, make_user, "a@t.com")
-    _gastar(db_engine, user_id, 50)
+    _gastar(db_engine, user_id, 150)
     assert not _chatear(client, headers)
 
     client.put("/me/subscription", json={"plan": "premium"}, headers=headers)
@@ -127,10 +127,10 @@ def test_al_disolverse_la_familia_cada_uno_vuelve_al_cupo_de_gratis(client, make
     codigo = client.put("/me/subscription", json={"plan": "familiar"}, headers=titular).json()["familia"]["codigo"]
     integrante, id_integrante = _persona(client, make_user, "integrante@t.com")
     client.post("/me/subscription/redeem", json={"codigo": codigo}, headers=integrante)
-    _gastar(db_engine, id_integrante, 60)
+    _gastar(db_engine, id_integrante, 160)
     assert _chatear(client, integrante)  # con la familia le sobra cupo
 
     client.put("/me/subscription", json={"plan": "gratis"}, headers=titular)  # el titular disuelve la familia
 
     assert _plan(client, integrante)["plan"] == "gratis"
-    assert not _chatear(client, integrante)  # 61 solicitudes y su cupo ahora es de 50
+    assert not _chatear(client, integrante)  # 161 solicitudes y su cupo ahora es de 150

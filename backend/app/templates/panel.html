@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Bienestar financiero · $organizacion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6f5; --card: #ffffff; --ink: #14201c; --muted: #5b6b66; --line: #e2e8e5;
+    --brand: #1f6f5c; --brand-soft: #d8eee6; --warn: #b86e00; --warn-soft: #fbecd2;
+    --calm: #3b7dd8; --violet: #8a63d2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1614; --card: #18211e; --ink: #e8efec; --muted: #9db0a9; --line: #2a3632;
+      --brand: #7fd3b8; --brand-soft: #1e3a32; --warn: #f2b45a; --warn-soft: #3a2c14;
+      --calm: #7aa9ec; --violet: #b49ae6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+  .eyebrow { color: var(--brand); font-weight: 600; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 4px; }
+  h1 { font-size: clamp(24px, 4vw, 32px); margin: 0; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .pill { display: inline-flex; gap: 6px; align-items: center; background: var(--brand-soft); color: var(--brand); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
+  .kpi .label { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .kpi .value { font-size: 34px; font-weight: 700; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  .kpi .hint { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .kpi.alert { background: var(--warn-soft); border-color: transparent; }
+  .kpi.alert .value { color: var(--warn); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+  .wide { grid-column: 1 / -1; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .chart { position: relative; height: 240px; }
+  .empty { color: var(--muted); font-size: 14px; padding: 24px 0; }
+  .apoyos { list-style: none; margin: 0; padding: 0; }
+  .apoyos li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .apoyos li:first-child { border-top: 0; }
+  .apoyos .n { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  footer { margin-top: 20px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">Pay&amp;Check · Bienestar Universitario</p>
+      <h1>Bienestar financiero de tus estudiantes</h1>
+      <div class="meta">$organizacion · corte al $fecha</div>
+    </div>
+    <span class="pill" id="anon"></span>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid">
+    <div class="card wide">
+      <h2>Tendencia de las últimas 8 semanas</h2>
+      <p class="sub">Gasto medio por estudiante activo y porcentaje de check-ins con ansiedad o preocupación.</p>
+      <div class="chart"><canvas id="tendencia"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Cómo se sienten con su dinero</h2>
+      <p class="sub">Check-ins emocionales de los últimos 30 días.</p>
+      <div class="chart"><canvas id="animo"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>En qué se va el dinero</h2>
+      <p class="sub">Parte del gasto de los últimos 30 días, por categoría.</p>
+      <div class="chart"><canvas id="categorias"></canvas></div>
+    </div>
+    <div class="card wide">
+      <h2>Apoyos de la universidad que más interesan</h2>
+      <p class="sub">Estudiantes que tocaron «Me interesa» en la app. La app los sugiere cuando el presupuesto no alcanza o hay señales de estrés; el contacto lo hace cada estudiante.</p>
+      <ul class="apoyos" id="apoyos"></ul>
+    </div>
+  </section>
+
+  <footer>
+    Solo cifras agregadas y anónimas: ningún indicador se calcula sobre menos de <span id="k"></span> estudiantes, y
+    el panel nunca muestra nombres, correos, descripciones de gastos ni montos individuales (Ley 1581 de 2012).
+    Cada estudiante aceptó la política de privacidad del convenio al activar su código.
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  const D = $datos;
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const pct = (v) => (v === null || v === undefined ? "—" : v + " %");
+  const pesos = (v) => "$$" + Math.round(v).toLocaleString("es-CO");
+
+  document.getElementById("k").textContent = D.k;
+  document.getElementById("anon").textContent = D.estudiantes + " estudiantes con el convenio · anonimato k ≥ " + D.k;
+
+  const kpis = [
+    { label: "Usan la app esta semana", value: pct(D.pct_activos),
+      hint: D.activos_semana === null ? "Pocos datos" : D.activos_semana + " de " + D.estudiantes + " registraron algo en 7 días" },
+    { label: "Con señales de estrés financiero", value: pct(D.pct_estres), alert: true,
+      hint: "3 o más días de ansiedad o preocupación en las últimas 2 semanas" },
+    { label: "El presupuesto no les alcanza", value: pct(D.pct_en_riesgo), alert: true,
+      hint: "Al ritmo actual, el dinero se acaba antes del cierre de su periodo" },
+    { label: "Ahorran para una meta", value: pct(D.pct_con_meta),
+      hint: "Tienen al menos una meta de ahorro activa" },
+  ];
+  const cont = document.getElementById("kpis");
+  for (const k of kpis) {
+    const el = document.createElement("div");
+    el.className = "card kpi" + (k.alert && k.value !== "—" ? " alert" : "");
+    const l = document.createElement("div"); l.className = "label"; l.textContent = k.label;
+    const v = document.createElement("div"); v.className = "value"; v.textContent = k.value;
+    const h = document.createElement("div"); h.className = "hint"; h.textContent = k.hint;
+    el.append(l, v, h);
+    cont.append(el);
+  }
+
+  function vacio(id, texto) {
+    const canvas = document.getElementById(id);
+    const p = document.createElement("p"); p.className = "empty"; p.textContent = texto;
+    canvas.parentElement.replaceWith(p);
+  }
+
+  if (window.Chart) {
+    Chart.defaults.font.family = "Plus Jakarta Sans, system-ui, sans-serif";
+    Chart.defaults.color = css("--muted");
+    Chart.defaults.borderColor = css("--line");
+  }
+  const POCOS = "Pocos datos todavía: se muestra cuando hay al menos " + D.k + " estudiantes.";
+
+  const lista = document.getElementById("apoyos");
+  if (!D.apoyos || !D.apoyos.length) {
+    const li = document.createElement("li"); li.textContent = "La universidad aún no ha cargado apoyos."; lista.append(li);
+  } else {
+    for (const [titulo, n] of D.apoyos) {
+      const li = document.createElement("li");
+      const t = document.createElement("span"); t.textContent = titulo;
+      const c = document.createElement("span"); c.className = "n";
+      c.textContent = n === null ? "menos de " + D.k : n + " estudiantes";
+      li.append(t, c); lista.append(li);
+    }
+  }
+
+  if (!window.Chart) {
+    ["tendencia", "animo", "categorias"].forEach((id) => vacio(id, "No se pudieron cargar las gráficas."));
+  } else {
+    const semanas = D.tendencia.map((t) => new Date(t.semana + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" }));
+    if (D.tendencia.some((t) => t.gasto_medio !== null || t.pct_estres !== null)) {
+      new Chart(document.getElementById("tendencia"), {
+        data: {
+          labels: semanas,
+          datasets: [
+            { type: "bar", label: "Gasto medio por estudiante", data: D.tendencia.map((t) => t.gasto_medio),
+              backgroundColor: css("--brand"), borderRadius: 6, yAxisID: "y" },
+            { type: "line", label: "% con ansiedad o preocupación", data: D.tendencia.map((t) => t.pct_estres),
+              borderColor: css("--warn"), backgroundColor: css("--warn"), tension: 0.35, yAxisID: "y1", spanGaps: true },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => (v >= 1000 ? "$$" + Math.round(v / 1000) + "k" : pesos(v)) } },
+            y1: { position: "right", beginAtZero: true, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: (v) => v + " %" } },
+          },
+          plugins: { tooltip: { callbacks: { label: (c) => c.dataset.yAxisID === "y" ? " " + pesos(c.raw) : " " + c.raw + " %" } } },
+        },
+      });
+    } else vacio("tendencia", POCOS);
+
+    const NOMBRES = { ansioso: "Ansiedad", preocupado: "Inquietud", neutral: "Neutral", tranquilo: "Calma", confiado: "Confianza" };
+    const COLORES = [css("--warn"), "#e0a23b", css("--muted"), css("--calm"), css("--brand")];
+    const animos = Object.keys(NOMBRES);
+    if (Object.keys(D.animo).length) {
+      new Chart(document.getElementById("animo"), {
+        type: "bar",
+        data: { labels: animos.map((a) => NOMBRES[a]), datasets: [{ data: animos.map((a) => D.animo[a] || 0), backgroundColor: COLORES, borderRadius: 6 }] },
+        options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + c.raw + " %" } } },
+          scales: { x: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + " %" } } } },
+      });
+    } else vacio("animo", POCOS);
+
+    if (D.categorias.length) {
+      new Chart(document.getElementById("categorias"), {
+        type: "bar",
+        data: { labels: D.categorias.map((c) => c[0]), datasets: [{ data: D.categorias.map((c) => c[1]), backgroundColor: css("--violet"), borderRadius: 6 }] },
+        options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + c.raw + " %" } } },
+          scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + " %" } } } },
+      });
+    } else vacio("categorias", POCOS);
+  }
+</script>
+</body>
+</html>

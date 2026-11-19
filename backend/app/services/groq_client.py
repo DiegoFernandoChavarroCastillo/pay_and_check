@@ -8,6 +8,7 @@ import time
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
+import httpx
 from groq import Groq
 
 from app.core.config import settings
@@ -37,6 +38,8 @@ GROQ_MAX_REINTENTOS = 0
 
 # Topes sobre lo que el modelo extrae: un texto hostil no puede colar un monto o una fecha absurdos.
 MONTO_MAXIMO = Decimal("100000000")
+# Movimientos que se aceptan de una sola frase ("almuerzo 18 mil y un uber de 12.500").
+MAX_MOVIMIENTOS = 5
 VENTANA_FECHA = timedelta(days=365)
 MAX_DESCRIPCION = 200
 
@@ -89,6 +92,9 @@ def _chat(
             ia_uso.registrar(
                 uso, model, exito=False, latencia_ms=_ms_desde(inicio), uso_respaldo=True
             )
+        # Mismo modelo en otro proveedor: la respuesta es equivalente, así que los prompts y los filtros no cambian.
+        if settings.AI_FALLBACK_URL and settings.AI_FALLBACK_API_KEY:
+            return _chat_respaldo(messages, temperature=temperature, reasoning_effort=reasoning_effort, uso=uso)
         raise GroqServiceError(f"Error llamando a Groq: {exc}") from exc
 
     if uso is not None:
@@ -100,6 +106,43 @@ def _chat(
             latencia_ms=_ms_desde(inicio),
             tokens_entrada=getattr(tokens, "prompt_tokens", None),
             tokens_salida=getattr(tokens, "completion_tokens", None),
+        )
+    return contenido
+
+
+def _chat_respaldo(messages: list[dict], *, temperature: float, reasoning_effort: str, uso) -> str:
+    """Llamada al proveedor de respaldo (API compatible con OpenAI). Queda en el registro de uso con su propio
+    nombre de modelo, así se mide cuánto tráfico atiende y cuánto cuesta."""
+    modelo = f"respaldo:{settings.AI_FALLBACK_MODEL}"
+    inicio = time.perf_counter()
+    try:
+        respuesta = httpx.post(
+            f"{settings.AI_FALLBACK_URL.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Bearer {settings.AI_FALLBACK_API_KEY}"},
+            json={
+                "model": settings.AI_FALLBACK_MODEL,
+                "messages": messages,
+                "temperature": temperature,
+                "reasoning_effort": reasoning_effort,
+            },
+            timeout=GROQ_TIMEOUT_S,
+        )
+        respuesta.raise_for_status()
+        data = respuesta.json()
+        contenido = data["choices"][0]["message"]["content"]
+    except Exception as exc:
+        if uso is not None:
+            ia_uso.registrar(uso, modelo, exito=False, latencia_ms=_ms_desde(inicio), uso_respaldo=True)
+        raise GroqServiceError(f"Error llamando al proveedor de respaldo: {exc}") from exc
+    if uso is not None:
+        tokens = data.get("usage") or {}
+        ia_uso.registrar(
+            uso,
+            modelo,
+            exito=True,
+            latencia_ms=_ms_desde(inicio),
+            tokens_entrada=tokens.get("prompt_tokens"),
+            tokens_salida=tokens.get("completion_tokens"),
         )
     return contenido
 
@@ -209,8 +252,30 @@ def parse_expense_text(texto: str, categorias: list[str], hoy: date) -> dict:
             {"role": "user", "content": como_datos(texto)},
         ],
     )
-    data = _validar_gasto_saneado(raw, categorias, hoy)
+    try:
+        crudo = _extraer_json(raw)
+    except ValueError as exc:
+        raise ExpenseParseError("El modelo no devolvió un JSON válido.") from exc
+    # Varios movimientos en una frase llegan como {"movimientos": [...]}; un objeto suelto sigue valiendo.
+    if isinstance(crudo, dict) and isinstance(crudo.get("movimientos"), list) and crudo["movimientos"]:
+        elementos = crudo["movimientos"][:MAX_MOVIMIENTOS]
+    else:
+        elementos = [crudo]
+
+    # El primero tiene que ser válido (si no, el error es el de siempre); de los demás se descartan los que no
+    # lo sean, para no perder el movimiento bueno por uno dudoso.
+    data = _validar_gasto_saneado(json.dumps(elementos[0]), categorias, hoy)
     data.pop("comercio")
+    adicionales = []
+    for elemento in elementos[1:]:
+        try:
+            extra = _validar_gasto_saneado(json.dumps(elemento), categorias, hoy)
+        except ExpenseParseError:
+            continue
+        extra.pop("comercio")
+        adicionales.append(extra)
+    if adicionales:
+        data["adicionales"] = adicionales
     return data
 
 

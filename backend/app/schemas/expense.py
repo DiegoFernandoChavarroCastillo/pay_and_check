@@ -39,6 +39,9 @@ class ExpenseParseResponse(BaseModel):
     categoria: str | None
     descripcion: str
     fecha: date
+    # Los demás movimientos de la misma frase ("almuerzo 18 mil y un uber de 12.500"): la app los confirma uno
+    # tras otro. Salen de la misma llamada a la IA, así que cuentan como una sola solicitud del cupo.
+    adicionales: list["ExpenseParseResponse"] = []
 
 
 class ReceiptParseRequest(BaseModel):

@@ -8,6 +8,7 @@ from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.plan import Organization
 from app.models.user import User
+from app.schemas.extras import FamilyMemberProgress, ShareProgressRequest
 from app.schemas.plan import (
     CambiarPlanRequest,
     CanjearRequest,
@@ -15,7 +16,7 @@ from app.schemas.plan import (
     PlanResponse,
     SuscripcionResponse,
 )
-from app.services import ia_uso, planes
+from app.services import familia, ia_uso, planes
 
 router = APIRouter(tags=["plans"])
 
@@ -39,6 +40,7 @@ def _suscripcion(session: Session, user: User) -> SuscripcionResponse:
             integrantes=datos[1],
             max_integrantes=planes.MAX_INTEGRANTES_FAMILIA,
             es_titular=suscripcion.es_titular,
+            comparte_progreso=suscripcion.comparte_progreso,
         )
     organizacion = None
     if suscripcion is not None and suscripcion.organization_id is not None:
@@ -100,3 +102,34 @@ def cambiar_mi_plan(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     session.commit()
     return _suscripcion(session, current_user)
+
+
+@router.put("/me/subscription/share-progress", status_code=status.HTTP_204_NO_CONTENT)
+def compartir_progreso(
+    payload: ShareProgressRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """En el plan Familiar, deja (o deja de dejar) que el titular vea el progreso agregado de la persona."""
+    suscripcion = planes.suscripcion_de(session, current_user)
+    if suscripcion is None or suscripcion.plan != "familiar":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Compartir el progreso es parte del plan Familiar.")
+    suscripcion.comparte_progreso = payload.comparte
+    session.add(suscripcion)
+    session.commit()
+
+
+@router.get("/me/family/progress", response_model=list[FamilyMemberProgress])
+def progreso_familiar(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[FamilyMemberProgress]:
+    """Para el titular de la familia: el progreso agregado de cada integrante que lo comparte. Nunca gastos,
+    montos del presupuesto ni check-ins."""
+    suscripcion = planes.suscripcion_de(session, current_user)
+    if suscripcion is None or suscripcion.plan != "familiar" or not suscripcion.es_titular:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo el titular del plan Familiar ve este progreso.")
+    return [
+        FamilyMemberProgress(**vars(p))
+        for p in familia.progreso_de_familia(session, current_user, today_for(current_user))
+    ]

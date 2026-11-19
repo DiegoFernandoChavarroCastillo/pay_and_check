@@ -126,7 +126,14 @@ class _LevelHeader extends StatelessWidget {
               value: _pct(perfil.ratioAhorro?.clamp(0, 1).toDouble()),
               tooltip: l.metricSavingsHint,
             ),
-            _Metric(label: l.metricConsistency, value: _pct(perfil.consistencia), tooltip: l.metricConsistencyHint),
+            // Con menos de una semana de cuenta, "1 de 1 días" se entiende; "100 %" el primer día no.
+            _Metric(
+              label: l.metricConsistency,
+              value: perfil.diasVentana > 0 && perfil.diasVentana < 7
+                  ? l.daysOfWindow(perfil.diasActivos, perfil.diasVentana)
+                  : _pct(perfil.consistencia),
+              tooltip: l.metricConsistencyHint,
+            ),
             _Metric(
               label: l.metricImprovement,
               // Solo se muestra cuando hay mejora: un mes más flojo no se marca en negativo (cero culpa).

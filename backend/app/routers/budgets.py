@@ -7,6 +7,7 @@ from app.deps import get_current_user
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.expense import Expense
+from app.models.goal import Goal, GoalContribution
 from app.models.user import User
 from app.schemas.budget import (
     BudgetCreate,
@@ -14,7 +15,12 @@ from app.schemas.budget import (
     BudgetSummaryResponse,
     BudgetUpdate,
     CategoriaDesgloseResponse,
+    SimulateGoalImpact,
+    SimulateRequest,
+    SimulateResponse,
 )
+from app.schemas.extras import CreditRequest, CreditResponse
+from app.services import credito, simulador
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
 from app.services.category_lookup import limite_de, limites_propios
@@ -96,6 +102,76 @@ def get_active_budget_summary(
         desglose_por_categoria=_desglose_por_categoria(session, budget),
         **summary.__dict__,
     )
+
+
+@router.post("/active/simulate", response_model=SimulateResponse)
+def simulate_purchase(
+    payload: SimulateRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> SimulateResponse:
+    """ "¿Me alcanza?": el presupuesto como quedaría si hoy se gastara `monto`, y a cuántos días de ahorro de la
+    meta activa (la primera con fecha límite) equivale. Cuenta determinista: no usa IA ni gasta cupo."""
+    today = today_for(current_user)
+    budget = get_active_budget_for_user(session, current_user.id, today)
+    if budget is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No hay un presupuesto activo.")
+    resumen = summary_for(session, budget, today)
+
+    plan = nombre = None
+    metas = session.exec(
+        select(Goal)
+        .where(Goal.user_id == current_user.id, Goal.estado == "activa", Goal.fecha_limite.is_not(None))
+        .order_by(Goal.fecha_limite)
+    ).all()
+    for meta in metas:
+        ahorrado = session.exec(
+            select(func.coalesce(func.sum(GoalContribution.monto), 0)).where(GoalContribution.goal_id == meta.id)
+        ).one()
+        candidato = simulador.plan_de_meta(meta.monto_objetivo, ahorrado, meta.fecha_limite, today)
+        if candidato.por_dia:
+            plan, nombre = candidato, meta.nombre
+            break
+
+    sim = simulador.simular_compra(budget, resumen, payload.monto, today, plan, nombre)
+    d = sim.despues
+    return SimulateResponse(
+        monto=sim.monto,
+        alcanza=sim.alcanza,
+        disponible_por_dia_antes=resumen.disponible_por_dia,
+        disponible_por_dia_despues=d.disponible_por_dia,
+        disponible_total_despues=d.disponible_total,
+        dias_restantes=d.dias_restantes,
+        en_riesgo_despues=d.en_riesgo,
+        fecha_agotamiento_despues=d.fecha_proyectada_agotamiento,
+        meta=SimulateGoalImpact(
+            nombre=nombre, dias_equivalentes=sim.meta_dias_equivalentes, aporte_por_dia=plan.por_dia
+        )
+        if sim.meta_dias_equivalentes
+        else None,
+    )
+
+
+@router.post("/simulate-credit", response_model=CreditResponse)
+def simulate_credit(
+    payload: CreditRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> CreditResponse:
+    """ "¿Me conviene este crédito?": cuota fija, costo total e intereses a partir de la tasa efectiva anual, y
+    cuánto bajaría el número del día pagando la cuota. Educación con cuentas exactas: no recomienda productos."""
+    c = credito.simular(payload.monto, payload.cuotas, payload.tasa_ea, payload.cargo_mensual)
+    respuesta = CreditResponse(
+        cuota=c.cuota, cuotas=c.cuotas, tasa_mensual=c.tasa_mensual, total_pagado=c.total_pagado,
+        intereses=c.intereses, por_dia=c.por_dia,
+    )
+    today = today_for(current_user)
+    budget = get_active_budget_for_user(session, current_user.id, today)
+    if budget is not None:
+        resumen = summary_for(session, budget, today)
+        respuesta.disponible_por_dia = resumen.disponible_por_dia
+        respuesta.disponible_por_dia_con_cuota = resumen.disponible_por_dia - c.por_dia
+    return respuesta
 
 
 @router.patch("/{budget_id}", response_model=BudgetResponse)

@@ -14,7 +14,10 @@ import 'plan_screen.dart';
 import '../reports/analytics_screen.dart';
 import '../reports/report_screens.dart';
 import '../sms/sms_inbox_screen.dart';
+import '../planning/planned_screen.dart';
+import '../support/support_screen.dart';
 import '../transactions/manage_screens.dart';
+import '../transactions/receivables_screen.dart';
 
 String _themeLabel(AppLocalizations l, ThemeMode mode) => switch (mode) {
       ThemeMode.light => l.themeLight,
@@ -196,6 +199,26 @@ class ProfileScreen extends ConsumerWidget {
           subtitle: Text(l.smsSubtitle),
           onTap: () => _abrir(context, const NotificationsScreen()),
         ),
+        ListTile(
+          leading: const Icon(Icons.event_note_outlined),
+          title: Text(l.plannedTitle),
+          subtitle: Text(l.plannedSubtitle),
+          onTap: () => _abrir(context, const PlannedScreen()),
+        ),
+        ListTile(
+          leading: const Icon(Icons.handshake_outlined),
+          title: Text(l.receivablesTitle),
+          subtitle: Text(l.receivablesSubtitle),
+          onTap: () => _abrir(context, const ReceivablesScreen()),
+        ),
+        // Solo con convenio: los apoyos son de la universidad que paga el plan.
+        if (ref.watch(supportProvider).value?.apoyos.isNotEmpty ?? false)
+          ListTile(
+            leading: const Icon(Icons.volunteer_activism_outlined),
+            title: Text(l.supportTitle),
+            subtitle: Text(ref.watch(supportProvider).value?.organizacion ?? ''),
+            onTap: () => _abrir(context, const SupportScreen()),
+          ),
         titulo(l.sectionReports),
         ListTile(
           leading: const Icon(Icons.donut_small_outlined),

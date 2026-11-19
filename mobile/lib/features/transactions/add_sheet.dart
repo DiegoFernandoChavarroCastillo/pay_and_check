@@ -12,6 +12,7 @@ import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../coach/coach_widgets.dart';
+import '../sms/sms_inbox_screen.dart' show NotificationsScreen;
 import 'expense_form_screen.dart';
 
 void _abrir(BuildContext context, Widget pantalla) =>
@@ -84,6 +85,15 @@ void showAddSheet(BuildContext context) {
                     onTap: () => elegir(() => _abrir(context, const IncomeFormScreen())),
                   ),
                 ],
+              ),
+              // La captura automática no queda escondida en Perfil: es la forma de registrar con menos esfuerzo.
+              _AddTile(
+                icon: Icons.notifications_active_outlined,
+                title: l.addFromBank,
+                subtitle: l.addFromBankHint,
+                color: tokens.goals.container,
+                foreground: tokens.goals.onContainer,
+                onTap: () => elegir(() => _abrir(context, const NotificationsScreen())),
               ),
             ].expand((t) => [t, const SizedBox(height: AppTokens.gap)]).toList()..removeLast()),
           ),
@@ -229,11 +239,9 @@ class _QuickAddScreenState extends ConsumerState<QuickAddScreen> {
     if (borrador != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute<void>(
-          // "Me pagaron…" no es un gasto: se confirma en el formulario de ingresos.
-          builder: (_) =>
-              borrador.esIngreso ? IncomeFormScreen(draft: borrador) : ExpenseFormScreen(draft: borrador),
-        ),
+        // "Me pagaron…" no es un gasto: se confirma en el formulario de ingresos. Si hay más movimientos en
+        // la frase, se confirman uno tras otro.
+        MaterialPageRoute<void>(builder: (_) => pantallaDeBorrador(borrador)),
       );
     }
   }
@@ -484,10 +492,13 @@ class _ReceiptScanScreenState extends ConsumerState<ReceiptScanScreen> {
 }
 
 class IncomeFormScreen extends ConsumerStatefulWidget {
-  const IncomeFormScreen({super.key, this.draft});
+  const IncomeFormScreen({super.key, this.draft, this.siguientes = const [], this.posicion = 1, this.total = 1});
 
   /// Ingreso propuesto por la IA a partir de un texto; se precarga para confirmar.
   final ExpenseDraft? draft;
+  final List<ExpenseDraft> siguientes;
+  final int posicion;
+  final int total;
 
   @override
   ConsumerState<IncomeFormScreen> createState() => _IncomeFormScreenState();
@@ -495,7 +506,7 @@ class IncomeFormScreen extends ConsumerStatefulWidget {
 
 class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   final _form = GlobalKey<FormState>();
-  late final _monto = TextEditingController(text: widget.draft?.monto?.round().toString() ?? '');
+  late final _monto = TextEditingController(text: MilesFormatter.agrupar(widget.draft?.monto?.round().toString() ?? ''));
   late final _descripcion = TextEditingController(text: widget.draft?.descripcion ?? '');
   late DateTime _fecha = widget.draft?.fecha ?? today();
   bool _saving = false;
@@ -518,6 +529,7 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
     setState(() => _saving = false);
     if (ok) {
       refreshData(ref);
+      if (abrirSiguienteBorrador(context, widget.siguientes, widget.posicion, widget.total)) return;
       Navigator.pop(context);
     }
   }
@@ -526,8 +538,11 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   Widget build(BuildContext context) {
     final l = context.l;
     final esConfirmacion = widget.draft != null;
+    final titulo = esConfirmacion ? l.confirmIncome : l.addIncome;
     return Scaffold(
-      appBar: AppBar(title: Text(esConfirmacion ? l.confirmIncome : l.addIncome)),
+      appBar: AppBar(
+        title: Text(widget.total > 1 ? '$titulo · ${l.draftPosition(widget.posicion, widget.total)}' : titulo),
+      ),
       body: Form(
         key: _form,
         child: ListView(

@@ -42,6 +42,8 @@ _TEXTOS = {
         "de margen.",
         "en_riesgo": "Al ritmo actual, tu presupuesto alcanzaría hasta el {fecha}, antes de que termine el "
         "periodo ({fin}).",
+        "gasto_previsto": "En {dias} días viene {gasto} ({monto}): apartar {por_semana} por semana lo cubre "
+        "a tiempo.",
         "accion_reto": "Aceptar reto: {pct}% menos en {categoria}",
         "accion_limite": "Poner límite de {monto} a {categoria}",
         "accion_apartar": "Apartar {monto} para {meta}",
@@ -60,6 +62,8 @@ _TEXTOS = {
         "buen_ritmo": "This week you have spent {gasto}, below your weekly pace of {ritmo}: you have {margen} "
         "to spare.",
         "en_riesgo": "At the current pace your budget would last until {fecha}, before the period ends ({fin}).",
+        "gasto_previsto": "In {dias} days {gasto} is due ({monto}): setting aside {por_semana} per week covers "
+        "it on time.",
         "accion_reto": "Accept challenge: {pct}% less on {categoria}",
         "accion_limite": "Set a {monto} limit on {categoria}",
         "accion_apartar": "Set aside {monto} for {meta}",
@@ -325,6 +329,32 @@ def _del_presupuesto(idioma, session: Session, user: User, today: date) -> list[
     ]
 
 
+# Avisar de un gasto previsto cuando faltan como mucho estos días.
+AVISO_PREVISTO_DIAS = 45
+
+
+def _gasto_previsto(idioma, session: Session, user: User, today: date) -> Pattern | None:
+    # Import local: `previstos` importa de `budget_totals`, igual que este módulo; así no hay ciclo.
+    from app.services.previstos import proximos
+
+    cercanos = [p for p in proximos(session, user, today) if p.dias <= AVISO_PREVISTO_DIAS]
+    if not cercanos:
+        return None
+    p = cercanos[0]
+    return Pattern(
+        tipo="gasto_previsto",
+        descripcion=_t(
+            idioma,
+            "gasto_previsto",
+            dias=p.dias,
+            gasto=sanear_dato(p.gasto.descripcion),
+            monto=fmt(p.gasto.monto),
+            por_semana=fmt(p.por_semana),
+        ),
+        datos={"planned_id": p.gasto.id, "por_semana": str(p.por_semana)},
+    )
+
+
 def detect_patterns(session: Session, user: User, today: date) -> list[Pattern]:
     """Patrones vigentes del usuario, del más urgente al más general."""
     idioma = user.idioma
@@ -341,6 +371,7 @@ def detect_patterns(session: Session, user: User, today: date) -> list[Pattern]:
 
     candidatos = [
         *_del_presupuesto(idioma, session, user, today),
+        _gasto_previsto(idioma, session, user, today),
         _variacion_semanal(idioma, gastos, categorias, today),
         _fin_de_semana(
             idioma, {k: v for k, v in gastos.items() if k[0] >= desde}, categorias, desde, today

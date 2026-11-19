@@ -111,7 +111,7 @@ void main() {
   });
 
   testWidgets('el permiso de SMS pasa primero por el consentimiento de la app', (tester) async {
-    final api = FakeApi()..usuario = {...userJson, 'sms_consent_at': null};
+    final api = FakeApi(planPago: true)..usuario = {...userJson, 'sms_consent_at': null};
     api.sms.llega(1, 'Bancolombia', r'Bancolombia: compra por $45.900 en EXITO 10:32');
     await tester.pumpWidget(await appDePrueba(api));
     await tester.pumpAndSettle();
@@ -121,14 +121,20 @@ void main() {
     await tester.tap(find.byTooltip('Notificaciones'));
     await tester.pumpAndSettle();
 
+    // Bajo la tarjeta de notificaciones de apps de pago: hay que desplazarse hasta el botón.
+    await tester.ensureVisible(find.text('Permitir lectura de SMS'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Permitir lectura de SMS'));
     await tester.pumpAndSettle();
-    expect(find.text('Leer los SMS de tu banco'), findsOneWidget);
+    expect(find.text('Leer los SMS y las notificaciones de tu banco'), findsOneWidget);
     await tester.tap(find.text('Ahora no'));
     await tester.pumpAndSettle();
     expect(api.usuario['sms_consent_at'], isNull);
     expect(find.textContaining(r'$45.900'), findsNothing);
 
+    // Bajo la tarjeta de notificaciones de apps de pago: hay que desplazarse hasta el botón.
+    await tester.ensureVisible(find.text('Permitir lectura de SMS'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Permitir lectura de SMS'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('sms-consent-accept')));

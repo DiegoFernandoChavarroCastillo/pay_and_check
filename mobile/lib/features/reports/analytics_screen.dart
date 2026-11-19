@@ -162,6 +162,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ],
           ),
         ),
+        // Gastos hormiga y suscripciones: lo que se repite y, sumado, pesa.
+        const RepeatedSpendCard(),
       ]),
     );
   }
@@ -199,6 +201,69 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         const SizedBox(height: 8),
         TrendLegend(series: series),
       ],
+    );
+  }
+}
+
+
+/// "Gastos que se repiten": hormiga (el tinto diario) y suscripciones, con cuánto cuestan al mes y al semestre.
+/// Lo calcula el backend sin IA (`GET /reports/repeated`).
+class RepeatedSpendCard extends ConsumerWidget {
+  const RepeatedSpendCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lista = ref.watch(repeatedProvider).value;
+    if (lista == null || lista.isEmpty) return const SizedBox.shrink();
+    final l = context.l;
+    final theme = Theme.of(context);
+    final semestre = lista.fold<double>(0, (suma, r) => suma + r.porSemestre);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppTokens.gap),
+      child: SectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.repeatedTitle, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(l.repeatedHint(money(semestre)), style: theme.textTheme.bodySmall),
+            const SizedBox(height: 12),
+            for (final r in lista.take(6))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      r.tipo == 'suscripcion' ? Icons.subscriptions_outlined : Icons.bug_report_outlined,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(r.nombre, style: theme.textTheme.bodyLarge),
+                          Text(
+                            r.tipo == 'suscripcion' ? l.repeatedSubscription : l.repeatedAnt(r.veces),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(l.repeatedPerMonth(money(r.porMes)), style: theme.textTheme.bodyMedium),
+                        Text(l.repeatedPerSemester(money(r.porSemestre)), style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

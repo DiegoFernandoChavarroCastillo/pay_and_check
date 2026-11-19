@@ -688,6 +688,8 @@ def metricas(session: Session, user: User, today: date, actividad: set[date]) ->
     return {
         "ratio_ahorro": ratio_actual,
         "consistencia": (Decimal(dias_activos) / dias_ventana).quantize(Decimal("0.0001")),
+        "dias_activos": dias_activos,
+        "dias_ventana": dias_ventana,
         "mejora_mensual": ratio_actual - ratio_previo
         if ratio_actual is not None and ratio_previo is not None
         else None,

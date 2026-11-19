@@ -52,3 +52,6 @@ class ChatMessageResponse(BaseModel):
     rol: Literal["usuario", "coach"]
     contenido: str
     created_at: datetime
+    # Acción de un toque bajo la respuesta (crear una meta, registrar el gasto simulado). No se guarda: solo
+    # viene en la respuesta del POST.
+    accion: InsightAction | None = None

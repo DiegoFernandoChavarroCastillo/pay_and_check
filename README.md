@@ -11,6 +11,9 @@ El repo contiene el **backend** (`backend/`) y la **app móvil** en Flutter (`mo
 | Documento | Qué contiene |
 |---|---|
 | `mobile/README.md` | Cómo correr, probar y compilar la app; sistema de diseño; cómo simular SMS del banco |
+| `docs/iteracion-jurado-nov-2026.md` | **Lo último:** auditoría como inversor, correcciones, análisis de competidores, funciones añadidas, análisis financiero y ajustes tras probar en el teléfono (nov 2026) |
+| `docs/demo-guion.md` | Guion de la demo, preguntas difíciles del jurado y checklist |
+| `docs/analisis-financiero-nov-2026.md` | Costos medidos de IA, comparación de proveedores (IA, hosting, base de datos), escenarios a 36 meses y decisiones de planes y precios |
 | `notas-iteracion-app-movil.md` | Estado actual, pendientes, bugs encontrados y decisiones técnicas, iteración por iteración |
 | `plan-app-movil.md` | Plan de la app Android fase por fase, con lo ya hecho marcado |
 | `mejoras.md` | Visión del producto (coach, gamificación, automatización) y qué parte está implementada |
@@ -27,7 +30,15 @@ El repo contiene el **backend** (`backend/`) y la **app móvil** en Flutter (`mo
 - **Coach**: check-in emocional diario, consejos con una acción de un toque, chat, reacción al registrar y
   reporte semanal. Nunca regaña, no recomienda inversiones y no puede inventar cifras.
 - **Progreso**: metas de ahorro con dinero realmente apartado, 6 tipos de reto, 23 insignias, puntos y niveles.
-- **Reportes**: análisis por semana con gráficas, reporte semanal y resumen mensual.
+- **Reportes**: análisis por semana con gráficas, reporte semanal y resumen mensual (compartible como tarjeta,
+  sin montos), y gastos que se repiten (hormiga y suscripciones) con su costo al semestre.
+- **Decidir antes de gastar**: «¿Me alcanza?» de contado o a cuotas (cuota, intereses y cómo baja el número del
+  día), gastos grandes que vienen (matrícula, libros) con cuánto apartar por semana, y metas con aporte semanal.
+- **Vacas**: «lo pagué por varias personas» registra solo la parte propia y deja el resto en «Te deben».
+- **Captura automática**: notificaciones de Nequi, Daviplata y bancos, y SMS (planes pagos).
+- **Universidad y familia**: panel web de Bienestar Universitario (agregado, anonimato k ≥ 5), apoyos de la
+  universidad sugeridos cuando el mes viene difícil, y progreso agregado para quien paga el plan Familiar.
+- **Widget de Android** con el número del día y un botón para registrar.
 
 ## Backend
 
@@ -66,7 +77,11 @@ La documentación interactiva completa está en `/docs`. Resumen por módulo:
 | Gastos fijos | `/recurring-expenses` (+ `/pending`, `/{id}/pay`, `/{id}/skip`) | Pagos semanales o mensuales. No se registran solos: `/pending` lista los vencidos y `/pay` crea el gasto |
 | Coach | `/checkins`, `/coach/reaction`, `/coach/insights`, `/coach/chat` | Check-in emocional, consejos accionables y chat |
 | Gamificación | `/goals` (+ `/contributions`), `/challenges` (+ `/suggestions`), `/gamification/profile` | Metas con dinero realmente apartado, retos verificados, puntos, niveles e insignias |
-| Reportes | `/reports/weekly`, `/reports/trends`, `/reports/monthly-wrapped` | Resumen semanal, gasto por semana para las gráficas y resumen mensual |
+| Decidir antes | `/budgets/active/simulate`, `/budgets/simulate-credit`, `/planned-expenses` | «¿Me alcanza?» de contado o a cuotas y gastos grandes que vienen |
+| Vacas | `/expenses/split`, `/receivables` | Gasto compartido: parte propia y cobros pendientes |
+| Planes y familia | `/plans`, `/me/subscription` (+ `/redeem`, `/share-progress`), `/me/family/progress` | Planes por funciones, convenios, cupo de IA y progreso familiar |
+| Universidad | `/support` (+ `/{id}/interest`), `/panel/{id}?token=…` | Apoyos de la universidad y panel agregado de Bienestar |
+| Reportes | `/reports/weekly`, `/reports/trends`, `/reports/monthly-wrapped`, `/reports/repeated` | Resumen semanal, gasto por semana, resumen mensual y gastos hormiga y suscripciones |
 
 Dos reglas atraviesan todo el backend:
 

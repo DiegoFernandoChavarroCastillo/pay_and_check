@@ -398,12 +398,14 @@ class MoneyField extends StatelessWidget {
     required this.label,
     this.autofocus = false,
     this.hero = false,
+    this.onChanged,
   });
 
   final TextEditingController controller;
   final String label;
   final bool autofocus;
   final bool hero;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -412,8 +414,9 @@ class MoneyField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       autofocus: autofocus,
+      onChanged: onChanged,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')), const MilesFormatter()],
       style: hero ? cifra : null,
       decoration: hero
           ? InputDecoration(
@@ -432,6 +435,41 @@ class MoneyField extends StatelessWidget {
           : InputDecoration(labelText: label, prefixText: '\$ '),
       validator: (v) => parseMoney(v ?? '') == null ? context.l.invalidAmount : null,
     );
+  }
+}
+
+/// Agrupa los miles con punto mientras se escribe ("1200000" → "1.200.000").
+/// Los decimales van después de la coma; [parseMoney] ignora los puntos.
+class MilesFormatter extends TextInputFormatter {
+  const MilesFormatter();
+
+  static String agrupar(String texto) {
+    final coma = texto.indexOf(',');
+    final entero = (coma < 0 ? texto : texto.substring(0, coma)).replaceAll('.', '');
+    final decimales = coma < 0 ? '' : texto.substring(coma).replaceAll('.', '');
+    final grupos = StringBuffer();
+    for (var i = 0; i < entero.length; i++) {
+      if (i > 0 && (entero.length - i) % 3 == 0) grupos.write('.');
+      grupos.write(entero[i]);
+    }
+    return '$grupos$decimales';
+  }
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final texto = agrupar(newValue.text);
+    if (texto == newValue.text) return newValue;
+    // Conserva la posición del cursor contando dígitos, no caracteres.
+    final digitosAntes = newValue.text
+        .substring(0, newValue.selection.end.clamp(0, newValue.text.length))
+        .replaceAll('.', '')
+        .length;
+    var pos = 0, vistos = 0;
+    while (pos < texto.length && vistos < digitosAntes) {
+      if (texto[pos] != '.') vistos++;
+      pos++;
+    }
+    return TextEditingValue(text: texto, selection: TextSelection.collapsed(offset: pos));
   }
 }
 

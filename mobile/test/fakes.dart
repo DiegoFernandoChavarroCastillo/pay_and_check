@@ -142,11 +142,27 @@ class FakeSmsSource extends SmsSource {
 
   @override
   Future<List<SmsMessage>> read(DateTime desde) async => [...mensajes];
+
+  /// Notificaciones de apps de pago (Nequi, Daviplata…), con el acceso ya concedido.
+  final notificaciones = <SmsMessage>[];
+  bool accesoNotificaciones = true;
+
+  @override
+  Future<bool> notifHasAccess() async => accesoNotificaciones;
+
+  @override
+  Future<void> openNotifSettings() async {}
+
+  @override
+  Future<List<SmsMessage>> readNotifications(DateTime desde) async => [...notificaciones];
 }
 
 /// Backend de mentira: responde con datos fijos y anota lo que la app le envía.
 class FakeApi extends Api {
-  FakeApi({this.conPresupuesto = true, this.conGastos = true}) : super(Dio());
+  /// [planPago]: Premium en vez de Gratis, para lo que exige un plan pago (la captura desde SMS y notificaciones).
+  FakeApi({this.conPresupuesto = true, this.conGastos = true, bool planPago = false}) : super(Dio()) {
+    if (planPago) suscripcion = {...suscripcion, 'plan': 'premium', 'cupo_ia_mensual': 300, 'restantes': 288};
+  }
 
   bool conPresupuesto;
   bool conGastos;
@@ -359,6 +375,48 @@ class FakeApi extends Api {
 
   @override
   Future<GamificationProfile> gamification() async => GamificationProfile.fromJson(gamificationJson);
+
+  // --- Funciones de noviembre: apoyos, previstos, vacas, gastos repetidos, crédito y familia ---
+  Json apoyos = {'organizacion': null, 'motivo_sugerencia': null, 'apoyos': <Json>[]};
+  final interesados = <int>[];
+  final vacas = <Json>[];
+  Json cobros = {'total_pendiente': '0', 'pendientes': <Json>[]};
+  final previstos = <Json>[];
+  final previstosCreados = <Json>[];
+
+  @override
+  Future<SupportList> support() async => SupportList.fromJson(apoyos);
+
+  @override
+  Future<void> supportInterest(int id) async => interesados.add(id);
+
+  @override
+  Future<List<PlannedExpense>> planned() async => [for (final p in previstos) PlannedExpense.fromJson(p)];
+
+  @override
+  Future<void> createPlanned(String descripcion, double monto, DateTime fecha) async =>
+      previstosCreados.add({'descripcion': descripcion, 'monto': monto});
+
+  @override
+  Future<int> splitExpense(Json datos) async {
+    vacas.add(datos);
+    return 77;
+  }
+
+  @override
+  Future<ReceivableSummary> receivables() async => ReceivableSummary.fromJson(cobros);
+
+  @override
+  Future<List<RepeatedSpend>> repeated() async => [];
+
+  @override
+  Future<List<FamilyMemberProgress>> familyProgress() async => [];
+
+  @override
+  Future<CreditCheck> simulateCredit(double monto, int cuotas, double tasaEa) async => CreditCheck.fromJson({
+        'cuota': '100000', 'cuotas': cuotas, 'tasa_mensual': '0.00', 'total_pagado': '${100000 * cuotas}',
+        'intereses': '0', 'por_dia': '3333', 'disponible_por_dia': '20000', 'disponible_por_dia_con_cuota': '16667',
+      });
 
   @override
   Future<Expense> createExpense(Json datos) async {

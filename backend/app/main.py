@@ -20,9 +20,13 @@ from app.routers import (
     gamification,
     goals,
     incomes,
+    panel,
+    planned,
     plans,
+    receivables,
     recurring_expenses,
     reports,
+    support,
 )
 
 logger = logging.getLogger("app")
@@ -49,6 +53,10 @@ app.include_router(coach.router)
 app.include_router(goals.router)
 app.include_router(gamification.router)
 app.include_router(plans.router)
+app.include_router(panel.router)
+app.include_router(support.router)
+app.include_router(planned.router)
+app.include_router(receivables.router)
 
 
 @app.exception_handler(RequestValidationError)

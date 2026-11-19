@@ -8,7 +8,10 @@ from app.models.goal import Goal, GoalContribution
 from app.models.group import Group
 from app.models.income import Income
 from app.models.plan import LicenseCode, Organization, Subscription
+from app.models.planned_expense import PlannedExpense
+from app.models.receivable import Receivable
 from app.models.recurring_expense import RecurringExpense
+from app.models.support import SupportInterest, SupportResource
 from app.models.user import User
 
 __all__ = [
@@ -31,4 +34,8 @@ __all__ = [
     "Organization",
     "LicenseCode",
     "Subscription",
+    "SupportResource",
+    "SupportInterest",
+    "PlannedExpense",
+    "Receivable",
 ]

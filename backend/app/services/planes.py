@@ -25,15 +25,33 @@ class Plan:
     paga: str  # nadie | universidad | persona | familia
     estado_demo: str  # real | codigo (se activa con un código) | simulado (sin cobro real)
     max_integrantes: int | None = None
+    # Lo que incluye, como beneficios y no como "solicitudes": a la persona le importa qué puede hacer.
+    funciones: tuple[str, ...] = ()
+
+
+# Gratis cubre el hábito completo: registrar, saber cuánto queda, decidir antes de gastar, el coach con chat y
+# los reportes. El chat y los reportes cuestan menos de un peso por solicitud (docs/analisis-financiero-nov-2026.md)
+# y son los que crean el hábito y la viralidad, así que no se cierran. Los planes pagos añaden lo que ahorra
+# tiempo (la captura automática), más IA y lo propio de cada uno: el progreso familiar o los apoyos de la
+# universidad.
+FUNCIONES_GRATIS = ("registro", "numero_diario", "simulador", "metas_retos", "coach", "reportes")
+FUNCIONES_PAGAS = (*FUNCIONES_GRATIS, "captura_automatica", "ia_ampliada")
 
 
 CATALOGO = {
     plan.codigo: plan
     for plan in (
-        Plan("gratis", 0, 50, False, "nadie", "real"),
-        Plan("institucional", 4_998, 300, False, "universidad", "codigo"),
-        Plan("premium", 9_990, 300, False, "persona", "simulado"),
-        Plan("familiar", 19_990, 390, True, "familia", "simulado", MAX_INTEGRANTES_FAMILIA),
+        # 150 y no 50: con una reacción por gasto, 50 se agotaban en la primera semana (auditoría de noviembre).
+        Plan("gratis", 0, 150, False, "nadie", "real", funciones=FUNCIONES_GRATIS),
+        Plan(
+            "institucional", 4_998, 300, False, "universidad", "codigo",
+            funciones=(*FUNCIONES_PAGAS, "apoyos_universidad"),
+        ),
+        Plan("premium", 9_990, 300, False, "persona", "simulado", funciones=FUNCIONES_PAGAS),
+        Plan(
+            "familiar", 19_990, 390, True, "familia", "simulado", MAX_INTEGRANTES_FAMILIA,
+            funciones=(*FUNCIONES_PAGAS, "progreso_familiar"),
+        ),
     )
 }
 CUPOS = {codigo: plan.cupo_ia_mensual for codigo, plan in CATALOGO.items()}
@@ -49,6 +67,10 @@ class CodigoNoEncontrado(PlanError):
 
 def suscripcion_de(session: Session, user: User) -> Subscription | None:
     return session.exec(select(Subscription).where(Subscription.user_id == user.id)).first()
+
+
+def tiene_funcion(session: Session, user: User, funcion: str) -> bool:
+    return funcion in CATALOGO[plan_de(session, user)].funciones
 
 
 def plan_de(session: Session, user: User) -> str:

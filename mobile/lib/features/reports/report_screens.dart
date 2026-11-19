@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../home/share_card.dart';
 import '../../core/charts.dart';
 import '../../core/format.dart';
 import '../../core/motion.dart';
@@ -189,8 +190,30 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
     final ahora = DateTime.now();
     final esMesActual = _mes == (ahora.year, ahora.month);
 
+    final resumen = ref.watch(wrappedProvider(_mes)).value;
     return Scaffold(
-      appBar: AppBar(title: Text(l.wrappedTitle)),
+      appBar: AppBar(
+        title: Text(l.wrappedTitle),
+        actions: [
+          // La versión para compartir: logros del mes, sin montos.
+          if (resumen != null && resumen.numGastos > 0)
+            IconButton(
+              tooltip: l.share,
+              icon: const Icon(Icons.ios_share),
+              onPressed: () => showShareCard(
+                context,
+                titulo: monthName(context, _mes.$1, _mes.$2),
+                destacado: l.shareWrappedDays(resumen.diasConRegistro),
+                lineas: [
+                  if (resumen.aportadoAMetas > 0) l.shareWrappedGoals,
+                  if (resumen.insignias.isNotEmpty) l.shareWrappedBadges(resumen.insignias.length),
+                  if (resumen.puntosGanados > 0) l.shareWrappedPoints(resumen.puntosGanados),
+                  if (resumen.animoFrecuente != null) l.wrappedMood(moodLabel(l, resumen.animoFrecuente!)),
+                ],
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Row(

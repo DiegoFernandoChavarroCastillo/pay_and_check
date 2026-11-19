@@ -23,6 +23,9 @@ def summary_for(session: Session, budget: Budget, today: date) -> BudgetSummary:
         ingresos_total=_suma(session, Income.monto, Income.budget_id == budget.id),
         today=today,
         apartado_total=_suma(session, GoalContribution.monto, GoalContribution.budget_id == budget.id),
+        gasto_fijo_total=_suma(
+            session, Expense.monto, Expense.budget_id == budget.id, Expense.recurring_expense_id.is_not(None)
+        ),
     )
 
 

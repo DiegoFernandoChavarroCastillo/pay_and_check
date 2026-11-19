@@ -62,7 +62,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nuevo gasto'), findsOneWidget);
-      expect(find.text('12500'), findsOneWidget);
+      expect(find.text('12.500'), findsOneWidget);
       expect(find.text('almuerzo 12.500'), findsOneWidget);
     });
   }

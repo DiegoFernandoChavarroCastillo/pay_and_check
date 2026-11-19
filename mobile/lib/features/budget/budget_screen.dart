@@ -32,7 +32,7 @@ class BudgetScreen extends ConsumerStatefulWidget {
 
 class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   final _form = GlobalKey<FormState>();
-  late final _monto = TextEditingController(text: widget.current?.montoTotal.round().toString() ?? '');
+  late final _monto = TextEditingController(text: MilesFormatter.agrupar(widget.current?.montoTotal.round().toString() ?? ''));
   late DateTime _inicio = widget.current?.fechaInicio ?? today();
   late DateTime _fin = widget.current?.fechaFin ?? today().add(const Duration(days: 120));
   late String _tono = ref.read(sessionProvider).value?.coachTone ?? coachTones.first;

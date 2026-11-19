@@ -90,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Confirma el gasto'), findsOneWidget);
-    expect(find.text('5000'), findsOneWidget);
+    expect(find.text('5.000'), findsOneWidget);
     expect(find.text('entretenimiento'), findsOneWidget);
 
     // La persona corrige el monto antes de guardar.
@@ -128,7 +128,7 @@ void main() {
     // No es el formulario de gasto: no pide categoría.
     expect(find.text('Confirma el ingreso'), findsOneWidget);
     expect(find.text('Categoría'), findsNothing);
-    expect(find.text('200000'), findsOneWidget);
+    expect(find.text('200.000'), findsOneWidget);
 
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
@@ -182,7 +182,7 @@ void main() {
   });
 
   testWidgets('un SMS del banco aparece en notificaciones y se aprueba sin salir de la lista', (tester) async {
-    final api = FakeApi()
+    final api = FakeApi(planPago: true)
       ..parseo = {
         'tipo': 'gasto',
         'monto': '45900',
@@ -230,7 +230,7 @@ void main() {
   });
 
   testWidgets('un SMS de dinero recibido se guarda como ingreso', (tester) async {
-    final api = FakeApi()
+    final api = FakeApi(planPago: true)
       ..parseo = {
         'tipo': 'ingreso',
         'monto': '200000',
@@ -273,7 +273,7 @@ void main() {
   testWidgets('lo revisado y el recordatorio son de cada cuenta, no del teléfono', (tester) async {
     SharedPreferences.setMockInitialValues({'reminder_enabled_7': true, 'sms_revisados_7': ['1']});
     final prefs = await SharedPreferences.getInstance();
-    final api = FakeApi();
+    final api = FakeApi(planPago: true);
     api.sms.llega(1, 'Nequi', 'Nequi: Pagaste 12.000 a Juan');
     final contenedor = ProviderContainer(
       overrides: [

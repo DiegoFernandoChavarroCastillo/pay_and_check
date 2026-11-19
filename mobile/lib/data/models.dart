@@ -230,6 +230,7 @@ class ExpenseDraft {
     this.source = 'manual',
     this.textoOriginal,
     this.esIngreso = false,
+    this.adicionales = const [],
   });
 
   ExpenseDraft.fromParse(Map<String, dynamic> j, {required this.source, this.textoOriginal})
@@ -238,7 +239,11 @@ class ExpenseDraft {
         categoria = j['categoria'] as String?,
         descripcion = j['descripcion'] as String?,
         fecha = _dateOrNull(j['fecha']),
-        comercio = j['comercio'] as String?;
+        comercio = j['comercio'] as String?,
+        adicionales = [
+          for (final a in (j['adicionales'] as List?) ?? const [])
+            ExpenseDraft.fromParse(a as Map<String, dynamic>, source: source, textoOriginal: textoOriginal),
+        ];
 
   final double? monto;
   final String? categoria;
@@ -250,6 +255,9 @@ class ExpenseDraft {
 
   /// El texto hablaba de dinero recibido ("me pagaron…"): se confirma como ingreso, sin categoría.
   final bool esIngreso;
+
+  /// Los demás movimientos de la misma frase ("almuerzo 18 mil y un uber de 12.500"): se confirman uno tras otro.
+  final List<ExpenseDraft> adicionales;
 }
 
 class Checkin {
@@ -293,15 +301,50 @@ class ChatMessage {
   ChatMessage.fromJson(Map<String, dynamic> j)
       : id = j['id'] as int,
         esDelCoach = j['rol'] == 'coach',
-        contenido = j['contenido'] as String;
+        contenido = j['contenido'] as String,
+        accion = j['accion'] == null ? null : InsightAction.fromJson(j['accion'] as Map<String, dynamic>);
 
   ChatMessage.local(this.contenido)
       : id = -1,
-        esDelCoach = false;
+        esDelCoach = false,
+        accion = null;
 
   final int id;
   final bool esDelCoach;
   final String contenido;
+
+  /// Acción de un toque bajo la respuesta ("Crear meta: Viaje", "Registrar este gasto"). Solo llega en la
+  /// respuesta recién enviada; el historial no la guarda.
+  final InsightAction? accion;
+}
+
+/// "¿Me alcanza?": cómo quedaría el presupuesto si hoy se gastara [monto]. No guarda nada. (No se llama
+/// `Simulation` para no chocar con la clase de física de Flutter.)
+class AffordCheck {
+  AffordCheck.fromJson(Map<String, dynamic> j)
+      : monto = _num(j['monto']),
+        alcanza = j['alcanza'] as bool,
+        porDiaAntes = _num(j['disponible_por_dia_antes']),
+        porDiaDespues = _num(j['disponible_por_dia_despues']),
+        totalDespues = _num(j['disponible_total_despues']),
+        diasRestantes = j['dias_restantes'] as int,
+        enRiesgo = j['en_riesgo_despues'] as bool,
+        fechaAgotamiento = _dateOrNull(j['fecha_agotamiento_despues']),
+        metaNombre = (j['meta'] as Map<String, dynamic>?)?['nombre'] as String?,
+        metaDias = (j['meta'] as Map<String, dynamic>?)?['dias_equivalentes'] as int?;
+
+  final double monto;
+  final bool alcanza;
+  final double porDiaAntes;
+  final double porDiaDespues;
+  final double totalDespues;
+  final int diasRestantes;
+  final bool enRiesgo;
+  final DateTime? fechaAgotamiento;
+  final String? metaNombre;
+
+  /// A cuántos días del ahorro que pide la meta equivale la compra.
+  final int? metaDias;
 }
 
 class Contribution {
@@ -425,6 +468,8 @@ class GamificationProfile {
         ratioAhorro = _numOrNull(j['metricas']['ratio_ahorro']),
         consistencia = _num(j['metricas']['consistencia']),
         mejoraMensual = _numOrNull(j['metricas']['mejora_mensual']),
+        diasActivos = (j['metricas']['dias_activos'] as int?) ?? 0,
+        diasVentana = (j['metricas']['dias_ventana'] as int?) ?? 0,
         insignias = _list(j['insignias'], BadgeInfo.fromJson),
         eventos = _list(j['eventos_recientes'], PointEvent.fromJson),
         nuevosPuntos = j['nuevos_puntos'] as int,
@@ -440,6 +485,8 @@ class GamificationProfile {
   final double? ratioAhorro;
   final double consistencia;
   final double? mejoraMensual;
+  final int diasActivos;
+  final int diasVentana;
   final List<BadgeInfo> insignias;
   final List<PointEvent> eventos;
   final int nuevosPuntos;
@@ -563,7 +610,8 @@ class Plan {
         cupoIa = j['cupo_ia_mensual'] as int,
         compartido = j['compartido'] as bool,
         estadoDemo = j['estado_demo'] as String,
-        maxIntegrantes = j['max_integrantes'] as int?;
+        maxIntegrantes = j['max_integrantes'] as int?,
+        funciones = ((j['funciones'] as List?) ?? const []).cast<String>();
 
   final String codigo;
   final int precio;
@@ -573,6 +621,9 @@ class Plan {
   /// "real" o "simulado" (Premium y Familiar no cobran en el piloto).
   final String estadoDemo;
   final int? maxIntegrantes;
+
+  /// Lo que incluye el plan ("simulador", "captura_automatica"…): se muestra como lista de beneficios.
+  final List<String> funciones;
 }
 
 class Family {
@@ -580,12 +631,16 @@ class Family {
       : codigo = j['codigo'] as String,
         integrantes = j['integrantes'] as int,
         maxIntegrantes = j['max_integrantes'] as int,
-        esTitular = j['es_titular'] as bool;
+        esTitular = j['es_titular'] as bool,
+        comparteProgreso = (j['comparte_progreso'] as bool?) ?? false;
 
   final String codigo;
   final int integrantes;
   final int maxIntegrantes;
   final bool esTitular;
+
+  /// Si deja que el titular vea su progreso agregado (constancia, metas, si el presupuesto alcanza).
+  final bool comparteProgreso;
 }
 
 /// El plan de la persona y cuánto le queda de su cupo de IA este mes (`GET /me/subscription`).
@@ -612,4 +667,142 @@ class Subscription {
 
   /// Aviso del backend para los planes simulados ("no hay cobro real").
   final String? aviso;
+}
+
+// --- Funciones añadidas tras el análisis de competidores (noviembre 2026) ---
+
+/// Un apoyo de la universidad del convenio (beca, auxilio de alimentación, apoyo psicológico…).
+class SupportResource {
+  SupportResource.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as int,
+        tipo = j['tipo'] as String,
+        titulo = j['titulo'] as String,
+        descripcion = j['descripcion'] as String,
+        contacto = j['contacto'] as String,
+        meInteresa = j['me_interesa'] as bool;
+
+  final int id;
+  final String tipo;
+  final String titulo;
+  final String descripcion;
+  final String contacto;
+  final bool meInteresa;
+}
+
+class SupportList {
+  SupportList.fromJson(Map<String, dynamic> j)
+      : organizacion = j['organizacion'] as String?,
+        motivo = j['motivo_sugerencia'] as String?,
+        apoyos = _list(j['apoyos'], SupportResource.fromJson);
+
+  final String? organizacion;
+
+  /// "en_riesgo" o "estres": por qué la app los sugiere ahora. Null si no hay motivo.
+  final String? motivo;
+  final List<SupportResource> apoyos;
+}
+
+/// Un gasto grande que viene (matrícula, libros, regalos…).
+class PlannedExpense {
+  PlannedExpense.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as int,
+        descripcion = j['descripcion'] as String,
+        monto = _num(j['monto']),
+        fecha = _date(j['fecha']),
+        dias = j['dias'] as int?,
+        porSemana = _numOrNull(j['por_semana']),
+        margenSemanal = _numOrNull(j['margen_semanal']);
+
+  final int id;
+  final String descripcion;
+  final double monto;
+  final DateTime fecha;
+  final int? dias;
+  final double? porSemana;
+
+  /// Lo que se puede gastar por semana menos lo que hay que apartar; negativo = al ritmo de hoy no alcanza.
+  final double? margenSemanal;
+}
+
+/// Lo que alguien le debe a la persona por una vaca.
+class Receivable {
+  Receivable.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as int,
+        persona = j['persona'] as String,
+        descripcion = j['descripcion'] as String,
+        monto = _num(j['monto']),
+        fecha = _date(j['fecha']);
+
+  final int id;
+  final String persona;
+  final String descripcion;
+  final double monto;
+  final DateTime fecha;
+}
+
+class ReceivableSummary {
+  ReceivableSummary.fromJson(Map<String, dynamic> j)
+      : total = _num(j['total_pendiente']),
+        pendientes = _list(j['pendientes'], Receivable.fromJson);
+
+  final double total;
+  final List<Receivable> pendientes;
+}
+
+/// Un gasto hormiga o una suscripción.
+class RepeatedSpend {
+  RepeatedSpend.fromJson(Map<String, dynamic> j)
+      : nombre = j['nombre'] as String,
+        tipo = j['tipo'] as String,
+        veces = j['veces'] as int,
+        porMes = _num(j['por_mes']),
+        porSemestre = _num(j['por_semestre']);
+
+  final String nombre;
+  final String tipo;
+  final int veces;
+  final double porMes;
+  final double porSemestre;
+}
+
+/// "¿Me conviene este crédito?".
+class CreditCheck {
+  CreditCheck.fromJson(Map<String, dynamic> j)
+      : cuota = _num(j['cuota']),
+        cuotas = j['cuotas'] as int,
+        tasaMensual = _num(j['tasa_mensual']),
+        totalPagado = _num(j['total_pagado']),
+        intereses = _num(j['intereses']),
+        porDia = _num(j['por_dia']),
+        porDiaHoy = _numOrNull(j['disponible_por_dia']),
+        porDiaConCuota = _numOrNull(j['disponible_por_dia_con_cuota']);
+
+  final double cuota;
+  final int cuotas;
+  final double tasaMensual;
+  final double totalPagado;
+  final double intereses;
+  final double porDia;
+  final double? porDiaHoy;
+  final double? porDiaConCuota;
+}
+
+/// Lo que el titular del plan Familiar ve de un integrante (solo si lo comparte).
+class FamilyMemberProgress {
+  FamilyMemberProgress.fromJson(Map<String, dynamic> j)
+      : nombre = j['nombre'] as String,
+        comparte = j['comparte'] as bool,
+        racha = j['racha'] as int?,
+        constancia = _numOrNull(j['constancia']),
+        metasActivas = j['metas_activas'] as int?,
+        progresoMetas = _numOrNull(j['progreso_metas']),
+        presupuestoAlcanza = j['presupuesto_alcanza'] as bool?;
+
+  final String nombre;
+  final bool comparte;
+  final int? racha;
+  final double? constancia;
+  final int? metasActivas;
+  final double? progresoMetas;
+  final bool? presupuestoAlcanza;
 }

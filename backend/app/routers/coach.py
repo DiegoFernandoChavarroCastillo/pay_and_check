@@ -20,12 +20,13 @@ from app.services import coach as coach_service
 router = APIRouter(prefix="/coach", tags=["coach"])
 
 
-def _a_respuesta(mensaje: CoachMessage) -> ChatMessageResponse:
+def _a_respuesta(mensaje: CoachMessage, accion: dict | None = None) -> ChatMessageResponse:
     return ChatMessageResponse(
         id=mensaje.id,
         rol="usuario" if mensaje.tipo == "chat_user" else "coach",
         contenido=mensaje.contenido,
         created_at=mensaje.created_at,
+        accion=accion,
     )
 
 
@@ -70,5 +71,7 @@ def chat(
     current_user: User = Depends(get_current_user),
 ) -> ChatMessageResponse:
     # Sin Groq el servicio responde su texto de respaldo (y no guarda el turno): aquí nunca hay un 5xx.
-    respuesta = coach_service.responder_chat(session, current_user, payload.mensaje, today_for(current_user))
-    return _a_respuesta(respuesta)
+    respuesta, accion = coach_service.responder_chat(
+        session, current_user, payload.mensaje, today_for(current_user)
+    )
+    return _a_respuesta(respuesta, accion)

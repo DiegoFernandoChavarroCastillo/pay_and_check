@@ -68,7 +68,7 @@ def test_listar_los_planes_con_su_precio_y_cupo(client, auth_headers):
     assert r.status_code == 200
     planes = {p["codigo"]: p for p in r.json()}
     assert {c: (p["precio_cop"], p["cupo_ia_mensual"], p["compartido"]) for c, p in planes.items()} == {
-        "gratis": (0, 50, False),
+        "gratis": (0, 150, False),
         "institucional": (4998, 300, False),
         "premium": (9990, 300, False),
         "familiar": (19990, 390, True),
@@ -79,7 +79,7 @@ def test_listar_los_planes_con_su_precio_y_cupo(client, auth_headers):
 
 def test_la_cuenta_nueva_esta_en_gratis_con_su_cupo_y_fecha_de_reinicio(client, auth_headers):
     assert _plan(client, auth_headers) == {
-        "plan": "gratis", "cupo_ia_mensual": 50, "usadas": 0, "restantes": 50, "compartido": False,
+        "plan": "gratis", "cupo_ia_mensual": 150, "usadas": 0, "restantes": 150, "compartido": False,
         "reinicia_el": "2027-01-01", "organizacion": None, "familia": None, "aviso": None,
     }  # fmt: skip
     assert client.get("/me/subscription").status_code == 401
@@ -115,7 +115,7 @@ def test_el_consumo_del_mes_sale_en_la_suscripcion(client, auth_headers, db_engi
         session.commit()
 
     plan = _plan(client, auth_headers)
-    assert (plan["usadas"], plan["restantes"]) == (8, 42)
+    assert (plan["usadas"], plan["restantes"]) == (8, 142)
 
 
 # --- Convenios ------------------------------------------------------------------
@@ -222,7 +222,8 @@ def test_activar_familiar_crea_la_familia_y_el_codigo_lo_canjean_los_demas(clien
     assert codigo.startswith("FAM-")
     mia = _plan(client, titular)
     assert (mia["plan"], mia["cupo_ia_mensual"], mia["compartido"], mia["aviso"]) == ("familiar", 390, True, AVISO)
-    assert mia["familia"] == {"codigo": codigo, "integrantes": 3, "max_integrantes": 3, "es_titular": True}
+    assert mia["familia"] == {"codigo": codigo, "integrantes": 3, "max_integrantes": 3, "es_titular": True,
+                             "comparte_progreso": False}
     assert _plan(client, uno)["familia"]["es_titular"] is False
 
     # Pedirlo otra vez no crea otra familia y el código se canjea sin gastar un lugar.
@@ -300,7 +301,7 @@ def test_si_un_integrante_se_va_sale_de_la_familia_y_los_demas_siguen(
     assert _plan(client, saliente)["plan"] == plan and _plan(client, saliente)["familia"] is None
     assert _plan(client, otro)["plan"] == "familiar"
     assert _plan(client, titular)["familia"] == {
-        "codigo": codigo, "integrantes": 2, "max_integrantes": 3, "es_titular": True,
+        "codigo": codigo, "integrantes": 2, "max_integrantes": 3, "es_titular": True, "comparte_progreso": False,
     }  # fmt: skip
     assert len(_filas(db_engine, Group)) == 1
 
@@ -309,3 +310,28 @@ def test_quien_salio_puede_volver_con_el_mismo_codigo(client, make_user):
     _, [saliente, _], codigo = _familia(client, make_user)
     _poner(client, saliente, "premium")
     assert _canjear(client, saliente, codigo).json()["plan"] == "familiar"
+
+
+# --- Funciones por plan -----------------------------------------------------------------------------------
+
+def test_los_planes_dicen_que_incluyen(client, auth_headers):
+    planes = {p["codigo"]: set(p["funciones"]) for p in client.get("/plans", headers=auth_headers).json()}
+    assert "simulador" in planes["gratis"] and "captura_automatica" not in planes["gratis"]
+    assert all("captura_automatica" in planes[c] for c in ("premium", "familiar", "institucional"))
+
+
+def test_la_captura_automatica_es_de_los_planes_pagos(client, auth_headers, categorias, presupuesto):
+    from datetime import date, timedelta
+
+    hoy = date.today()
+    presupuesto(hoy - timedelta(days=1), hoy + timedelta(days=10))
+    gasto = {"monto": "8000", "category_id": 1, "descripcion": "Nequi", "fecha": hoy.isoformat(), "source": "sms"}
+
+    r = client.post("/expenses", json=gasto, headers=auth_headers)
+    assert r.status_code == 402
+    assert "Premium" in r.json()["detail"]
+    # El registro manual sigue libre.
+    assert client.post("/expenses", json={**gasto, "source": "manual"}, headers=auth_headers).status_code == 201
+
+    client.put("/me/subscription", json={"plan": "premium"}, headers=auth_headers)
+    assert client.post("/expenses", json=gasto, headers=auth_headers).status_code == 201

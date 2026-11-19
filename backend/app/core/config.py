@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     # parseo con IA responde 503 y el coach usa sus textos de respaldo; sin
     # GOOGLE_CLIENT_ID el login con Google queda deshabilitado (401).
     GROQ_API_KEY: str = ""
+    # Proveedor de respaldo con el mismo modelo (gpt-oss-20b) y API compatible con OpenAI, para cuando Groq
+    # falla o llega a su límite (docs/analisis-financiero-nov-2026.md). Vacío = sin respaldo: el coach usa sus
+    # textos fijos. Ej.: DeepInfra, https://api.deepinfra.com/v1/openai con el modelo openai/gpt-oss-20b.
+    AI_FALLBACK_URL: str = ""
+    AI_FALLBACK_API_KEY: str = ""
+    AI_FALLBACK_MODEL: str = "openai/gpt-oss-20b"
     GOOGLE_CLIENT_ID: str = ""
     # Orígenes permitidos por CORS, separados por coma (ver .env.example).
     # No estaba contemplada en la Fase 0; se agregó al llegar a la Fase 1
