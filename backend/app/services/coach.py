@@ -276,8 +276,9 @@ def _leer_turno(raw: str) -> tuple[bool, str] | None:
 
 def responder_chat(session: Session, user: User, mensaje: str, today: date) -> CoachMessage:
     """Responde un turno del chat y guarda ambos mensajes. Nunca lanza GroqServiceError: si Groq está caído,
-    limitado o no responde, contesta con el texto de respaldo pero NO guarda el turno. El historial se reenvía
-    al modelo y no debe llevar textos de respaldo; el mensaje devuelto trae `id` = SIN_GUARDAR.
+    limitado o no responde, o si se agotó el cupo mensual, contesta con el texto de respaldo pero NO guarda el
+    turno. El historial se reenvía al modelo y no debe llevar textos de respaldo; el mensaje devuelto trae
+    `id` = SIN_GUARDAR.
 
     El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
     muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien."""
@@ -308,16 +309,17 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
                 ia_uso.marcar_bloqueo("inyeccion")
         caida = caida or (raw is not None and not raw)  # Groq respondió, pero sin nada
 
-        if caida:
-            respuesta = _respaldo(user, "chat", contexto=contexto_financiero(session, user, today, patrones=[]))
+        if caida or sin_cupo:
+            respuesta = _respaldo(
+                user, "sin_cupo" if sin_cupo else "chat",
+                contexto=contexto_financiero(session, user, today, patrones=[]),
+            )  # fmt: skip
             return CoachMessage(id=SIN_GUARDAR, user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)
 
         # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
         en_alcance, respuesta = _leer_turno(raw or "") or (True, "")
 
-        if sin_cupo:
-            respuesta = _respaldo(user, "sin_cupo", contexto=contexto_financiero(session, user, today, patrones=[]))
-        elif not en_alcance:
+        if not en_alcance:
             ia_uso.marcar_bloqueo("alcance")
             respuesta = _respaldo(user, "fuera_de_alcance")
         else:

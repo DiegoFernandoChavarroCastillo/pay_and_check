@@ -12,6 +12,7 @@ from app.db.reporte_ia import formatear, promedios_por_tarea
 from app.models.ai_usage import AiUsage
 from app.models.user import User
 from app.services import ia_uso, planes
+from app.services.coach import SIN_GUARDAR
 
 MARZO = date(2026, 3, 31)
 GASTO = {"monto": 5000, "categoria": "comida", "descripcion": "café", "fecha": "2026-03-31"}
@@ -247,8 +248,9 @@ def test_con_el_tope_agotado_el_chat_responde_su_respaldo_sin_llamar_a_groq(
     bloqueada = _filas(db_engine)[-1]
     assert (bloqueada.exito, bloqueada.uso_respaldo, bloqueada.bloqueado_por) == (False, True, "cupo")
     assert bloqueada.tokens_entrada is None
-    # El turno se guarda como cualquier otro.
-    assert len(client.get("/coach/chat", headers=auth_headers).json()) == 2
+    # El turno no se guarda: el historial se reenvía al modelo y no debe llevar textos de respaldo.
+    assert r.json()["id"] == SIN_GUARDAR
+    assert client.get("/coach/chat", headers=auth_headers).json() == []
 
 
 def test_el_tope_de_gratis_es_50_y_la_llamada_bloqueada_no_suma(client, auth_headers, db_engine, groq, fijar_hoy):
