@@ -17,6 +17,7 @@ from app.services.ia_seguridad import (
     como_datos,
     filtra_salida,
     marca_inyeccion,
+    parece_codigo,
     sanear_dato,
 )
 from app.services.prompts import build_coach_rules, build_expense_parse_prompt, build_receipt_parse_prompt
@@ -226,3 +227,32 @@ def test_validar_gasto_pone_topes_a_monto_fecha_y_descripcion():
 
     # Sin `hoy` no se valida la ventana de fecha (otros llamadores y pruebas).
     assert _validar_gasto(base.format(monto=10, desc="x", fecha="2020-01-01"), ["comida"])["monto"] == 10
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        'print("hola mundo")',
+        "def juego():\n    pass",
+        "import random\nmonedas = []",
+        "for moneda in monedas:\n    total += moneda",
+        "function snake() {\n  let coins = 0;\n}",
+        'console.log("hi")',
+    ],
+)
+def test_parece_codigo_detecta_codigo_sin_backticks(texto):
+    assert parece_codigo(texto)
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "Tienes 240.000 disponibles (17.143 por día durante 14 días).",
+        "Si quieres ahorrar más: cocina en casa este fin de semana.",
+        "If you want to save more, try this: cook at home on Saturday.",
+        "Vas bien; esta semana llevas 40.000 gastados.",
+        "Tu meta Celular va en 100.000 de 500.000 (te falta 400.000).",
+    ],
+)
+def test_parece_codigo_no_marca_respuestas_normales(texto):
+    assert not parece_codigo(texto)

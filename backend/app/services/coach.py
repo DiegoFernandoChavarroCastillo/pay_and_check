@@ -6,21 +6,26 @@ deja de responder ni rompe sus reglas aunque el modelo falle."""
 import json
 import logging
 import re
-from dataclasses import asdict
-from datetime import date
+from dataclasses import asdict, dataclass, field
+from datetime import date, timedelta
+from decimal import Decimal
 from functools import partial
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from app.core.time import fmt_fecha
+from app.models.budget import Budget
 from app.models.category import Category
 from app.models.coach import CoachMessage
 from app.models.expense import Expense
-from app.models.goal import Goal
+from app.models.goal import Goal, GoalContribution
+from app.models.recurring_expense import RecurringExpense
 from app.models.user import User
 from app.services import ia_uso
+from app.services import recurring_expenses as gastos_fijos
+from app.services.budget_calculator import BudgetSummary
 from app.services.budget_lookup import get_active_budget_for_user
-from app.services.budget_totals import summary_for
+from app.services.budget_totals import gasto_entre, summary_for
 from app.services.groq_client import (
     MAX_DESCRIPCION,
     CupoIAAgotado,
@@ -29,7 +34,15 @@ from app.services.groq_client import (
     generate_coach_json,
     generate_coach_text,
 )
-from app.services.ia_seguridad import como_datos, filtra_salida, marca_inyeccion, sanear_dato
+from app.services.ia_seguridad import (
+    como_datos,
+    filtra_salida,
+    marca_inyeccion,
+    parece_codigo,
+    pedido_ajeno,
+    sanear_dato,
+    sin_tildes,
+)
 from app.services.patterns import Pattern, detect_patterns, fmt
 from app.services.prompts import (
     build_coach_chat_prompt,
@@ -66,6 +79,7 @@ _RESPALDO = {
         "y tus metas de ahorro. ¿Quieres que revisemos alguno de ellos?",
         "sin_cupo": "Este mes ya usaste todas tus solicitudes de IA, así que no puedo responder con detalle. "
         "Esto es lo esencial: {contexto}",
+        "sin_cupo_corto": "Este mes ya usaste todas tus solicitudes de IA, pero esto sí te lo puedo decir:",
     },
     "en": {
         "reaccion": "Logged! Tracking every expense is what keeps you in charge. You have {por_dia} left per day.",
@@ -77,6 +91,7 @@ _RESPALDO = {
         "and your savings goals. Want to go over any of them?",
         "sin_cupo": "You've used all your AI requests for this month, so I can't answer in detail. "
         "Here is the essential: {contexto}",
+        "sin_cupo_corto": "You've used all your AI requests for this month, but this I can tell you:",
     },
 }
 
@@ -87,6 +102,11 @@ def _respaldo(user: User, clave: str, **kwargs) -> str:
     if clave != "fuera_de_alcance":
         ia_uso.marcar_respaldo()
     return _RESPALDO.get(user.idioma, _RESPALDO["es"])[clave].format(**kwargs)
+
+
+def _respaldo_texto(user: User, clave: str) -> str:
+    """Un texto fijo sin anotarlo en el registro de uso (quien lo usa ya lo anotó)."""
+    return _RESPALDO.get(user.idioma, _RESPALDO["es"])[clave]
 
 
 def reglas_para(user: User) -> str:
@@ -120,36 +140,206 @@ def inventa_cifras(mensaje: str, fuente: str) -> bool:
     return any(len(c) >= 2 for c in _cifras(mensaje) - _cifras(fuente))
 
 
-def contexto_financiero(session: Session, user: User, today: date, patrones: list[Pattern] | None = None) -> str:
-    """Situación del usuario en texto compacto y agregado para la IA."""
-    # Fechas en palabras: el modelo las repite tal cual en lo que redacta.
-    idioma = user.idioma
-    lineas = [f"Fecha de hoy: {fmt_fecha(today, idioma, con_anio=True)}"]
+@dataclass
+class Cifras:
+    """Las cifras de la persona que el chat puede citar. Todas se calculan aquí: la IA no hace cuentas, así que
+    cualquier dato que alguien pueda preguntar ("¿cuánto puedo gastar por semana?") tiene que venir ya hecho."""
+
+    hoy: date
+    presupuesto: Budget | None = None
+    resumen: BudgetSummary | None = None
+    # Lo que puede gastar en una semana. Si quedan menos de 7 días, es todo lo que queda hasta el cierre.
+    por_semana: Decimal | None = None
+    gastado_semana: Decimal = Decimal("0")
+    gastado_mes: Decimal = Decimal("0")
+    por_categoria: list[tuple[str, Decimal]] = field(default_factory=list)
+    metas: list[tuple[str, Decimal, Decimal, date | None]] = field(default_factory=list)  # nombre, objetivo, ahorrado
+    fijos: list[tuple[str, Decimal, date, bool]] = field(default_factory=list)  # descripción, monto, fecha, vencido
+
+
+def cifras_de(session: Session, user: User, today: date) -> Cifras:
+    cifras = Cifras(hoy=today)
+    lunes = today - timedelta(days=today.weekday())
+    cifras.gastado_semana = gasto_entre(session, user.id, lunes, today)
+    cifras.gastado_mes = gasto_entre(session, user.id, today.replace(day=1), today)
 
     budget = get_active_budget_for_user(session, user.id, today)
-    if budget is None:
+    if budget is not None:
+        s = summary_for(session, budget, today)
+        cifras.presupuesto, cifras.resumen = budget, s
+        if s.dias_restantes >= 7:
+            cifras.por_semana = s.disponible_por_semana
+        elif s.dias_restantes > 0:
+            cifras.por_semana = s.disponible_total
+        cifras.por_categoria = [
+            (sanear_dato(nombre), Decimal(total))
+            for nombre, total in session.exec(
+                select(Category.nombre, func.sum(Expense.monto))
+                .join(Category, Category.id == Expense.category_id)
+                .where(Expense.budget_id == budget.id)
+                .group_by(Category.nombre)
+                .order_by(func.sum(Expense.monto).desc())
+                .limit(5)
+            ).all()
+        ]
+
+    for meta in session.exec(select(Goal).where(Goal.user_id == user.id).where(Goal.estado == "activa")).all():
+        ahorrado = Decimal(
+            session.exec(
+                select(func.coalesce(func.sum(GoalContribution.monto), 0)).where(GoalContribution.goal_id == meta.id)
+            ).one()
+        )
+        cifras.metas.append((sanear_dato(meta.nombre), meta.monto_objetivo, ahorrado, meta.fecha_limite))
+
+    vencidos = gastos_fijos.pendientes(session, user.id, today)
+    cifras.fijos = [(sanear_dato(r.descripcion), r.monto, f, True) for r, f in vencidos]
+    ya_listados = {r.id for r, _ in vencidos}
+    for r in session.exec(select(RecurringExpense).where(RecurringExpense.user_id == user.id)).all():
+        if r.activo and r.id not in ya_listados:
+            proximo = gastos_fijos.proximo_vencimiento(r, today)
+            if proximo <= today + timedelta(days=7):
+                cifras.fijos.append((sanear_dato(r.descripcion), r.monto, proximo, False))
+    return cifras
+
+
+def contexto_financiero(
+    session: Session,
+    user: User,
+    today: date,
+    patrones: list[Pattern] | None = None,
+    *,
+    detalle: bool = True,
+    cifras: Cifras | None = None,
+) -> str:
+    """Situación del usuario en texto compacto y agregado para la IA. Con `detalle=False` es la versión corta
+    que se le muestra a la persona en un texto de respaldo."""
+    # Fechas en palabras: el modelo las repite tal cual en lo que redacta.
+    idioma = user.idioma
+    c = cifras or cifras_de(session, user, today)
+    f = partial(fmt_fecha, idioma=idioma, con_anio=True)
+    lineas = [f"Fecha de hoy: {f(today)}"]
+
+    budget, s = c.presupuesto, c.resumen
+    if budget is None or s is None:
         lineas.append("No tiene un presupuesto activo.")
     else:
-        s = summary_for(session, budget, today)
         lineas += [
-            f"Presupuesto del periodo ({fmt_fecha(budget.fecha_inicio, idioma, con_anio=True)} a "
-            f"{fmt_fecha(budget.fecha_fin, idioma, con_anio=True)}): "
-            f"{fmt(budget.monto_total)}",
+            f"Presupuesto del periodo ({f(budget.fecha_inicio)} a {f(budget.fecha_fin)}): {fmt(budget.monto_total)}",
             f"Gastado: {fmt(s.gastado_total)}. Ingresos extra: {fmt(s.ingresos_total)}. "
             f"Apartado para metas: {fmt(s.apartado_total)}.",
             f"Disponible: {fmt(s.disponible_total)} ({fmt(s.disponible_por_dia)} por día, "
             f"{s.dias_restantes} días restantes).",
         ]
+    if not detalle:
+        return "\n".join(lineas)
 
-    metas = session.exec(select(Goal).where(Goal.user_id == user.id).where(Goal.estado == "activa")).all()
-    for meta in metas:
-        lineas.append(f"Meta de ahorro activa: {sanear_dato(meta.nombre)} (objetivo {fmt(meta.monto_objetivo)}).")
+    lineas.append("Cifras ya calculadas (úsalas tal cual cuando te pregunten por ellas):")
+    if s is not None:
+        if c.por_semana is not None and s.dias_restantes >= 7:
+            lineas.append(f"  - Disponible para gastar por semana: {fmt(c.por_semana)}.")
+        elif c.por_semana is not None:
+            lineas.append(
+                f"  - Disponible para gastar esta semana: {fmt(c.por_semana)} (es todo lo que queda hasta el "
+                f"cierre del presupuesto, en {s.dias_restantes} días)."
+            )
+        lineas.append(f"  - Disponible para gastar por día: {fmt(s.disponible_por_dia)}.")
+        lineas.append(f"  - Disponible en total hasta el {f(budget.fecha_fin)}: {fmt(s.disponible_total)}.")
+        if s.en_riesgo and s.fecha_proyectada_agotamiento:
+            lineas.append(
+                f"  - Al ritmo de gasto actual el dinero alcanza hasta el {f(s.fecha_proyectada_agotamiento)}, "
+                f"antes del cierre del presupuesto."
+            )
+        elif s.gastado_total > 0:
+            lineas.append("  - Al ritmo de gasto actual el dinero alcanza hasta el cierre del presupuesto.")
+    lineas.append(f"  - Gastado esta semana (desde el lunes): {fmt(c.gastado_semana)}.")
+    lineas.append(f"  - Gastado este mes: {fmt(c.gastado_mes)}.")
+    if c.por_categoria:
+        lineas.append(
+            "  - Gasto del periodo por categoría: "
+            + ", ".join(f"{nombre} {fmt(total)}" for nombre, total in c.por_categoria)
+            + "."
+        )
+    for nombre, objetivo, ahorrado, limite in c.metas:
+        falta = max(objetivo - ahorrado, Decimal("0"))
+        hasta = f", fecha límite {f(limite)}" if limite else ""
+        lineas.append(
+            f"  - Meta de ahorro activa: {nombre}: objetivo {fmt(objetivo)}, ahorrado {fmt(ahorrado)}, "
+            f"falta {fmt(falta)}{hasta}."
+        )
+    for descripcion, monto, fecha, vencido in c.fijos:
+        estado = "vencido y por pagar desde" if vencido else "vence el"
+        lineas.append(f"  - Gasto fijo {descripcion}: {fmt(monto)}, {estado} {f(fecha)}.")
 
     patrones = detect_patterns(session, user, today) if patrones is None else patrones
     if patrones:
         lineas.append("Patrones detectados:")
         lineas += [f"  - {p.descripcion}" for p in patrones]
     return "\n".join(lineas)
+
+
+_PREGUNTA_DISPONIBLE = re.compile(
+    r"(cuanto|cuanta plata|cuanto dinero|how much).{0,40}"
+    r"(tengo|me queda|quedan|puedo gastar|disponible|gastar|left|can i spend|available|budget)"
+)
+_PERIODO = (
+    ("semana", re.compile(r"seman|week")),
+    ("dia", re.compile(r"\bdia|diari|\bday|daily|hoy\b|today")),
+)
+
+
+def respuesta_de_disponible(user: User, mensaje: str, cifras: Cifras) -> str | None:
+    """Respuesta determinista a "¿cuánto puedo gastar (por día | por semana | en total)?", o None si el mensaje
+    no pregunta eso. Sirve de respaldo cuando la IA no responde o no da la cifra: esa pregunta siempre tiene
+    una respuesta concreta."""
+    plano = sin_tildes(mensaje.lower())
+    if not _PREGUNTA_DISPONIBLE.search(plano):
+        return None
+    periodo = next((nombre for nombre, patron in _PERIODO if patron.search(plano)), "total")
+    en = user.idioma == "en"
+    budget, s = cifras.presupuesto, cifras.resumen
+    if budget is None or s is None:
+        return (
+            "You don't have an active budget yet, so there's no available amount to work out. Create one in "
+            "the Budget tab and I'll tell you how much you can spend per day and per week."
+            if en
+            else "Aún no tienes un presupuesto activo, así que no hay un disponible que calcular. Crea uno en la "
+            "pestaña Presupuesto y te digo cuánto puedes gastar por día y por semana."
+        )
+    fin = fmt_fecha(budget.fecha_fin, user.idioma)
+    total, por_dia, dias = fmt(s.disponible_total), fmt(s.disponible_por_dia), s.dias_restantes
+    if dias == 0:
+        return (
+            f"Your budget closed on {fin} with {total} left. Create a new one and I'll tell you how much you can spend."
+            if en
+            else f"Tu presupuesto cerró el {fin} y te quedaron {total}. Crea uno nuevo y te digo cuánto puedes gastar."
+        )
+    if periodo == "semana" and dias >= 7:
+        return (
+            f"You can spend {fmt(cifras.por_semana)} per week until {fin} ({dias} days left). That's {por_dia} "
+            f"per day, and {total} in total."
+            if en
+            else f"Puedes gastar {fmt(cifras.por_semana)} por semana hasta el {fin} (quedan {dias} días). Eso es "
+            f"{por_dia} por día y {total} en total."
+        )
+    if periodo == "semana":
+        return (
+            f"Your budget closes on {fin}, in {dias} days, so this week you can spend everything left: {total} "
+            f"({por_dia} per day)."
+            if en
+            else f"Tu presupuesto cierra el {fin}, en {dias} días, así que esta semana puedes gastar todo lo que "
+            f"queda: {total} ({por_dia} por día)."
+        )
+    if periodo == "dia":
+        return (
+            f"You can spend {por_dia} per day for the {dias} days left (until {fin})."
+            if en
+            else f"Puedes gastar {por_dia} por día durante los {dias} días que quedan (hasta el {fin})."
+        )
+    return (
+        f"You have {total} available until {fin} ({por_dia} per day for {dias} days)."
+        if en
+        else f"Tienes {total} disponibles hasta el {fin} ({por_dia} por día durante {dias} días)."
+    )
 
 
 def reaccion_a_gasto(session: Session, user: User, expense: Expense, today: date) -> str:
@@ -274,28 +464,78 @@ def _leer_turno(raw: str) -> tuple[bool, str] | None:
     return data["en_alcance"], respuesta.strip() if isinstance(respuesta, str) else ""
 
 
+# Frases con las que el modelo le devuelve la cuenta a la persona en vez de darle la cifra.
+_PIDE_LA_CUENTA = re.compile(
+    r"haz la cuenta|haces la cuenta|calcula(lo)? tu|calculalo|divide (tu|el|ese|lo)|dividelo|dividir (tu|el|ese)"
+    r"|multiplica (tu|el|ese)|toma (tu|el) (disponible|valor|total)|do the math|divide (your|the|it)"
+    r"|multiply (your|the)|calculate it yourself"
+)
+
+
+def pide_la_cuenta(texto: str) -> bool:
+    return bool(_PIDE_LA_CUENTA.search(sin_tildes(texto.lower())))
+
+
+def _es_redireccion(texto: str) -> bool:
+    return texto in (r["fuera_de_alcance"] for r in _RESPALDO.values())
+
+
+def _previos(session: Session, user: User) -> list[dict]:
+    """Los últimos turnos del chat para el modelo. Los que terminaron en la frase de redirección no se
+    reenvían: un pedido ajeno (o un ataque) no debe quedar como contexto de los siguientes. Lo que escribió la
+    persona viaja siempre como dato, así una inyección guardada antes no queda "viva" como instrucción."""
+    mensajes = historial_chat(session, user.id, HISTORIAL_CHAT)
+    previos: list[dict] = []
+    for i, m in enumerate(mensajes):
+        if m.tipo == "chat_user":
+            siguiente = mensajes[i + 1] if i + 1 < len(mensajes) else None
+            if siguiente is not None and siguiente.tipo == "chat_coach" and _es_redireccion(siguiente.contenido):
+                continue
+            previos.append({"role": "user", "content": como_datos(m.contenido)})
+        elif not _es_redireccion(m.contenido):
+            previos.append({"role": "assistant", "content": m.contenido})
+    return previos
+
+
+def _guardar_turno(session: Session, user: User, mensaje: str, respuesta: str, today: date) -> CoachMessage:
+    session.add(CoachMessage(user_id=user.id, tipo="chat_user", contenido=mensaje, fecha=today))
+    del_coach = CoachMessage(user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)
+    session.add(del_coach)
+    session.commit()
+    session.refresh(del_coach)
+    return del_coach
+
+
 def responder_chat(session: Session, user: User, mensaje: str, today: date) -> CoachMessage:
     """Responde un turno del chat y guarda ambos mensajes. Nunca lanza GroqServiceError: si Groq está caído,
     limitado o no responde, o si se agotó el cupo mensual, contesta con el texto de respaldo pero NO guarda el
     turno. El historial se reenvía al modelo y no debe llevar textos de respaldo; el mensaje devuelto trae
     `id` = SIN_GUARDAR.
 
-    El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
-    muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien."""
+    Capas (planFinal §4.1):
+    1. Un pedido claramente ajeno (código, juegos, poemas, tareas…) se rechaza aquí, sin llamar a Groq.
+    2. El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
+       muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien.
+    3. La respuesta pasa por los filtros de salida; si trae código, también se redirige.
+    Las cifras las calcula el backend (`cifras_de`): a "¿cuánto puedo gastar por semana?" siempre se responde
+    con la cifra, del modelo o de `respuesta_de_disponible`."""
+    if pedido_ajeno(mensaje):
+        # Se deja la fila en el registro de uso para medir los bloqueos; no es una llamada exitosa, así que no
+        # gasta cupo.
+        with ia_uso.usar(session, user, "chat"):
+            if contexto := ia_uso.actual():
+                ia_uso.registrar(contexto, "filtro_local", exito=False, bloqueado_por="alcance")
+        return _guardar_turno(session, user, mensaje, _respaldo(user, "fuera_de_alcance"), today)
+
     inyectado = marca_inyeccion(mensaje)
     if inyectado:
         logger.warning("coach/chat: el mensaje parece un intento de inyección")
-    # Lo que escribió la persona viaja siempre como dato, también el historial: una inyección guardada
-    # antes no queda "viva" como instrucción.
-    previos = [
-        {"role": "user", "content": como_datos(m.contenido)}
-        if m.tipo == "chat_user"
-        else {"role": "assistant", "content": m.contenido}
-        for m in historial_chat(session, user.id, HISTORIAL_CHAT)
-    ]
-    contexto = contexto_financiero(session, user, today)
+    cifras = cifras_de(session, user, today)
+    directa = respuesta_de_disponible(user, mensaje, cifras)
+    contexto = contexto_financiero(session, user, today, cifras=cifras)
+    corto = partial(contexto_financiero, session, user, today, patrones=[], detalle=False, cifras=cifras)
     prompt = build_coach_chat_prompt(reglas_para(user), contexto)
-    turnos = [*previos, {"role": "user", "content": como_datos(mensaje)}]
+    turnos = [*_previos(session, user), {"role": "user", "content": como_datos(mensaje)}]
     with ia_uso.usar(session, user, "chat"):
         sin_cupo = caida = False
         try:
@@ -310,29 +550,33 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
         caida = caida or (raw is not None and not raw)  # Groq respondió, pero sin nada
 
         if caida or sin_cupo:
-            respuesta = _respaldo(
-                user, "sin_cupo" if sin_cupo else "chat",
-                contexto=contexto_financiero(session, user, today, patrones=[]),
-            )  # fmt: skip
+            if directa:
+                ia_uso.marcar_respaldo()
+                respuesta = f"{_respaldo_texto(user, 'sin_cupo_corto')} {directa}" if sin_cupo else directa
+            else:
+                respuesta = _respaldo(user, "sin_cupo" if sin_cupo else "chat", contexto=corto())
             return CoachMessage(id=SIN_GUARDAR, user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)
 
         # Una salida que no cumple el contrato queda como respuesta vacía y cae al texto de respaldo.
         en_alcance, respuesta = _leer_turno(raw or "") or (True, "")
 
-        if not en_alcance:
+        if not en_alcance or (respuesta and parece_codigo(respuesta)):
             ia_uso.marcar_bloqueo("alcance")
             respuesta = _respaldo(user, "fuera_de_alcance")
         else:
-            # Si trae cifras que no salen ni de sus datos ni de lo conversado, se le pide una vez que responda
-            # sin ellas. No se descarta sin más: en el chat la persona puede haber pedido una cuenta.
+            # Si trae cifras que no salen ni de sus datos ni de lo conversado, o le devuelve la cuenta a la
+            # persona, se le pide una vez que responda con las cifras ya calculadas. No se descarta sin más: en
+            # el chat la persona puede haber pedido una cuenta.
             conocido = "\n".join([contexto, *(t["content"] for t in turnos)])
-            if respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje):
+            inventa = respuesta and inventa_cifras(respuesta, conocido) and not _CIFRA.search(mensaje)
+            if inventa or pide_la_cuenta(respuesta):
                 turnos += [
                     {"role": "assistant", "content": raw},
                     {
                         "role": "user",
-                        "content": "Repite tu respuesta, en el mismo formato JSON, sin proponer montos ni "
-                        "porcentajes que no estén en mi situación: describe el paso con palabras.",
+                        "content": "Repite tu respuesta, en el mismo formato JSON. Usa solo las cifras de "
+                        '"Cifras ya calculadas" de mi situación y dame la cifra directamente: no me pidas hacer '
+                        "cuentas ni propongas montos o porcentajes nuevos.",
                     },
                 ]
                 try:
@@ -341,18 +585,19 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> C
                     nuevo = None
                 if nuevo and nuevo[0] and nuevo[1]:
                     respuesta = nuevo[1]
+                if pide_la_cuenta(respuesta):
+                    respuesta = ""  # sigue sin dar la cifra: cae al respaldo de abajo
 
             regla_rota = rompe_guardrails(respuesta) if respuesta else "vacia"
             if regla_rota == "inversion":
                 respuesta = _respaldo(user, "inversion")
+            elif regla_rota and parece_codigo(respuesta):
+                ia_uso.marcar_bloqueo("alcance")
+                respuesta = _respaldo(user, "fuera_de_alcance")
+            elif regla_rota and directa:
+                ia_uso.marcar_respaldo()
+                respuesta = directa
             elif regla_rota:
-                respuesta = _respaldo(
-                    user, "chat", contexto=contexto_financiero(session, user, today, patrones=[])
-                )
+                respuesta = _respaldo(user, "chat", contexto=corto())
 
-    session.add(CoachMessage(user_id=user.id, tipo="chat_user", contenido=mensaje, fecha=today))
-    del_coach = CoachMessage(user_id=user.id, tipo="chat_coach", contenido=respuesta, fecha=today)
-    session.add(del_coach)
-    session.commit()
-    session.refresh(del_coach)
-    return del_coach
+    return _guardar_turno(session, user, mensaje, respuesta, today)
