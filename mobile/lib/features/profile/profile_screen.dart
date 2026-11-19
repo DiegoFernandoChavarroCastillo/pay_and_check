@@ -10,6 +10,7 @@ import '../../data/session.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../auth/privacy_policy.dart';
 import '../budget/budget_screen.dart';
+import 'plan_screen.dart';
 import '../reports/analytics_screen.dart';
 import '../reports/report_screens.dart';
 import '../sms/sms_inbox_screen.dart';
@@ -164,6 +165,15 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
         titulo(l.sectionMoney),
+        ListTile(
+          leading: const Icon(Icons.workspace_premium_outlined),
+          title: Text(l.myPlan),
+          subtitle: switch (ref.watch(subscriptionProvider).value) {
+            final s? => Text('${planLabel(l, s.plan)} · ${l.aiUsageCount(s.usadas, s.cupoIa)}'),
+            null => null,
+          },
+          onTap: () => _abrir(context, const PlanScreen()),
+        ),
         if (budget != null)
           ListTile(
             leading: const Icon(Icons.account_balance_wallet_outlined),

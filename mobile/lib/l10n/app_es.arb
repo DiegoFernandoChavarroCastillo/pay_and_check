@@ -556,5 +556,112 @@
     }
   },
   "deleteAccountWord": "BORRAR",
-  "deleteAccountDone": "Tu cuenta y tus datos fueron borrados."
+  "deleteAccountDone": "Tu cuenta y tus datos fueron borrados.",
+  "myPlan": "Mi plan",
+  "planFree": "Gratis",
+  "planInstitutional": "Institucional",
+  "planPremium": "Premium",
+  "planFamily": "Familiar",
+  "planCurrent": "Tu plan actual",
+  "aiUsageTitle": "Solicitudes de IA este mes",
+  "aiUsageCount": "{usadas} de {cupo} usadas",
+  "@aiUsageCount": {
+    "placeholders": {
+      "usadas": {
+        "type": "int"
+      },
+      "cupo": {
+        "type": "int"
+      }
+    }
+  },
+  "aiUsageShared": "Compartidas con tu familia",
+  "aiUsageResets": "Se reinicia el {fecha}",
+  "@aiUsageResets": {
+    "placeholders": {
+      "fecha": {
+        "type": "String"
+      }
+    }
+  },
+  "aiUsageExhausted": "Ya usaste todo tu cupo de este mes. Puedes seguir registrando con el formulario manual.",
+  "planPricePerMonth": "{precio} al mes",
+  "@planPricePerMonth": {
+    "placeholders": {
+      "precio": {
+        "type": "String"
+      }
+    }
+  },
+  "planPaidByUniversity": "Lo paga tu universidad",
+  "planAiQuota": "{cupo} solicitudes de IA al mes",
+  "@planAiQuota": {
+    "placeholders": {
+      "cupo": {
+        "type": "int"
+      }
+    }
+  },
+  "planAiQuotaShared": "{cupo} solicitudes compartidas, hasta {max} personas",
+  "@planAiQuotaShared": {
+    "placeholders": {
+      "cupo": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "planSimulated": "Simulado: en el piloto no hay cobro real.",
+  "planChoose": "Cambiar a este plan",
+  "planChooseTitle": "¿Cambiar a {plan}?",
+  "@planChooseTitle": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "planChooseBody": "Es una simulación: no se te cobrará nada. Tu cupo de IA cambia de inmediato.",
+  "planInstitutionalHow": "Se activa con el código de convenio de tu universidad.",
+  "planChanged": "Listo: ahora tienes el plan {plan}.",
+  "@planChanged": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "planOrganization": "Convenio: {org}",
+  "@planOrganization": {
+    "placeholders": {
+      "org": {
+        "type": "String"
+      }
+    }
+  },
+  "familyCode": "Código de tu familia: {codigo}",
+  "@familyCode": {
+    "placeholders": {
+      "codigo": {
+        "type": "String"
+      }
+    }
+  },
+  "familyMembers": "{n} de {max} integrantes",
+  "@familyMembers": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "redeemTitle": "¿Tienes un código?",
+  "redeemHint": "Código de convenio o familiar",
+  "redeemAction": "Canjear",
+  "planOtherPlans": "Otros planes"
 }

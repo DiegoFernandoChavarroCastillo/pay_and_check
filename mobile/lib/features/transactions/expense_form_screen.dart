@@ -97,7 +97,8 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
     unawaited(HapticFeedback.lightImpact());
     refreshData(ref);
-    Navigator.pop(context);
+    ref.invalidate(subscriptionProvider);
+    Navigator.pop(context, true);
     // El mensaje del coach llega después y sin bloquear: registrar nunca espera a la IA.
     final nuevo = creado;
     if (nuevo != null) unawaited(api.reaction(nuevo.id).then(showSnack, onError: (_) {}));

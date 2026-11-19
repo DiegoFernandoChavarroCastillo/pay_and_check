@@ -24,6 +24,8 @@ final challengesProvider = FutureProvider<List<Challenge>>((ref) => _api(ref).ch
 final suggestionsProvider = FutureProvider<List<ChallengeSuggestion>>((ref) => _api(ref).challengeSuggestions());
 final gamificationProvider = FutureProvider<GamificationProfile>((ref) => _api(ref).gamification());
 final trendsProvider = FutureProvider<Trends>((ref) => _api(ref).trends());
+final plansProvider = FutureProvider<List<Plan>>((ref) => _api(ref).plans());
+final subscriptionProvider = FutureProvider<Subscription>((ref) => _api(ref).subscription());
 final weeklyReportProvider = FutureProvider.autoDispose<WeeklyReport?>((ref) => _api(ref).weeklyReport());
 final wrappedProvider = FutureProvider.autoDispose.family<Wrapped, (int, int)>(
   (ref, mes) => _api(ref).wrapped(mes.$1, mes.$2),

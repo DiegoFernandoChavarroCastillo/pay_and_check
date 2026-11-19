@@ -38,6 +38,22 @@ DateTime today() {
 }
 
 /// Mensaje legible para un error de red o de la API.
+/// El registro con IA no está disponible: 402 si se agotó el cupo del mes y 503 si
+/// la IA está caída o limitada (docs/planes.md §4). La app lleva entonces al
+/// formulario manual, que no usa IA.
+bool esSinIA(Object error) =>
+    error is DioException && (error.response?.statusCode == 402 || error.response?.statusCode == 503);
+
+/// El primer monto de un texto ("almuerzo 12.500", "compra por $45.900"), sin IA,
+/// para adelantar el formulario manual. Punto o coma seguidos de 3 dígitos son
+/// separadores de miles, como en los SMS de los bancos colombianos.
+double? montoDelTexto(String texto) {
+  final m = RegExp(r'\d{1,3}(?:[.,]\d{3})+|\d+').firstMatch(texto);
+  if (m == null) return null;
+  final valor = double.tryParse(m.group(0)!.replaceAll(RegExp(r'[.,]'), ''));
+  return valor == null || valor <= 0 ? null : valor;
+}
+
 String errorMessage(Object error, AppLocalizations l) {
   if (error is DioException) {
     final data = error.response?.data;

@@ -226,9 +226,74 @@ class FakeApi extends Api {
   /// Lo que "responde la IA" al interpretar un texto.
   Json parseo = {'tipo': 'gasto', 'monto': '5000', 'categoria': 'entretenimiento', 'descripcion': 'helado', 'fecha': '2026-03-10'};
 
+  /// Si no es null, el parseo con IA falla con este código (402 sin cupo, 503 IA caída).
+  int? parseoFallaCon;
+
   @override
-  Future<ExpenseDraft> parseText(String texto, {required String source}) async =>
-      ExpenseDraft.fromParse(parseo, source: source, textoOriginal: texto);
+  Future<ExpenseDraft> parseText(String texto, {required String source}) async {
+    final codigo = parseoFallaCon;
+    if (codigo != null) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/expenses/parse'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/expenses/parse'),
+          statusCode: codigo,
+          data: {'detail': codigo == 402 ? 'Llegaste al límite de solicitudes de IA de este mes.' : 'IA caída.'},
+        ),
+      );
+    }
+    return ExpenseDraft.fromParse(parseo, source: source, textoOriginal: texto);
+  }
+
+  Json suscripcion = {
+    'plan': 'gratis',
+    'cupo_ia_mensual': 50,
+    'usadas': 12,
+    'restantes': 38,
+    'compartido': false,
+    'reinicia_el': '2026-12-01',
+    'organizacion': null,
+    'familia': null,
+    'aviso': null,
+  };
+  final planesElegidos = <String>[];
+  final codigosCanjeados = <String>[];
+
+  @override
+  Future<List<Plan>> plans() async => [
+        for (final (codigo, precio, cupo, compartido, estado, maximo) in [
+          ('gratis', 0, 50, false, 'real', null),
+          ('institucional', 4998, 300, false, 'real', null),
+          ('premium', 9990, 300, false, 'simulado', null),
+          ('familiar', 19990, 390, true, 'simulado', 3),
+        ])
+          Plan.fromJson({
+            'codigo': codigo,
+            'precio_cop': precio,
+            'cupo_ia_mensual': cupo,
+            'compartido': compartido,
+            'paga': '',
+            'estado_demo': estado,
+            'max_integrantes': maximo,
+          }),
+      ];
+
+  @override
+  Future<Subscription> subscription() async => Subscription.fromJson(suscripcion);
+
+  @override
+  Future<Subscription> changePlan(String plan) async {
+    planesElegidos.add(plan);
+    suscripcion = {...suscripcion, 'plan': plan, 'cupo_ia_mensual': 300, 'restantes': 288, 'aviso': 'simulado'};
+    return Subscription.fromJson(suscripcion);
+  }
+
+  @override
+  Future<Subscription> redeemCode(String codigo) async {
+    codigosCanjeados.add(codigo);
+    suscripcion = {...suscripcion, 'plan': 'institucional', 'cupo_ia_mensual': 300, 'organizacion': 'ECI'};
+    return Subscription.fromJson(suscripcion);
+  }
 
   @override
   Future<List<RecurringExpense>> recurring() async => [];

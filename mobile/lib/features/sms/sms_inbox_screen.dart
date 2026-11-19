@@ -404,7 +404,22 @@ class _SmsCardState extends ConsumerState<_SmsCard> {
   Future<void> _aprobar() async {
     setState(() => _busy = true);
     ExpenseDraft? propuesta;
-    await guarded(context, () async => propuesta = await ref.read(apiProvider).parseText(_m.cuerpo, source: 'sms'));
+    try {
+      propuesta = await ref.read(apiProvider).parseText(_m.cuerpo, source: 'sms');
+    } catch (e) {
+      if (!mounted) return;
+      showSnack(errorMessage(e, context.l));
+      if (esSinIA(e)) {
+        // Sin IA se registra con el formulario manual; si se guarda, el SMS queda revisado.
+        setState(() => _busy = false);
+        final guardado = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => ExpenseFormScreen(draft: borradorManual(_m.cuerpo, descripcion: _m.remitente))),
+        );
+        if (guardado == true) ref.read(smsInboxProvider.notifier).marcarRevisado(_m);
+        return;
+      }
+    }
     if (mounted) {
       setState(() {
         _busy = false;
