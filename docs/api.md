@@ -13,6 +13,11 @@ en `backend/app/main.py`. JSON en español (`monto`, `fecha`, `categoria`…).
   (el registro con IA lleva al formulario manual; el chat responde su texto de respaldo, sin guardar el turno);
   402 si se agotó el cupo mensual de IA; 429 con `Retry-After` si se pasan 20 solicitudes de IA por minuto o 10
   intentos de login fallidos en 5 minutos.
+- **Códigos de éxito**: los `POST` que crean un recurso responden 201 (`/auth/register`, `/budgets`,
+  `/categories`, `/expenses`, `/expenses/from-text`, `/incomes`, `/recurring-expenses`,
+  `/recurring-expenses/{id}/pay`, `/goals`, `/goals/{goal_id}/contributions`, `/challenges`); los `DELETE` y
+  `POST /recurring-expenses/{id}/skip` responden 204 sin cuerpo. El resto responde 200, incluidos
+  `POST /checkins` y `DELETE /goals/{goal_id}/contributions/{contribution_id}` (devuelve la meta actualizada).
 - **CORS**: orígenes de `CORS_ORIGINS` (coma-separados).
 - **Healthcheck**: `GET /health` ejecuta `SELECT 1` (lo usa Render).
 
@@ -90,6 +95,17 @@ límite personal, vía `CategoryLimit`).
 | GET | `/reports/weekly` | Resumen semanal + recomendaciones (respaldo determinista si Groq falla); 404 sin presupuesto activo |
 | GET | `/reports/trends?semanas=8` | Gasto por semana (2–26) para las gráficas |
 | GET | `/reports/monthly-wrapped?mes=YYYY-MM` | Resumen mensual |
+
+### Planes y suscripción — `routers/plans.py`
+
+Planes simulados, sin pasarela de pago (ver [planes.md](planes.md)).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/plans` | Catálogo de planes con su cupo mensual de IA |
+| GET | `/me/subscription` | Plan actual, cupo usado y restante, fecha de reinicio y datos de la familia si aplica |
+| PUT | `/me/subscription` | Cambia de plan (`plan`); 422 si el cambio no es válido |
+| POST | `/me/subscription/redeem` | Canjea un código de convenio (activa Institucional) o familiar (une a una familia); 404 si el código no existe, 422 si no se puede usar |
 
 ## Consumidores de eventos / CLI
 

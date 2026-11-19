@@ -385,7 +385,7 @@ El documento además debe responder, con las respuestas ya ciertas hoy:
 | **PS-14** Google Sign-In (Julian) | Client ID web + Android con SHA-1 de release y debug; `GOOGLE_CLIENT_ID` en Render y `GOOGLE_SERVER_CLIENT_ID` en el workflow. Probar en teléfono real con el APK de PS-32: primera vez crea cuenta, segunda entra a la misma. | `services/google_auth.py`, consola de Google *(verificar)* |
 | **PS-21** Registro de uso de Groq (Sebastián) | Tabla `ai_usage` (usuario, tarea, modelo, tokens in/out de `completion.usage`, latencia, `uso_respaldo`, `bloqueado_por`, mes). Registrar dentro de `_chat()`, **no** el texto de la persona. Script/endpoint de promedio por tarea y rango. Pruebas con cliente falso. | `groq_client.py`, `models/` (nuevo), migración, `tests/` |
 | **PS-22** Tope mensual (Sebastián) | Contador por usuario y mes en su zona, sobre `ai_usage`. Con N-04 el tope sale del plan. Sobre el cupo: textos de respaldo + registro por texto pasa a manual, con aviso. | `groq_client.py`/`services/ia_cupo.py` (nuevo), `routers/expenses.py` |
-| **PS-50** Diagramas (David) | C4 L1 y L2 a mano + ER desde `SQLModel.metadata` (todas las tablas, incluidas las nuevas). Fuente editable y PNG. | `docs/diagramas/` (hoy los PNG están en `docs/Diagrams/`: unificar nombre) |
+| **PS-50** Diagramas (David) | C4 L1 y L2 a mano + ER desde `SQLModel.metadata` (todas las tablas, incluidas las nuevas). Fuente editable y PNG. | `docs/diagramas/` (ya unificado: los PNG que estaban en `docs/Diagrams/` viven en `docs/diagramas/` desde PS-45) |
 
 ### Sprint 3
 

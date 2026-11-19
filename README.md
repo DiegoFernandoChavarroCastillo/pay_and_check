@@ -1,170 +1,145 @@
-# pay_and_check
+# Pay&Check
 
-App de finanzas personales con coach: registra gastos e ingresos con muy poca fricción (texto, voz, foto de
-un recibo o SMS del banco), dice cuánto se puede gastar hoy, y acompaña con un coach que no regaña y con
-retos e insignias verificados con datos reales.
+App de finanzas personales para Android con un coach financiero. Registra gastos e ingresos con muy poca
+fricción (texto, voz, foto de un recibo o SMS del banco), dice **cuánto se puede gastar hoy** y acompaña con un
+coach que no regaña y con retos e insignias verificados con datos reales.
 
-El repo contiene el **backend** (`backend/`) y la **app móvil** en Flutter (`mobile/`, ver `mobile/README.md`).
+El repo es un monorepo con dos piezas:
 
-## Documentos
-
-| Documento | Qué contiene |
-|---|---|
-| `mobile/README.md` | Cómo correr, probar y compilar la app; sistema de diseño; cómo simular SMS del banco |
-| `docs/historico/notas-iteracion-app-movil.md` | Estado actual, pendientes, bugs encontrados y decisiones técnicas, iteración por iteración |
-| `docs/historico/plan-app-movil.md` | Plan de la app Android fase por fase, con lo ya hecho marcado |
-| `docs/historico/mejoras.md` | Visión del producto (coach, gamificación, automatización) y qué parte está implementada |
-| `docs/historico/plan-backend-gestion-gastos.md` | Plan del backend original (terminado) |
+- `backend/`: API REST en Python 3.12 + FastAPI + SQLModel/Alembic + PostgreSQL. IA con [Groq](https://console.groq.com/).
+- `mobile/`: app Flutter, solo Android (detalle en [mobile/README.md](mobile/README.md)).
 
 ## Qué hace hoy
 
 - **Presupuesto del periodo** y el número central de la app: el disponible por día.
 - **Registro de movimientos**: manual, por frase escrita o dictada, por foto de un recibo (el texto se reconoce
-  en el teléfono) y desde SMS del banco. La IA distingue gastos de ingresos ("mis papás me dieron 200.000").
-- **Gastos fijos** semanales o mensuales (arriendo, recibos): el día que vencen avisa una notificación y
-  quedan por pagar hasta que la persona confirma; ahí se descuentan.
-- **Notificaciones** dentro de la app: pagos por hacer y movimientos detectados en SMS, para aprobar u omitir.
+  en el teléfono) y desde SMS del banco. La IA solo propone un borrador; la persona lo confirma.
+- **Gastos fijos** semanales o mensuales: el día que vencen llega un aviso y quedan por pagar hasta que la
+  persona confirma; ahí se descuentan.
 - **Coach**: check-in emocional diario, consejos con una acción de un toque, chat, reacción al registrar y
   reporte semanal. Nunca regaña, no recomienda inversiones y no puede inventar cifras.
-- **Progreso**: metas de ahorro con dinero realmente apartado, 6 tipos de reto, 23 insignias, puntos y niveles.
-- **Reportes**: análisis por semana con gráficas, reporte semanal y resumen mensual.
+- **Progreso**: metas de ahorro con dinero realmente apartado, retos, insignias, puntos y niveles.
+- **Reportes**: gasto por semana con gráficas, reporte semanal y resumen mensual.
+- **Planes** Gratis, Premium, Familiar e Institucional (simulados, sin pasarela de pago) con cupo mensual de IA.
 
-## Backend
+Dos reglas atraviesan el backend: **la IA redacta, no calcula** (toda cifra sale de código determinista y la
+app funciona igual sin Groq) y **nada se auto-reporta ni se programa en el servidor** (retos, puntos y
+vencimientos se recalculan al consultar). Ver [docs/ia.md](docs/ia.md) y [docs/decisiones/](docs/decisiones/).
 
-- Python 3.12 + FastAPI + SQLModel/Alembic + PostgreSQL.
-- Gestor de dependencias: [`uv`](https://docs.astral.sh/uv/).
-- IA: [Groq](https://console.groq.com/) para parsear gastos en lenguaje natural y generar recomendaciones.
+## Correr el backend
 
-### Correr en local
-
-```bash
-cd backend
-cp .env.example .env   # completar con tus propios valores
-docker compose up --build
-```
-
-La primera vez (y tras traer migraciones nuevas) hay que aplicar las migraciones y sembrar las categorías:
-
-```bash
-docker compose exec api sh -c "alembic upgrade head && python -m app.db.seed"
-```
-
-La API queda en `http://localhost:8000` (docs interactivas en `/docs`). También se puede correr sin Docker
-con `uv sync && uv run uvicorn app.main:app --reload`, apuntando `DATABASE_URL` a cualquier Postgres accesible
-(local, Docker, o uno gestionado como [Neon](https://neon.tech/)).
-
-### Qué expone la API
-
-La documentación interactiva completa está en `/docs`. Resumen por módulo:
-
-| Módulo | Endpoints | Para qué |
-|---|---|---|
-| Sesión | `/auth/register`, `/auth/login`, `/auth/google`, `/auth/refresh`, `/auth/me` (GET/PATCH/DELETE) | Cuenta, perfil (tono del coach, idioma, zona horaria) y borrado total de datos. El correo no distingue mayúsculas y la cuenta nace en el idioma que envía la app |
-| Presupuesto | `/budgets`, `/budgets/active`, `/budgets/active/summary` | Presupuesto del periodo y el disponible por día |
-| Movimientos | `/expenses` (+ `/parse`, `/parse-receipt`, `/from-text`), `/incomes` | Gastos e ingresos manuales o propuestos por IA desde texto, voz, recibo o SMS. `/parse` devuelve `tipo` (`gasto` o `ingreso`) |
-| Categorías | `/categories` | Por defecto (compartidas) y propias. A una por defecto cada persona solo le puede fijar su propio límite |
-| Gastos fijos | `/recurring-expenses` (+ `/pending`, `/{id}/pay`, `/{id}/skip`) | Pagos semanales o mensuales. No se registran solos: `/pending` lista los vencidos y `/pay` crea el gasto |
-| Coach | `/checkins`, `/coach/reaction`, `/coach/insights`, `/coach/chat` | Check-in emocional, consejos accionables y chat |
-| Gamificación | `/goals` (+ `/contributions`), `/challenges` (+ `/suggestions`), `/gamification/profile` | Metas con dinero realmente apartado, retos verificados, puntos, niveles e insignias |
-| Reportes | `/reports/weekly`, `/reports/trends`, `/reports/monthly-wrapped` | Resumen semanal, gasto por semana para las gráficas y resumen mensual |
-
-Dos reglas atraviesan todo el backend:
-
-- **La IA redacta, no calcula.** Toda cifra sale de código determinista (`services/patterns.py`,
-  `budget_totals.py`, `gamification.py`). Cada salida del modelo pasa por un filtro de guardrails y tiene un
-  texto de respaldo, así que la app funciona igual aunque Groq no responda o falte `GROQ_API_KEY`. Los
-  guardrails descartan el texto si trae lenguaje culposo, asesoría de inversión o **cifras que no estaban en
-  el dato de origen** (`inventa_cifras` en `services/coach.py`). En el chat el filtro de cifras es más suave:
-  pide una vez que la respuesta se rehaga, porque ahí la persona puede pedir una cuenta de verdad.
-- **Nada se auto-reporta.** Metas, retos, puntos e insignias se recalculan "al vuelo" a partir de los gastos y
-  check-ins reales; el libro de puntos es idempotente. No hay tareas programadas en el servidor: un reto
-  vencido o un pago fijo pendiente se resuelve la próxima vez que la app consulta.
-
-### La IA (Groq)
-
-Todo pasa por `services/groq_client.py` y los prompts viven solo en `services/prompts.py`.
-
-- Modelo: `openai/gpt-oss-20b` para extraer movimientos y para el coach (`MODEL` y `COACH_MODEL`).
-- **Sin el modo JSON de Groq.** Con este modelo devolvía respuestas vacías de forma intermitente (error 400
-  `json_validate_failed`). El JSON se pide en el prompt y lo extrae el backend, tolerando texto alrededor.
-- **Razonamiento distinto según la tarea.** Mínimo (`low`) para extraer un movimiento, que es mecánico;
-  `medium` para redactar (`COACH_REASONING`), porque con el mínimo el modelo copiaba el dato en vez de
-  escribir el consejo.
-- El plan gratuito de Groq limita a 8.000 tokens por minuto: alcanza para desarrollo, no para usuarios reales.
-
-### Retos, insignias y puntos
-
-Catálogo y reglas en `services/gamification.py`.
-
-| Reto (7 días) | Se cumple cuando | Puntos |
-|---|---|---|
-| Reducir una categoría | Termina la semana gastando un porcentaje menos que la semana anterior | 50 |
-| Una semana a tu ritmo | Termina la semana sin pasar del ritmo semanal del presupuesto | 50 |
-| Días sin gasto opcional | Se acumulan 3 días sin gasto en categorías opcionales | 40 |
-| Días registrando | Hay gasto registrado en 5 días distintos | 35 |
-| Check-ins | Se hacen 5 check-ins | 30 |
-| Aporte a una meta | Se aparta dinero para una meta | 30 |
-
-Las categorías por defecto `transporte`, `salud` y `servicios` son de tipo fijo y no cuentan como gasto
-opcional. Las 23 insignias premian constancia y uso real (rachas, check-ins, metas, retos, semanas en ritmo,
-terminar un presupuesto sin pasarse, registrar por voz, recibo o SMS), nunca montos absolutos.
-
-Para añadir una insignia: su texto en `INSIGNIAS` y su condición en `_desbloquear_insignias`; la app la
-muestra sola. Un tipo de reto nuevo necesita además su medición en `_valor_reto`, sus textos y una migración
-que amplíe la restricción `ck_challenges_tipo_valido`.
-
-### Tests
+Requisitos: Python 3.12, [`uv`](https://docs.astral.sh/uv/) y un PostgreSQL accesible (local, Docker o uno
+gestionado como [Neon](https://neon.tech/)).
 
 ```bash
 cd backend
-uv run pytest
+uv sync                        # instala dependencias en .venv
+cp .env.example .env           # y completar DATABASE_URL, JWT_SECRET y, si hay, GROQ_API_KEY
+uv run alembic upgrade head    # crea o actualiza las tablas
+uv run python -m app.db.seed_demo
+uv run uvicorn app.main:app --reload
 ```
 
-La suite es hermética: no necesita `GROQ_API_KEY` real, `DATABASE_URL` real, ni conexión a internet
-(`tests/conftest.py` usa SQLite en memoria y mockea las llamadas a Groq).
+La API queda en `http://localhost:8000`, con documentación interactiva en `/docs`. `.env.example` explica cada
+variable; las imprescindibles son `DATABASE_URL` y `JWT_SECRET`. Sin `GROQ_API_KEY` la app arranca igual: el
+registro con IA responde 503 (la app lleva al formulario manual) y el coach usa sus textos de respaldo.
 
-Son 108 tests. Como corren sobre SQLite, las migraciones de Alembic no se ejercitan ahí: se comprueban
-aplicándolas en el Postgres de Docker (`docker compose exec api alembic upgrade head`).
+¿Sin Postgres instalado? `docker compose up --build` dentro de `backend/` levanta la API y una base de datos;
+luego `docker compose exec api sh -c "alembic upgrade head && python -m app.db.seed_demo"`.
 
-### Variables de entorno
+### Semilla de la demo y cuentas de prueba
 
-Ver `backend/.env.example` para la lista completa con comentarios. Resumen para desplegar en un servicio
-gestionado (Railway, Render, Fly.io, etc.):
+`app.db.seed_demo` siembra las categorías por defecto, la organización **ECI** con el código de convenio
+**`ECI-2026`** y un usuario por plan. Se puede correr las veces que haga falta: al usuario demo le reconstruye
+los datos para que quede siempre a mitad de periodo. Al terminar imprime las cuentas:
 
-| Variable | Descripción |
+| Correo | Contraseña | Plan |
+|---|---|---|
+| `demo@demo.payandcheck.com` | `Demo2026!` | Premium, con presupuesto a mitad de periodo, gastos fijos, movimientos, una meta y una alerta de riesgo |
+| `gratis@demo.payandcheck.com` | `Demo2026!` | Gratis |
+| `institucional@demo.payandcheck.com` | `Demo2026!` | Institucional (canjeó `ECI-2026`) |
+| `familiar.titular@demo.payandcheck.com` | `Demo2026!` | Familiar, titular (el código familiar lo imprime la semilla) |
+| `familiar.integrante@demo.payandcheck.com` | `Demo2026!` | Familiar, integrante |
+
+Son cuentas de demostración: no usar esta semilla con datos reales de personas.
+
+### Tests y lint
+
+```bash
+cd backend
+uv run ruff check .
+uv run pytest -q
+```
+
+La suite es hermética: usa SQLite en memoria y simula Groq, así que no necesita `.env`, Postgres ni internet.
+Las migraciones de Alembic no se ejercitan ahí; se comprueban con `alembic upgrade head` contra un Postgres.
+
+## Correr la app
+
+Requisitos: Flutter (canal stable), JDK 17 y el Android SDK; versiones exactas en
+[mobile/README.md](mobile/README.md). Con el backend corriendo:
+
+```bash
+cd mobile
+flutter pub get
+
+# Emulador de Android (10.0.2.2 es el localhost del PC visto desde el emulador; es el valor por defecto)
+flutter run
+
+# Teléfono físico por USB, con depuración USB activada
+adb reverse tcp:8000 tcp:8000
+flutter run --dart-define=API_BASE_URL=http://localhost:8000
+
+# Contra el backend desplegado
+flutter run --dart-define=API_BASE_URL=https://<tu-backend>
+```
+
+Para el login con Google se agrega `--dart-define=GOOGLE_SERVER_CLIENT_ID=<client id web>`; sin él, el botón
+"Continuar con Google" no aparece. Pruebas: `flutter analyze` y `flutter test`.
+
+## Instalar el APK
+
+La app se distribuye como un APK firmado adjunto a un GitHub Release (ver
+[ADR-007](docs/decisiones/007-distribucion-apk.md)). No está en Google Play, así que Android pide permitir la
+instalación desde "orígenes desconocidos".
+
+1. En el teléfono, abrir la página del último release
+   (<https://github.com/DiegoFernandoChavarroCastillo/pay_and_check/releases/latest>, o escanear el QR de la
+   presentación) y descargar `pay-and-check-<versión>.apk`.
+2. Abrir el archivo descargado desde la notificación o desde la app *Archivos*.
+3. Android avisa que esa app no tiene permiso para instalar apps desconocidas. Tocar **Configuración**,
+   activar **Permitir de esta fuente** y volver.
+   - En Android 7 o anterior el permiso es general: *Ajustes → Seguridad → Orígenes desconocidos*.
+   - La ruta exacta cambia según la marca; también se encuentra en *Ajustes → Apps → Acceso especial →
+     Instalar apps desconocidas*.
+4. Tocar **Instalar**. Si Google Play Protect muestra una advertencia, elegir **Más detalles → Instalar de
+   todas formas**.
+5. Abrir Pay&Check y entrar con una de las [cuentas de prueba](#semilla-de-la-demo-y-cuentas-de-prueba) o
+   crear una cuenta.
+
+Una vez instalada se puede volver a desactivar el permiso del paso 3. Las versiones nuevas se instalan
+encima de la anterior (los datos viven en el servidor); si Android dice que el paquete está en conflicto, hay
+que desinstalar la versión vieja primero. Para compilar el APK uno mismo, ver
+[mobile/README.md](mobile/README.md#generar-un-apk).
+
+## Desplegar
+
+`render.yaml` es un blueprint de Render; la base de datos vive en Neon. El contenedor aplica las migraciones y
+siembra las categorías en cada arranque (`backend/start.sh`). Pasos, variables y CI en
+[docs/setup.md](docs/setup.md).
+
+## Documentación
+
+| Documento | Qué contiene |
 |---|---|
-| `DATABASE_URL` | Cadena de conexión a Postgres, formato `postgresql://usuario:password@host:puerto/db`. Un Postgres gestionado (el propio del servicio, o Neon/Supabase) funciona igual que uno local. |
-| `JWT_SECRET` | Secreto para firmar los JWT propios de la app. Generar uno largo y aleatorio en producción (nunca reusar `change-me`). |
-| `JWT_ALGORITHM` | Algoritmo de firma del JWT. `HS256` por defecto. |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Minutos de expiración del JWT. `60` por defecto. |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | Días de vida del refresh token con el que la app móvil renueva el JWT (`POST /auth/refresh`). `30` por defecto. |
-| `GROQ_API_KEY` | API key de [Groq](https://console.groq.com/keys) para el parseo de lenguaje natural, los recibos y el coach. Opcional para arrancar: sin ella el parseo responde 502 y el coach usa sus textos de respaldo. |
-| `GOOGLE_CLIENT_ID` | Opcional: sin ella el login con Google queda deshabilitado. Client ID de "Google Identity Services" (ver [Google Cloud Console](https://console.cloud.google.com/), pantalla de consentimiento OAuth + credencial "ID de cliente OAuth" de tipo aplicación web). El mismo Client ID lo usa el frontend. |
-| `CORS_ORIGINS` | Orígenes permitidos por CORS, separados por coma. Solo importa para clientes web: la app móvil no usa CORS. |
-
-### Desplegar
-
-**Render + Neon (camino previsto).** `render.yaml` en la raíz es un blueprint: en Render, *New → Blueprint*,
-elegir este repo y completar `DATABASE_URL` (la cadena de conexión de Neon), `GROQ_API_KEY` y, si aplica,
-`GOOGLE_CLIENT_ID`. Al crearlo, elegir la rama que tenga el código. El servicio aplica las migraciones y siembra
-las categorías en cada arranque (`backend/start.sh`). La URL que
-entrega Render es el `API_BASE_URL` de la app móvil. En el plan gratuito el servicio se duerme tras un rato
-sin uso y la primera petición tarda cerca de un minuto en responder.
-
-**Cualquier otra plataforma con Docker.**
-
-El `Dockerfile` es multi-stage y produce una imagen liviana lista para producción (corre como usuario no-root,
-sin herramientas de build). Cualquier plataforma que despliegue desde un `Dockerfile` (Railway, Render, Fly.io,
-Google Cloud Run, etc.) puede usarlo directamente:
-
-```bash
-docker build -t pay-and-check-backend ./backend
-docker run -p 8000:8000 --env-file backend/.env pay-and-check-backend
-```
-
-La imagen aplica las migraciones y siembra las categorías al arrancar (`backend/start.sh`), así que no hay
-que hacerlo a mano. Lee el puerto de la variable `PORT` y usa el 8000 si no está.
-
-### CI
-
-`.github/workflows/backend-ci.yml` corre `ruff check` y `pytest` en cada push/PR que toque `backend/`.
+| [docs/README.md](docs/README.md) | Índice de toda la documentación técnica |
+| [docs/api.md](docs/api.md) | Endpoints HTTP, autenticación y errores |
+| [docs/ia.md](docs/ia.md) | Cómo se usa la IA: modelo, prompts, guardrails, textos de respaldo y lo que sale a Groq |
+| [docs/decisiones/](docs/decisiones/) | Registro de decisiones de arquitectura (ADR) |
+| [docs/seguridad.md](docs/seguridad.md) | Modelo de amenazas y controles |
+| [docs/reglas-calculo.md](docs/reglas-calculo.md) | Fórmulas del presupuesto, casos especiales y ejemplos a mano |
+| [docs/informe-adversarial.md](docs/informe-adversarial.md) | Resultados de la suite adversarial de *prompt injection* |
+| [docs/planes.md](docs/planes.md) | Planes y cupo de IA |
+| [docs/negocio/](docs/negocio/) | Modelo financiero y plantilla de finanzas a 36 meses |
+| [docs/setup.md](docs/setup.md) | Puesta en marcha, variables de entorno, CI y despliegue |
+| [mobile/README.md](mobile/README.md) | App móvil: pantallas, diseño, SMS simulados, APK |

@@ -9,6 +9,11 @@ App de finanzas personales para Android con un coach financiero. Un monorepo con
 
 - [planFinal.md](planFinal.md) — Plan final: estado real frente a Jira, tickets nuevos, diseño técnico y cronograma de la entrega.
 - [planes.md](planes.md) — Planes y cupo de IA: qué incluye cada plan y qué cuenta como solicitud.
+- [ia.md](ia.md) — IA en la app: casos de uso, qué datos salen a Groq, guardrails y métricas.
+- [seguridad.md](seguridad.md) — Modelo de amenazas del backend con los controles que existen en el código.
+- [decisiones/](decisiones/) — Registro de decisiones de arquitectura (ADR-001 a ADR-009).
+- [reglas-calculo.md](reglas-calculo.md) — Fórmulas del resumen de presupuesto, casos especiales y casos calculados a mano.
+- [informe-adversarial.md](informe-adversarial.md) — Resultados de la suite adversarial de *prompt injection* y huecos encontrados.
 - [architecture.md](architecture.md) — Visión general, tech stack, capas, **Diagrama 1** (componentes) y **Diagrama 2** (flujo end-to-end).
 - [architecture.pdf](architecture.pdf) — Versión en PDF de la arquitectura.
 - [use-cases.md](use-cases.md) — **Diagrama de contexto** y **diagrama de casos de uso**, con trazabilidad a endpoints.
