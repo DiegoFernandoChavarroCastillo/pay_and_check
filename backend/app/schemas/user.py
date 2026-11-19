@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
+
+from app.core.config import POLITICA_VERSION
 
 CoachTone = Literal["motivador", "directo", "humoristico", "minimalista"]
 Idioma = Literal["es", "en"]
@@ -18,6 +20,15 @@ class UserResponse(BaseModel):
     idioma: str
     zona_horaria: str
     created_at: datetime
+    politica_version: str | None
+    politica_aceptada_at: datetime | None
+    sms_consent_at: datetime | None
+
+    @computed_field
+    @property
+    def politica_vigente(self) -> bool:
+        """True si aceptó la versión vigente; si es False la app muestra la política antes de dejarla entrar."""
+        return self.politica_version == POLITICA_VERSION
 
 
 class UserUpdate(BaseModel):

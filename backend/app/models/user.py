@@ -28,3 +28,9 @@ class User(SQLModel, table=True):
     # Preparado para el modo familiar/grupal — no se usa en el MVP.
     group_id: int | None = Field(default=None, foreign_key="groups.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Consentimiento (Ley 1581 de 2012): qué versión de la política aceptó y cuándo. None = aún no la acepta
+    # (cuentas creadas con Google o antes de existir la política); la app le pide aceptarla al entrar.
+    politica_version: str | None = Field(default=None)
+    politica_aceptada_at: datetime | None = Field(default=None)
+    # Permiso aparte para leer los SMS bancarios en el teléfono. None = no lo ha dado o lo revocó.
+    sms_consent_at: datetime | None = Field(default=None)

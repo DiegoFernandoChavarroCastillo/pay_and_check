@@ -92,8 +92,11 @@ class SmsInbox extends Notifier<SmsInboxState> {
   Future<void> cargar({bool pedirPermiso = false}) async {
     final fuente = ref.read(smsSourceProvider);
     try {
-      var permiso = await fuente.hasPermission();
-      if (!permiso && pedirPermiso) permiso = await fuente.requestPermission();
+      // Sin el consentimiento de la app (PS-48) no se leen SMS, aunque Android ya tenga el permiso: la bandeja
+      // se muestra como "sin permiso" y el botón pasa primero por la hoja de consentimiento.
+      final consentido = ref.read(sessionProvider).value?.smsConsentido ?? false;
+      var permiso = consentido && await fuente.hasPermission();
+      if (consentido && !permiso && pedirPermiso) permiso = await fuente.requestPermission();
 
       var mensajes = const <SmsMessage>[];
       if (permiso) {
@@ -120,6 +123,76 @@ class SmsInbox extends Notifier<SmsInboxState> {
 }
 
 final smsInboxProvider = NotifierProvider<SmsInbox, SmsInboxState>(SmsInbox.new);
+
+/// Pide el permiso de SMS, siempre después del consentimiento de la app: qué se
+/// lee, dónde queda y cómo revocarlo. Si la persona no acepta, no se pide el
+/// permiso de Android y la app sigue funcionando sin SMS.
+Future<void> permitirSms(BuildContext context, WidgetRef ref) async {
+  final session = ref.read(sessionProvider);
+  if (!(session.value?.smsConsentido ?? false)) {
+    final acepta = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _ConsentimientoSms(),
+    );
+    if (acepta != true || !context.mounted) return;
+    final ok = await guarded(context, () => ref.read(sessionProvider.notifier).setSmsConsent(true));
+    if (!ok) return;
+  }
+  await ref.read(smsInboxProvider.notifier).cargar(pedirPermiso: true);
+}
+
+class _ConsentimientoSms extends StatelessWidget {
+  const _ConsentimientoSms();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    final theme = Theme.of(context);
+    final puntos = [
+      (Icons.phone_android_outlined, l.smsConsentPoint1),
+      (Icons.auto_awesome_outlined, l.smsConsentPoint2),
+      (Icons.settings_outlined, l.smsConsentPoint3),
+    ];
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.smsConsentTitle, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(l.smsConsentBody, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 12),
+            for (final (icono, texto) in puntos)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(icono, size: 20, color: theme.colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(texto, style: theme.textTheme.bodyMedium)),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const ValueKey('sms-consent-accept'),
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+              child: Text(l.smsConsentAccept),
+            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.smsConsentDecline)),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Campana del inicio: cuántos movimientos detectados esperan revisión.
 class NotificationsBell extends ConsumerWidget {
@@ -170,7 +243,7 @@ class NotificationsScreen extends ConsumerWidget {
           child: EmptyView(
             icon: Icons.sms_outlined,
             text: l.smsExplain,
-            action: FilledButton(onPressed: () => control.cargar(pedirPermiso: true), child: Text(l.smsAllow)),
+            action: FilledButton(onPressed: () => permitirSms(context, ref), child: Text(l.smsAllow)),
           ),
         );
       } else if (bandeja.permiso == null && bandeja.error == null) {

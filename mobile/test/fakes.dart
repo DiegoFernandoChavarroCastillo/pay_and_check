@@ -34,6 +34,9 @@ const userJson = {
   'coach_tone': 'motivador',
   'idioma': 'es',
   'zona_horaria': 'America/Bogota',
+  'politica_version': '2026-11',
+  'politica_vigente': true,
+  'sms_consent_at': '2026-11-01T00:00:00Z',
 };
 
 const summaryJson = {
@@ -167,8 +170,32 @@ class FakeApi extends Api {
     return {'access_token': 'a', 'refresh_token': 'r'};
   }
 
+  /// La cuenta con sesión; las pruebas de consentimiento le cambian los campos.
+  Json usuario = Map.of(userJson);
+  final registros = <Json>[];
+  bool borrada = false;
+
   @override
-  Future<User> me() async => User.fromJson(userJson);
+  Future<User> me() async => User.fromJson(usuario);
+
+  @override
+  Future<void> register(String nombre, String email, String password, {String? idioma}) async =>
+      registros.add({'nombre': nombre, 'email': email});
+
+  @override
+  Future<User> acceptPolicy() async {
+    usuario = {...usuario, 'politica_version': '2026-11', 'politica_vigente': true};
+    return User.fromJson(usuario);
+  }
+
+  @override
+  Future<User> setSmsConsent(bool acepta) async {
+    usuario = {...usuario, 'sms_consent_at': acepta ? '2026-11-18T00:00:00Z' : null};
+    return User.fromJson(usuario);
+  }
+
+  @override
+  Future<void> deleteMe() async => borrada = true;
 
   @override
   Future<BudgetSummary?> activeSummary() async => conPresupuesto ? BudgetSummary.fromJson(summaryJson) : null;

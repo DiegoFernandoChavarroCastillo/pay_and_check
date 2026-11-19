@@ -1,8 +1,11 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlmodel import Session, delete, select
 
 from app.core import rate_limit
+from app.core.config import POLITICA_VERSION
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -23,6 +26,8 @@ from app.models.income import Income
 from app.models.recurring_expense import RecurringExpense
 from app.models.user import User
 from app.schemas.auth import (
+    ConsentimientoRequest,
+    ConsentimientoSmsRequest,
     GoogleAuthRequest,
     LoginRequest,
     RefreshRequest,
@@ -44,8 +49,26 @@ def _tokens_for(user: User) -> TokenResponse:
     )
 
 
+def _validar_politica(version: str) -> None:
+    if version != POLITICA_VERSION:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "La política de privacidad cambió: vuelve a leerla y aceptarla."
+        )
+
+
+def _aceptar_politica(user: User) -> None:
+    user.politica_version = POLITICA_VERSION
+    user.politica_aceptada_at = datetime.now(UTC)
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, session: Session = Depends(get_session)) -> User:
+    if not payload.acepta_politica:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Para crear la cuenta debes aceptar la política de privacidad y el tratamiento de tus datos.",
+        )
+    _validar_politica(payload.politica_version)
     existing = session.exec(select(User).where(User.email == payload.email)).first()
 
     if existing is not None:
@@ -53,6 +76,7 @@ def register(payload: RegisterRequest, session: Session = Depends(get_session)) 
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ese email ya está registrado.")
         # Tenía cuenta solo por Google (sin password) — le agregamos una en vez de fallar.
         existing.hashed_password = hash_password(payload.password)
+        _aceptar_politica(existing)
         session.add(existing)
         session.commit()
         session.refresh(existing)
@@ -65,6 +89,7 @@ def register(payload: RegisterRequest, session: Session = Depends(get_session)) 
         # La app manda el idioma del teléfono: la cuenta nace hablando como el dispositivo.
         idioma=payload.idioma or "es",
     )
+    _aceptar_politica(user)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -146,6 +171,37 @@ def update_me(
     for field, value in payload.model_dump(exclude_unset=True, exclude_none=True).items():
         setattr(current_user, field, value)
 
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return current_user
+
+
+@router.put("/me/consent", response_model=UserResponse)
+def aceptar_politica(
+    payload: ConsentimientoRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Acepta la política vigente. Lo usan las cuentas creadas con Google (que no pasan por el registro) y
+    quien aceptó una versión anterior."""
+    _validar_politica(payload.politica_version)
+    _aceptar_politica(current_user)
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return current_user
+
+
+@router.put("/me/consent/sms", response_model=UserResponse)
+def consentimiento_sms(
+    payload: ConsentimientoSmsRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Registra (o revoca) el permiso para leer los SMS bancarios. Los SMS se leen en el teléfono; aquí solo
+    queda la fecha en que la persona aceptó."""
+    current_user.sms_consent_at = datetime.now(UTC) if payload.acepta else None
     session.add(current_user)
     session.commit()
     session.refresh(current_user)

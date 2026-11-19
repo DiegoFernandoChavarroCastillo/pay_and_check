@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
 from app.db.seed import seed_default_categories
+from tests.conftest import ACEPTA_POLITICA
 
 DEFAULT_NAMES = {"comida", "transporte", "entretenimiento", "salud", "servicios", "otros"}
 
@@ -78,7 +79,9 @@ def test_cada_persona_pone_su_propio_limite_a_una_categoria_por_defecto(client, 
     assert mias["comida"] == "200000.00"
 
     # Otra persona no ve ese límite: es de quien lo puso.
-    client.post("/auth/register", json={"email": "otra@test.com", "password": "secret123", "nombre": "Otra"})
+    client.post(
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "otra@test.com", "password": "secret123", "nombre": "Otra"}
+    )
     token = client.post("/auth/login", json={"email": "otra@test.com", "password": "secret123"}).json()["access_token"]
     suyas = client.get("/categories", headers={"Authorization": f"Bearer {token}"}).json()
     assert next(c for c in suyas if c["nombre"] == "comida")["limite"] is None

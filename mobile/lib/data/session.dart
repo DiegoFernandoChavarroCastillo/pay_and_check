@@ -93,6 +93,15 @@ class SessionController extends AsyncNotifier<User?> {
     return true;
   }
 
+  /// Acepta la política vigente (cuentas de Google o que aceptaron una versión anterior).
+  Future<void> acceptPolicy() async {
+    state = AsyncData(await _api.acceptPolicy());
+  }
+
+  Future<void> setSmsConsent(bool acepta) async {
+    state = AsyncData(await _api.setSmsConsent(acepta));
+  }
+
   Future<void> updateProfile(Map<String, dynamic> cambios) async {
     state = AsyncData(await _api.updateMe(cambios));
   }
