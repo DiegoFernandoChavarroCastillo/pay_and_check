@@ -5,7 +5,11 @@ name: Mobile release
 #
 # Requiere en el repositorio (Settings > Secrets and variables > Actions):
 #   Secrets:   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
-#   Variables: API_BASE_URL (obligatoria), GOOGLE_SERVER_CLIENT_ID (opcional)
+#   Variables: API_BASE_URL (obligatoria), GOOGLE_SERVER_CLIENT_ID y PRIVACY_CONTACT (opcionales)
+#
+# Además del APK con la versión en el nombre, publica una copia como
+# pay-and-check.apk: así .../releases/latest/download/pay-and-check.apk es una URL
+# estable para el QR (PS-53) que siempre baja la última versión.
 on:
   push:
     tags:
@@ -61,6 +65,14 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
 
+      # Un APK apuntando a un backend caído o mal escrito no sirve: se comprueba antes de compilar. Render en
+      # plan gratis tarda hasta ~1 min en despertar, por eso los reintentos.
+      - name: Check backend health
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          curl -fsS --retry 6 --retry-delay 10 --retry-all-errors --max-time 30 "$API_BASE_URL/health"
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -75,16 +87,21 @@ jobs:
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
           GOOGLE_SERVER_CLIENT_ID: ${{ vars.GOOGLE_SERVER_CLIENT_ID }}
+          PRIVACY_CONTACT: ${{ vars.PRIVACY_CONTACT }}
           TAG: ${{ github.ref_name }}
         run: |
           flutter build apk --release \
             --build-name="${TAG#v}" --build-number="${{ github.run_number }}" \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
-            --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID"
+            --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID" \
+            --dart-define=PRIVACY_CONTACT="$PRIVACY_CONTACT"
           mv build/app/outputs/flutter-apk/app-release.apk "build/pay-and-check-$TAG.apk"
+          cp "build/pay-and-check-$TAG.apk" build/pay-and-check.apk
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: mobile/build/pay-and-check-${{ github.ref_name }}.apk
+          files: |
+            mobile/build/pay-and-check-${{ github.ref_name }}.apk
+            mobile/build/pay-and-check.apk
           generate_release_notes: true
