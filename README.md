@@ -11,10 +11,10 @@ El repo contiene el **backend** (`backend/`) y la **app móvil** en Flutter (`mo
 | Documento | Qué contiene |
 |---|---|
 | `mobile/README.md` | Cómo correr, probar y compilar la app; sistema de diseño; cómo simular SMS del banco |
-| `notas-iteracion-app-movil.md` | Estado actual, pendientes, bugs encontrados y decisiones técnicas, iteración por iteración |
-| `plan-app-movil.md` | Plan de la app Android fase por fase, con lo ya hecho marcado |
-| `mejoras.md` | Visión del producto (coach, gamificación, automatización) y qué parte está implementada |
-| `plan-backend-gestion-gastos.md` | Plan del backend original (terminado) |
+| `docs/historico/notas-iteracion-app-movil.md` | Estado actual, pendientes, bugs encontrados y decisiones técnicas, iteración por iteración |
+| `docs/historico/plan-app-movil.md` | Plan de la app Android fase por fase, con lo ya hecho marcado |
+| `docs/historico/mejoras.md` | Visión del producto (coach, gamificación, automatización) y qué parte está implementada |
+| `docs/historico/plan-backend-gestion-gastos.md` | Plan del backend original (terminado) |
 
 ## Qué hace hoy
 
