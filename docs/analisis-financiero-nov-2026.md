@@ -3,7 +3,7 @@
 > Cierra las decisiones que quedaron abiertas en `docs/iteracion-jurado-nov-2026.md` §9. Fuentes: el consumo real
 > de IA medido en la tabla `ai_usage`, precios públicos de proveedores (noviembre de 2026) y una réplica en Python
 > del plan a 36 meses del Excel. El libro actualizado es
-> `docs/negocio/Plantilla_Finanzas_SWNT_PayCheck_36M_v2.xlsx` (el original queda intacto).
+> `docs/negocio/Plantilla_Finanzas_SWNT_PayCheck_36M.xlsx` (reemplaza la versión anterior; el documento `Modelo_Financiero_PayCheck_SWNT(1).docx` usa estas cifras).
 
 ## 1. Resumen ejecutivo
 
@@ -14,7 +14,7 @@
 | Infraestructura | USD 90/mes | **USD 30/mes** (Render Starter + Neon Launch) |
 | Mes de equilibrio | 16 | **14** sin cambiar precios · **12** con la licencia de plataforma |
 | Utilidad a 36 meses | $82,8 M | **$128,2 M** · **$254,2 M** con la licencia |
-| Ronda que se pide | $163 M | **$115 M** (cubre incluso el escenario pesimista) |
+| Ronda que se pide | $163 M | **$150 M** (cubre el crecimiento pesimista sin contar con la licencia) |
 | Filas en "Revisar" del Excel | 3 | **0** |
 
 **Conclusión:** la IA no es el riesgo del negocio (cuesta 2 % del precio). Lo que mueve el equilibrio son los
@@ -136,10 +136,22 @@ Lectura:
 
 ## 6. La ronda
 
-**Decisión: pedir $115 M (antes $163 M).** Cubre la pérdida acumulada máxima del escenario pesimista (D, $83,7 M)
-más dos meses de costos fijos ($27,2 M), redondeado. En el escenario recomendado (C) sobran unos $27 M como colchón.
-En el Excel: `Supuestos_PayCheck!B75` toma el mayor entre el mínimo del plan base y esta ronda, y `Inputs!B15`
-coincide.
+**Decisión: pedir $150 M (antes $163 M).** El mínimo del plan base es $105 M (pérdida acumulada máxima de $77,6 M
+más dos meses de costos fijos, $27,2 M). La primera propuesta era $115 M, pero suponía la licencia de plataforma,
+que todavía no está firmada: sin ella y con crecimiento de 8 %, 5 % y 3 % (escenario G), la caja con $115 M bajaría
+a −$6,6 M. Con $150 M ese escenario llega al equilibrio en el mes 23 y la caja no baja de $28,4 M (unos dos meses de
+costos fijos); sin el canal B2C del mes 1 (escenario H), equilibrio en el mes 20 y caja mínima de $39,5 M. La licencia
+queda como *upside*: con ella el equilibrio llega en el mes 12.
+
+| Escenario sin licencia | Equilibrio | Pérdida máxima | Ronda necesaria | Utilidad 36 meses |
+|---|---|---|---|---|
+| G. B con crecimiento de 8 %, 5 % y 3 % | mes 23 | $121,6 M | $149 M | −$65,0 M |
+| H. B sin el canal B2C del mes 1 | mes 20 | $110,5 M | $138 M | −$14,2 M |
+
+En el Excel: `Ajuste_Nov2026` tiene los escenarios G y H y la ronda recomendada (`C25`); `Supuestos_PayCheck!B75`
+toma el mayor entre el mínimo del plan base y esa ronda, y `Inputs!B15` coincide. Con $150 M la caja del plan base
+nunca baja de $72,4 M y termina el mes 36 en $278,2 M. Esta decisión salió al fusionar con la rama de Sebastián
+(PS-52), que pedía $165 M con el mismo criterio de colchón.
 
 ---
 
@@ -149,7 +161,7 @@ coincide.
 |---|---|---|
 | Nómina | $13,58 M calculado (contrato laboral) contra $10,5 M escrito | **$10,5 M por prestación de servicios** ($2,1 M por integrante), como dice el documento del modelo. El cálculo laboral queda como referencia |
 | Marketing | $1,5 M calculado contra $2 M escrito | **$2 M**: eventos en campus $1 M y pauta y programa de referidos $1 M (las vacas y las tarjetas compartibles hacen que los referidos valgan más) |
-| Caja inicial | $120 M calculado contra $163 M escrito | **$115 M** (§6) |
+| Caja inicial | $120 M calculado contra $163 M escrito | **$150 M** (§6) |
 
 ---
 

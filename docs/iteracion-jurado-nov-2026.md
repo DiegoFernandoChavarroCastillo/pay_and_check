@@ -142,7 +142,7 @@ Decisiones de diseño que vale la pena defender:
 ## 6. Análisis financiero y decisiones
 
 Detalle completo, fuentes y escenarios en `docs/analisis-financiero-nov-2026.md`; el modelo actualizado está en
-`docs/negocio/Plantilla_Finanzas_SWNT_PayCheck_36M_v2.xlsx` (hoja nueva `Ajuste_Nov2026`; el original no se tocó).
+`docs/negocio/Plantilla_Finanzas_SWNT_PayCheck_36M.xlsx` (hoja nueva `Ajuste_Nov2026`). Es el único modelo vigente: al fusionar con la rama de Sebastián (PS-52) se adoptó este y se le pasaron sus notas (§7.1).
 
 | Variable | Antes | Ahora |
 |---|---|---|
@@ -151,7 +151,7 @@ Detalle completo, fuentes y escenarios en `docs/analisis-financiero-nov-2026.md`
 | Infraestructura | USD 90/mes | **USD 30/mes** (Render Starter + Neon Launch) |
 | Mes de equilibrio | 16 | **14**, o **12** con licencia de plataforma |
 | Utilidad a 36 meses | $82,8 M | **$128,2 M**, o **$254,2 M** con licencia |
-| Ronda | $163 M | **$115 M** (cubre el escenario pesimista) |
+| Ronda | $163 M | **$150 M** (mínimo $105 M + colchón para crecer al 8 % sin la licencia; ver §7.1) |
 
 Decisiones tomadas:
 
@@ -171,7 +171,7 @@ Decisiones tomadas:
    comercial: solo está como escenario en el Excel, no en el código.
 5. **Google Play.** Comisión del 15 %. La versión de Play no pedirá `READ_SMS` (Play Protect marca la combinación
    SMS + notificaciones); la captura irá por notificaciones. Los SMS quedan solo en el APK del piloto.
-6. **Filas en «Revisar» del Excel:** nómina $10,5 M por prestación de servicios, marketing $2 M y caja $115 M.
+6. **Filas en «Revisar» del Excel:** nómina $10,5 M por prestación de servicios, marketing $2 M y caja $150 M (era $115 M; se subió al fusionar, §7.1).
 
 ---
 
@@ -204,6 +204,21 @@ Lecciones para la demo en vivo:
 - Volver a correr `seed_demo` recrea las cuentas demo: el teléfono debe iniciar sesión otra vez y la URL del
   panel cambia.
 - Silenciar las notificaciones del teléfono antes de presentar (durante la prueba entraron mensajes personales).
+
+### 7.1 Fusión con el trabajo de Sebastián (`feature/sebastian-cierre`)
+
+La rama de Sebastián reúne PS-35, PS-45, PS-47/33, PS-52, PS-99, PS-102, PS-105, PS-106, PS-108 y el README final.
+Casi no se pisaban (él trabajó en documentación, pruebas y seguridad); los choques y cómo se resolvieron:
+
+| Choque | Resolución |
+|---|---|
+| Los dos crearon `backend/app/db/seed_demo.py` | **Una sola semilla.** De la suya: una cuenta por plan, la cuenta Premium a mitad de periodo y en riesgo (Laura), el convenio `ECI-2026` con vencimiento y tope, el uso de IA sembrado para que se vea el cupo y la función `sembrar_demo`, que se puede probar. De la nuestra: la historia de Valentina, los 30 estudiantes del panel, la familia y los apoyos. Todo con el dominio `@demo.payandcheck.app`; la universidad y el token del panel se conservan entre corridas. `tests/test_seed_demo.py` se reescribió para la semilla unida (5 pruebas) |
+| Modelo financiero: él concilió el Excel y el `.docx` originales (PS-52, costo estimado $3,72, cupo gratis 50, sin respaldo, ronda $165 M); nosotros hicimos un v2 con tokens medidos | **Queda el nuestro**, porque usa datos medidos y coincide con el código (cupo 150, respaldo en DeepInfra). Va en el nombre original (se borró el `_v2`) y se le pasaron sus notas (piloto por APK con cobro simulado, honorarios, Bolsio). Coincidíamos en nómina ($2,1 M por integrante) y marketing ($2 M). El `.docx` se actualizó con todas las cifras nuevas |
+| La ronda | De su criterio (mínimo + colchón) salió un ajuste: los $115 M que proponíamos suponían la licencia de plataforma, que no está firmada. Sin ella, creciendo al 8 %, la caja quedaba en −$6,6 M. **Se piden $150 M**: el mínimo de $105 M más un colchón; la caja no baja de $28,4 M ni en ese escenario (`Ajuste_Nov2026`, escenarios G y H) |
+| `test_budget_calculator.py` y `test_planes_cupo.py` | Se quedan las pruebas de los dos. Sus casos con cifras exactas pasan con nuestra regla de ventana mínima; la prueba del reinicio del cupo se ajustó a 150 |
+| 6 pruebas adversariales (PS-102) | La suite se escribió sin el filtro local `pedido_ajeno` de PS-100. Ahora, si ese filtro para un mensaje que además parece inyección, `bloqueado_por` registra `inyeccion` (`coach.py`). Las pruebas aceptan que el filtro local contenga el ataque sin llamar al modelo, la línea de la meta sigue el formato nuevo del contexto, y dos huecos conocidos (`chat-disregard-en`, `chat-mixto-es`) ya están cerrados: se quitó su `xfail` y se actualizó `docs/informe-adversarial.md` (contención 38 de 50) |
+| Documentos suyos que contradecían el código | `planFinal.md` (D2, D4), ADR 002 y 008, `docs/ia.md` (proveedor de respaldo), `docs/reglas-calculo.md` (ventana mínima y gastos fijos), `docs/api.md` (todos los endpoints nuevos) y `docs/planes.md` |
+| `README.md` | Su estructura (el detalle de endpoints vive en `docs/api.md`) con nuestras funciones, las cuentas de la semilla unida y los documentos nuevos en la tabla |
 
 ---
 
@@ -255,12 +270,16 @@ de la semana (ronda 3).
 | Cuenta | Clave | Qué tiene |
 |---|---|---|
 | `valentina@demo.payandcheck.app` | `Demo2026!` | Institucional (ECI). 8 semanas de historia, arriendo y celular como gastos fijos, meta «Viaje a Santa Marta», 2 gastos que vienen, una vaca de pizza con 3 cobros, Spotify, Netflix y tinto diario. Este mes va justa: aparecen la alerta, el consejo y los apoyos |
+| `laura@demo.payandcheck.app` | `Demo2026!` | Premium, a mitad de periodo, con dos gastos fijos, una docena de movimientos y la alerta de riesgo (viene de la semilla de Sebastián, PS-35) |
+| `andres@demo.payandcheck.app` | `Demo2026!` | Gratis, sin datos: muestra el bloqueo de la captura automática |
 | `papa@demo.payandcheck.app` | `Demo2026!` | Titular del plan Familiar; ve el progreso de Camilo |
 | `camilo@demo.payandcheck.app` | `Demo2026!` | Integrante que comparte su progreso |
 | `estudiante01…30@demo.payandcheck.app` | `Demo2026!` | Estudiantes sintéticos del convenio para el panel |
 
-Convenio: `ECI-DEMO-2026`. Código familiar: `FAM-DEMO-2026`. El script imprime la URL del panel; cambia en cada
-ejecución. Desde la ronda 3, la semilla deja ya otorgadas las insignias de la historia.
+Convenio: `ECI-2026` (vence el 31 dic 2026, máximo 460 usos). Código familiar: `FAM-DEMO-2026`. La semilla borra y
+recrea las cuentas demo, pero conserva la universidad, su convenio y el token del panel: la URL del panel ya no
+cambia entre corridas (hay que volver a iniciar sesión en el teléfono). Deja otorgadas las insignias de la
+historia. Pruebas en `tests/test_seed_demo.py`.
 
 ---
 

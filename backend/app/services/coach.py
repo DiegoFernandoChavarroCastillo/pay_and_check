@@ -665,10 +665,11 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> t
     acompaña la respuesta pero no se guarda."""
     if pedido_ajeno(mensaje):
         # Se deja la fila en el registro de uso para medir los bloqueos; no es una llamada exitosa, así que no
-        # gasta cupo.
+        # gasta cupo. Si además parece un intento de inyección, se cuenta como tal (es lo más grave).
+        motivo = "inyeccion" if marca_inyeccion(mensaje) else "alcance"
         with ia_uso.usar(session, user, "chat"):
             if contexto := ia_uso.actual():
-                ia_uso.registrar(contexto, "filtro_local", exito=False, bloqueado_por="alcance")
+                ia_uso.registrar(contexto, "filtro_local", exito=False, bloqueado_por=motivo)
         return _guardar_turno(session, user, mensaje, _respaldo(user, "fuera_de_alcance"), today), None
 
     inyectado = marca_inyeccion(mensaje)

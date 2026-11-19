@@ -6,7 +6,7 @@
 >
 > **Qué no pude verificar desde el repo:** Jira (solo tengo el texto pegado), la organización de GitHub y sus ramas
 > protegidas, los secretos de Actions, Render, Neon, la consola de Google, ni lo que hay dentro de las imágenes de
-> `docs/Diagrams/`. Esos puntos van marcados *(verificar)*.
+> `docs/diagramas/`. Esos puntos van marcados *(verificar)*.
 
 ---
 
@@ -32,9 +32,9 @@
 | # | Decisión | Recomendación | Por qué |
 |---|---|---|---|
 | D1 | ¿Cobro real o simulado? | **Simulado** (el plan cambia sin pasarela; se canjea un código de convenio) | La demo es por APK directo, no Google Play (PS-88 está fuera de alcance). Google Play Billing exige publicar. El modelo seguiría siendo válido porque lo que se demuestra es el *cupo y el plan*, no la pasarela. |
-| D2 | ¿Qué incluye el plan Gratis? | **Registro manual + textos de respaldo + 50 solicitudes de IA al mes** | El modelo cuenta "usuarios gratis" en el costo de IA (hoja `Costo_IA`) pero nunca define su cupo. Hay que fijarlo y reflejarlo en el Excel. |
+| D2 | ¿Qué incluye el plan Gratis? | **Registro manual + textos de respaldo + 50 solicitudes de IA al mes** (*actualizado el 18 nov: 150, ver `docs/planes.md`*) | El modelo cuenta "usuarios gratis" en el costo de IA (hoja `Costo_IA`) pero nunca define su cupo. Hay que fijarlo y reflejarlo en el Excel. |
 | D3 | Cupo Familiar | **390 solicitudes compartidas** por cuenta familiar, como dice el modelo | La tabla `groups` ya existe (`users.group_id`) pero "no se usa en el MVP". Para la demo basta con simularlo con un solo grupo. |
-| D4 | Proveedor de respaldo (Gemini 2.5 Flash, 10 % del tráfico en el modelo) | **No implementarlo ahora; corregir el modelo** para decir "respaldo = texto determinista; segundo proveedor planificado" | No existe en el código. Implementarlo cuesta ~4 h y no se ve en la demo. El 10 % se puede conservar como colchón de costo, pero hay que decir que es un supuesto. |
+| D4 | Proveedor de respaldo (Gemini 2.5 Flash, 10 % del tráfico en el modelo) | *Actualizado el 19 nov: se implementó con el mismo gpt-oss-20b en DeepInfra (`AI_FALLBACK_*`).* Recomendación original: **No implementarlo ahora; corregir el modelo** para decir "respaldo = texto determinista; segundo proveedor planificado" | No existe en el código. Implementarlo cuesta ~4 h y no se ve en la demo. El 10 % se puede conservar como colchón de costo, pero hay que decir que es un supuesto. |
 | D5 | ¿Canal de distribución en el modelo? | **APK directo/institucional para el piloto; Google Play (15 %) como supuesto de escala** | Hoy el modelo descuenta 15 % de Google Play en Premium/Familiar, pero la entrega es por APK. |
 | D6 | "Suscripciones" en tu mensaje | Entiendo **los planes de pago de Pay&Check** (ingreso). La HU-032 "detectar suscripciones y cargos recurrentes del usuario" sigue en el backlog sin tocar. | Si te referías a la HU-032, avísame y cambia la prioridad. |
 
@@ -107,7 +107,7 @@ cupo mensual por plan con degradación a texto de respaldo y una pantalla de pla
 ## 3. Épicas y tickets nuevos para el Jira
 
 > No tengo acceso a Jira: los IDs son provisionales (`N-xx`). Hay un CSV listo para importar en
-> `docs/jira-import-nuevos.csv`. Las **ampliaciones** a tickets existentes van en §3.4.
+> `docs/historico/jira-import-nuevos.csv`. Las **ampliaciones** a tickets existentes van en §3.4.
 
 ### 3.1 Épica nueva — EP-09 · Planes y suscripción
 
@@ -385,7 +385,7 @@ El documento además debe responder, con las respuestas ya ciertas hoy:
 | **PS-14** Google Sign-In (Julian) | Client ID web + Android con SHA-1 de release y debug; `GOOGLE_CLIENT_ID` en Render y `GOOGLE_SERVER_CLIENT_ID` en el workflow. Probar en teléfono real con el APK de PS-32: primera vez crea cuenta, segunda entra a la misma. | `services/google_auth.py`, consola de Google *(verificar)* |
 | **PS-21** Registro de uso de Groq (Sebastián) | Tabla `ai_usage` (usuario, tarea, modelo, tokens in/out de `completion.usage`, latencia, `uso_respaldo`, `bloqueado_por`, mes). Registrar dentro de `_chat()`, **no** el texto de la persona. Script/endpoint de promedio por tarea y rango. Pruebas con cliente falso. | `groq_client.py`, `models/` (nuevo), migración, `tests/` |
 | **PS-22** Tope mensual (Sebastián) | Contador por usuario y mes en su zona, sobre `ai_usage`. Con N-04 el tope sale del plan. Sobre el cupo: textos de respaldo + registro por texto pasa a manual, con aviso. | `groq_client.py`/`services/ia_cupo.py` (nuevo), `routers/expenses.py` |
-| **PS-50** Diagramas (David) | C4 L1 y L2 a mano + ER desde `SQLModel.metadata` (todas las tablas, incluidas las nuevas). Fuente editable y PNG. | `docs/diagramas/` (hoy los PNG están en `docs/Diagrams/`: unificar nombre) |
+| **PS-50** Diagramas (David) | C4 L1 y L2 a mano + ER desde `SQLModel.metadata` (todas las tablas, incluidas las nuevas). Fuente editable y PNG. | `docs/diagramas/` (ya unificado: los PNG que estaban en `docs/Diagrams/` viven en `docs/diagramas/` desde PS-45) |
 
 ### Sprint 3
 
@@ -478,7 +478,7 @@ negocio sin planes en la app no se puede defender).
 
 ## 9. Cómo importar los tickets nuevos al Jira
 
-1. Abrir `docs/jira-import-nuevos.csv` (Resumen, Tipo, Épica, Responsable, Prioridad, Estimación, Descripción).
+1. Abrir `docs/historico/jira-import-nuevos.csv` (Resumen, Tipo, Épica, Responsable, Prioridad, Estimación, Descripción).
 2. Jira → Configuración → Sistema → **Importación externa → CSV**; mapear columnas; crear primero las épicas
    EP-09, EP-10 y EP-11.
 3. Asignar los 16 tickets al Sprint 2 o 3 según el cronograma (§6): N-01…N-04, N-10, N-11, N-13 al Sprint 2; el

@@ -134,6 +134,7 @@ tiene tope de usos). El código se guarda en mayúsculas y al canjear no disting
 
 ## 7. Pendiente fuera del código
 
-- Reflejar el cupo gratis (50) en las hojas `Costo_IA` e `Inputs` del modelo financiero (PS-52).
-- Cuando haya datos medidos de `ai_usage` (`uv run python -m app.db.reporte_ia`), reemplazar el factor de
-  incertidumbre del costo por solicitud por el promedio real.
+- ~~Reflejar el cupo gratis en el modelo financiero~~ **Hecho** (19 nov 2026): `Costo_IA` usa el cupo de 150 con un
+  uso típico de 80 y los tokens medidos en `ai_usage` (`docs/analisis-financiero-nov-2026.md`).
+- Con los datos del piloto (`uv run python -m app.db.reporte_ia`), ajustar el margen de seguridad de 1,5 que
+  hoy se aplica sobre la muestra medida.

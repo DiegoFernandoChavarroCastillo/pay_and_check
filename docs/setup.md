@@ -85,3 +85,30 @@ Más detalle (SMS simulados, sistema de diseño, APK): `mobile/README.md`.
 | `backend/Dockerfile` | Multi-stage (`uv sync --frozen --no-dev`), usuario no root, `CMD sh /app/start.sh` |
 | `backend/start.sh` | `alembic upgrade head` → `python -m app.db.seed` → `uvicorn` en `$PORT` (def. 8000) |
 | `render.yaml` | Blueprint de Render: servicio web Docker, plan free, región `ohio`, `healthCheckPath: /health`, `JWT_SECRET` autogenerado; `DATABASE_URL`, `GROQ_API_KEY`, `GOOGLE_CLIENT_ID` se cargan a mano. La base es externa (Neon) |
+
+### Desplegar
+
+**Render + Neon (camino previsto).** `render.yaml` en la raíz es un blueprint: en Render, *New → Blueprint*,
+elegir este repo y completar `DATABASE_URL` (la cadena de conexión de Neon), `GROQ_API_KEY` y, si aplica,
+`GOOGLE_CLIENT_ID`. Al crearlo, elegir la rama que tenga el código. El servicio aplica las migraciones y siembra
+las categorías en cada arranque (`backend/start.sh`). La URL que
+entrega Render es el `API_BASE_URL` de la app móvil. En el plan gratuito el servicio se duerme tras un rato
+sin uso y la primera petición tarda cerca de un minuto en responder.
+
+**Cualquier otra plataforma con Docker.**
+
+El `Dockerfile` es multi-stage y produce una imagen liviana lista para producción (corre como usuario no-root,
+sin herramientas de build). Cualquier plataforma que despliegue desde un `Dockerfile` (Railway, Render, Fly.io,
+Google Cloud Run, etc.) puede usarlo directamente:
+
+```bash
+docker build -t pay-and-check-backend ./backend
+docker run -p 8000:8000 --env-file backend/.env pay-and-check-backend
+```
+
+La imagen aplica las migraciones y siembra las categorías al arrancar (`backend/start.sh`), así que no hay
+que hacerlo a mano. Lee el puerto de la variable `PORT` y usa el 8000 si no está.
+
+### CI
+
+`.github/workflows/backend-ci.yml` corre `ruff check` y `pytest` en cada push/PR que toque `backend/`.

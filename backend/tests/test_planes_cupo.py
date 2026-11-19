@@ -1,6 +1,7 @@
 """PS-96: el cupo mensual de IA sale del plan (Gratis 150, Premium 300, Institucional 300, Familiar 390 compartidas)."""
 
-from datetime import date
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlmodel import Session
@@ -134,3 +135,25 @@ def test_al_disolverse_la_familia_cada_uno_vuelve_al_cupo_de_gratis(client, make
 
     assert _plan(client, integrante)["plan"] == "gratis"
     assert not _chatear(client, integrante)  # 161 solicitudes y su cupo ahora es de 150
+
+
+
+
+def test_el_cupo_se_reinicia_el_dia_1_a_las_0000_de_bogota(client, make_user, db_engine, groq, monkeypatch):
+    """El servidor corre en UTC (Bogotá es UTC-5): el mes cambia a las 05:00 UTC, no a medianoche UTC."""
+    headers, user_id = _persona(client, make_user, "a@t.com")
+    _gastar(db_engine, user_id, 150)
+
+    def fijar_reloj_utc(instante):
+        monkeypatch.setattr("app.core.time._now", lambda zona: instante.astimezone(ZoneInfo(zona)))
+
+    fijar_reloj_utc(datetime(2026, 4, 1, 4, 59, 59, tzinfo=UTC))  # 31 de marzo, 23:59:59 en Bogotá
+    assert not _chatear(client, headers)
+    plan = _plan(client, headers)
+    assert (plan["usadas"], plan["restantes"], plan["reinicia_el"]) == (150, 0, "2026-04-01")
+
+    fijar_reloj_utc(datetime(2026, 4, 1, 5, 0, tzinfo=UTC))  # 1 de abril, 00:00 en Bogotá
+    plan = _plan(client, headers)
+    assert (plan["usadas"], plan["restantes"], plan["reinicia_el"]) == (0, 150, "2026-05-01")
+    assert _chatear(client, headers)
+    assert groq.llamadas == 1

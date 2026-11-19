@@ -1,30 +1,34 @@
-"""Datos de demo para presentar Pay&Check (docs/demo-guion.md). Idempotente: borra y vuelve a crear todo lo suyo.
+"""Semilla de la demo (PS-35 + iteración para el jurado, docs/demo-guion.md). Se puede correr las veces que haga
+falta: borra y vuelve a crear las cuentas @demo.payandcheck.app con fechas relativas a "hoy", y conserva la
+universidad, su código de convenio y el token de su panel (la URL del panel no cambia entre corridas).
 
     uv run python -m app.db.seed_demo            # o, en Docker: docker compose exec api python -m app.db.seed_demo
 
-Crea:
-- La universidad "Escuela Colombiana de Ingeniería" con su código de convenio y el token de su panel.
-- Valentina, estudiante con plan Institucional y ocho semanas de historia realista: gastos en todas las
-  categorías, check-ins, mesada e ingreso de monitoría, arriendo y celular como gastos fijos, la meta "Viaje a
-  Santa Marta" con aportes y un reto en curso. Su presupuesto va bien, pero esta semana pesa la comida a domicilio.
-- 30 estudiantes sintéticos del mismo convenio para que el panel de Bienestar tenga datos (k ≥ 5), con interés en
-  los apoyos de la universidad.
-- Los apoyos de la universidad, gastos previstos, una vaca, suscripciones y gastos hormiga de Valentina, y una
-  familia de ejemplo (papa@… es el titular y ve el progreso de Camilo).
+Crea una cuenta por plan, todas con la clave Demo2026!:
+- valentina@ (Institucional, canjeó ECI-2026): ocho semanas de historia realista, gastos fijos, mesada y monitoría,
+  la meta "Viaje a Santa Marta", gastos que vienen, una vaca, suscripciones y gastos hormiga. Este mes va justa:
+  aparecen la alerta, el consejo y los apoyos de la universidad. Es la cuenta del guion.
+- laura@ (Premium): presupuesto a mitad de periodo con dos gastos fijos, una docena de movimientos, la meta
+  "Portátil para la U" y una alerta de riesgo activa.
+- andres@ (Gratis): sin datos, para mostrar el plan Gratis y el bloqueo de la captura automática.
+- papa@ (Familiar, titular) y camilo@ (integrante que comparte su progreso).
+- estudiante01…30@ (Institucional): estudiantes sintéticos para que el panel de Bienestar tenga datos (k ≥ 5).
 
-Solo toca cuentas con correo @demo.payandcheck.app. Al final imprime el usuario, la clave y la URL del panel."""
+Al final imprime las cuentas, el código de convenio y la URL del panel."""
 
 import random
 import secrets
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
+from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from app.core.config import POLITICA_VERSION
 from app.core.security import hash_password
 from app.db.seed import seed_default_categories
-from app.db.session import engine
+from app.models.ai_usage import AiUsage
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.coach import EmotionalCheckin
@@ -41,44 +45,58 @@ from app.models.support import SupportInterest, SupportResource
 from app.models.user import User
 from app.routers.auth import delete_me
 from app.services.gamification import sync_gamification
+from app.services.groq_client import MODEL
 
 DOMINIO = "@demo.payandcheck.app"
-EMAIL_DEMO = f"valentina{DOMINIO}"
 CLAVE_DEMO = "Demo2026!"
+EMAIL_DEMO = f"valentina{DOMINIO}"  # la cuenta del guion
 UNIVERSIDAD = "Escuela Colombiana de Ingeniería"
-CODIGO_CONVENIO = "ECI-DEMO-2026"
+CODIGO_CONVENIO = "ECI-2026"
+VENCE_CONVENIO = date(2026, 12, 31)
+MAX_USOS_CONVENIO = 460
+CODIGO_FAMILIAR = "FAM-DEMO-2026"
 SEMANAS = 8
 MESADA = Decimal("1400000")
+ESTUDIANTES_SINTETICOS = 30
 
 
 def _hoy() -> date:
-    return datetime.now(UTC).astimezone().date()
+    return datetime.now(ZoneInfo("America/Bogota")).date()
 
 
 def _limpiar(session: Session) -> None:
+    """Borra las cuentas demo con todo lo suyo (`DELETE /auth/me`). La universidad, su convenio y sus apoyos se
+    conservan: así el token del panel no cambia y no se toca a nadie que haya canjeado el código de verdad."""
     for user in session.exec(select(User).where(User.email.like(f"%{DOMINIO}"))).all():
         delete_me(session=session, current_user=user)
-    org = session.exec(select(Organization).where(Organization.nombre == UNIVERSIDAD)).first()
-    if org is not None:
-        for codigo in session.exec(select(LicenseCode).where(LicenseCode.organization_id == org.id)).all():
-            session.delete(codigo)
-        session.flush()
-        for suscripcion in session.exec(select(Subscription).where(Subscription.organization_id == org.id)).all():
-            session.delete(suscripcion)
-        session.flush()
-        for recurso in session.exec(select(SupportResource).where(SupportResource.organization_id == org.id)).all():
-            for interes in session.exec(select(SupportInterest).where(SupportInterest.resource_id == recurso.id)).all():
-                session.delete(interes)
-            session.flush()
-            session.delete(recurso)
-        session.flush()
-        session.delete(org)
     session.commit()
 
 
+def _universidad(session: Session) -> tuple[Organization, LicenseCode]:
+    org = session.exec(select(Organization).where(Organization.nombre == UNIVERSIDAD)).first()
+    if org is None:
+        org = Organization(nombre=UNIVERSIDAD)
+    if not org.panel_token:
+        org.panel_token = secrets.token_urlsafe(18)
+    session.add(org)
+    session.flush()
+    convenio = session.exec(select(LicenseCode).where(LicenseCode.codigo == CODIGO_CONVENIO)).first()
+    if convenio is None:
+        convenio = LicenseCode(codigo=CODIGO_CONVENIO, tipo="convenio", organization_id=org.id,
+                               vence_en=VENCE_CONVENIO, max_usos=MAX_USOS_CONVENIO)
+    convenio.usos = 0  # se cuentan de nuevo con las cuentas demo que lo canjean
+    session.add(convenio)
+    if session.exec(select(SupportResource).where(SupportResource.organization_id == org.id)).first() is None:
+        _apoyos(session, org)
+    session.flush()
+    return org, convenio
+
+
 def _persona(
-    session: Session, email: str, nombre: str, org: Organization | None, tono: str = "motivador"
+    session: Session, email: str, nombre: str, convenio: LicenseCode | None = None, tono: str = "motivador",
+    semanas: int = SEMANAS,
 ) -> User:
+    """Una cuenta demo con la política aceptada. Con `convenio`, canjeado (plan Institucional)."""
     ahora = datetime.now(UTC)
     user = User(
         email=email,
@@ -89,12 +107,21 @@ def _persona(
         politica_aceptada_at=ahora,
         sms_consent_at=ahora,
     )
-    user.created_at = ahora - timedelta(weeks=SEMANAS, days=3)
+    user.created_at = ahora - timedelta(weeks=semanas, days=3)
     session.add(user)
     session.flush()
-    if org is not None:
-        session.add(Subscription(user_id=user.id, plan="institucional", organization_id=org.id))
+    if convenio is not None:
+        session.add(Subscription(user_id=user.id, plan="institucional", organization_id=convenio.organization_id))
+        convenio.usos += 1
+        session.add(convenio)
     return user
+
+
+def _uso_ia(session: Session, user: User, solicitudes: int, hoy: date) -> None:
+    """Solicitudes de IA ya hechas este mes, para que se vea el cupo consumido en «Mi plan»."""
+    tareas = ("registro", "reaccion", "consejos", "chat", "reporte")
+    for i in range(solicitudes):
+        session.add(AiUsage(user_id=user.id, tarea=tareas[i % len(tareas)], modelo=MODEL, mes=hoy.strftime("%Y-%m")))
 
 
 def _presupuestos(session: Session, user: User, hoy: date, monto: Decimal) -> list[Budget]:
@@ -227,6 +254,63 @@ def _historia_de_valentina(session: Session, user: User, cats: dict[str, Categor
                           objetivo=Decimal("5"), fecha_inicio=lunes, fecha_fin=lunes + timedelta(days=6), puntos=30))
 
 
+# (días antes de hoy, monto, categoría, descripción, comercio, source). Gastos de una universitaria en Bogotá.
+GASTOS_LAURA = (
+    (14, 18_000, "comida", "Almuerzo corrientazo cerca a la U", "Restaurante La Sazón", "manual"),
+    (13, 9_000, "comida", "Tinto y empanadas", "Cafetería de la U", "voz"),
+    (12, 32_000, "comida", "Pedido de Rappi un domingo", "Rappi", "texto"),
+    (11, 15_000, "estudio", "Fotocopias e impresiones", "Papelería El Estudiante", "manual"),
+    (10, 38_000, "entretenimiento", "Cine con amigos", "Cine Colombia Andino", "texto"),
+    (9, 22_000, "comida", "Mercado pequeño", "D1", "manual"),
+    (8, 27_000, "salud", "Droguería: acetaminofén y vitaminas", "Droguería Colsubsidio", "manual"),
+    (7, 48_000, "entretenimiento", "Cervezas el viernes", "Bar en Chapinero", "voz"),
+    (5, 16_900, "entretenimiento", "Suscripción de Spotify", "Spotify", "manual"),
+    (4, 85_000, "estudio", "Libro para Cálculo II", "Librería Lerner", "texto"),
+    (3, 24_000, "comida", "Hamburguesa después de clase", "El Corral", "texto"),
+    (1, 360_000, "vivienda", "Mi parte del arriendo compartido", None, "manual"),
+)
+
+
+def _historia_de_laura(session: Session, user: User, cats: dict[str, Category], hoy: date) -> None:
+    """Premium a mitad de periodo y en riesgo: el presupuesto no alcanzaría hasta el final al ritmo de hoy."""
+    budget = Budget(owner_id=user.id, monto_total=Decimal("1200000"), fecha_inicio=hoy - timedelta(days=14),
+                    fecha_fin=hoy + timedelta(days=15))
+    session.add(budget)
+    session.flush()
+    session.add(Income(user_id=user.id, budget_id=budget.id, monto=Decimal("150000"), descripcion="Mesada de la tía",
+                       fecha=hoy - timedelta(days=6)))
+
+    # Dos gastos fijos: el plan de datos ya se pagó este periodo; la recarga de TuLlave queda por pagar.
+    plan_datos = RecurringExpense(
+        user_id=user.id, category_id=cats["servicios"].id, monto=Decimal("45000"),
+        descripcion="Plan de datos del celular", frecuencia="mensual", dia_mes=(hoy - timedelta(days=2)).day,
+        fecha_inicio=hoy - timedelta(days=14),
+    )
+    tullave = RecurringExpense(
+        user_id=user.id, category_id=cats["transporte"].id, monto=Decimal("30000"),
+        descripcion="Recarga TuLlave", frecuencia="semanal", dia_semana=hoy.weekday(), fecha_inicio=hoy,
+    )
+    session.add_all([plan_datos, tullave])
+    session.flush()
+    session.add(Expense(user_id=user.id, budget_id=budget.id, category_id=plan_datos.category_id,
+                        monto=plan_datos.monto, descripcion=plan_datos.descripcion,
+                        recurring_expense_id=plan_datos.id, source="recurrente", comercio="Claro",
+                        fecha=hoy - timedelta(days=2)))
+
+    for dias, monto, categoria, descripcion, comercio, source in GASTOS_LAURA:
+        session.add(Expense(user_id=user.id, budget_id=budget.id, category_id=cats[categoria].id,
+                            monto=Decimal(monto), descripcion=descripcion, comercio=comercio, source=source,
+                            fecha=hoy - timedelta(days=dias),
+                            texto_original=descripcion.lower() if source in ("texto", "voz") else None))
+
+    meta = Goal(user_id=user.id, nombre="Portátil para la U", monto_objetivo=Decimal("2500000"),
+                fecha_limite=hoy + timedelta(days=180))
+    session.add(meta)
+    session.flush()
+    session.add(GoalContribution(goal_id=meta.id, user_id=user.id, budget_id=budget.id, monto=Decimal("80000"),
+                                 fecha=hoy - timedelta(days=5)))
+
+
 APOYOS = (
     ("alimentacion", "Auxilio de alimentación", "Almuerzo subsidiado en la cafetería central para estudiantes con "
      "dificultades económicas.", "Bienestar Universitario, bloque A, piso 1 · bienestar@escuelaing.edu.co"),
@@ -249,17 +333,17 @@ def _apoyos(session: Session, org: Organization) -> list[SupportResource]:
     return recursos
 
 
-def _familia(session: Session, cats: dict[str, Category], hoy: date) -> None:
+def _familia(session: Session, cats: dict[str, Category], hoy: date) -> User:
     """Una familia de ejemplo: el papá paga el plan Familiar y ve el progreso agregado de su hijo, que decidió
     compartirlo."""
-    papa = _persona(session, f"papa{DOMINIO}", "Andrés Gómez", None)
-    hijo = _persona(session, f"camilo{DOMINIO}", "Camilo Gómez", None)
+    papa = _persona(session, f"papa{DOMINIO}", "Jorge Gómez")
+    hijo = _persona(session, f"camilo{DOMINIO}", "Camilo Gómez")
     grupo = Group(nombre="Familia Gómez")
     session.add(grupo)
     session.flush()
     papa.group_id = hijo.group_id = grupo.id
     session.add_all([papa, hijo])
-    session.add(LicenseCode(codigo="FAM-DEMO-2026", tipo="familiar", group_id=grupo.id))
+    session.add(LicenseCode(codigo=CODIGO_FAMILIAR, tipo="familiar", group_id=grupo.id))
     session.add(Subscription(user_id=papa.id, plan="familiar", es_titular=True))
     session.add(Subscription(user_id=hijo.id, plan="familiar", comparte_progreso=True))
     session.flush()
@@ -276,11 +360,14 @@ def _familia(session: Session, cats: dict[str, Category], hoy: date) -> None:
     session.flush()
     session.add(GoalContribution(goal_id=meta.id, user_id=hijo.id, budget_id=budgets[-1].id,
                                  monto=Decimal("300000"), fecha=hoy))
+    return papa
 
 
-def _estudiante_sintetico(session: Session, i: int, org: Organization, cats: dict[str, Category], hoy: date) -> None:
+def _estudiante_sintetico(
+    session: Session, i: int, convenio: LicenseCode, cats: dict[str, Category], hoy: date
+) -> None:
     rnd = random.Random(i)
-    user = _persona(session, f"estudiante{i:02d}{DOMINIO}", f"Estudiante {i:02d}", org)
+    user = _persona(session, f"estudiante{i:02d}{DOMINIO}", f"Estudiante {i:02d}", convenio)
     mesada = Decimal(rnd.choice([900000, 1100000, 1300000, 1600000]))
     budgets = _presupuestos(session, user, hoy, mesada)
     estresado = rnd.random() < 0.3  # cerca de un tercio pasa una mala racha
@@ -305,42 +392,67 @@ def _estudiante_sintetico(session: Session, i: int, org: Organization, cats: dic
     if rnd.random() < 0.45:
         session.add(Goal(user_id=user.id, nombre="Meta", monto_objetivo=Decimal("800000")))
     # Quien está pasando una mala racha a veces pide apoyo; el resto, de vez en cuando, mira las monitorías.
-    recursos = session.exec(select(SupportResource).where(SupportResource.organization_id == org.id)).all()
+    recursos = session.exec(
+        select(SupportResource).where(SupportResource.organization_id == convenio.organization_id)
+    ).all()
     for recurso in recursos:
         probabilidad = 0.6 if estresado and recurso.tipo in ("alimentacion", "bienestar", "beca") else 0.15
         if rnd.random() < probabilidad:
             session.add(SupportInterest(user_id=user.id, resource_id=recurso.id))
 
 
-def main() -> None:
-    hoy = _hoy()
+def sembrar_demo(session: Session, hoy: date | None = None) -> tuple[list[tuple[str, str]], Organization]:
+    """Siembra la demo y devuelve ([(email, plan visible)], universidad)."""
+    hoy = hoy or _hoy()
+    seed_default_categories(session)
+    _limpiar(session)
+    cats = {c.nombre: c for c in session.exec(select(Category).where(Category.owner_id.is_(None))).all()}
+    org, convenio = _universidad(session)
+
+    valentina = _persona(session, EMAIL_DEMO, "Valentina Rojas", convenio)
+    _historia_de_valentina(session, valentina, cats, hoy)
+    _uso_ia(session, valentina, 40, hoy)
+
+    laura = _persona(session, f"laura{DOMINIO}", "Laura Gómez", semanas=2)
+    session.add(Subscription(user_id=laura.id, plan="premium"))
+    _historia_de_laura(session, laura, cats, hoy)
+    _uso_ia(session, laura, 25, hoy)
+
+    andres = _persona(session, f"andres{DOMINIO}", "Andrés Rojas", semanas=0)
+    _uso_ia(session, andres, 12, hoy)
+
+    for i in range(1, ESTUDIANTES_SINTETICOS + 1):
+        _estudiante_sintetico(session, i, convenio, cats, hoy)
+    _familia(session, cats, hoy)
+    session.commit()
+
+    # Las insignias de la historia ya se ganaron: así el primer inicio de sesión no las anuncia todas juntas.
+    for persona in session.exec(select(User).where(User.email.endswith(DOMINIO))).all():
+        sync_gamification(session, persona, hoy)
+    session.commit()
+
+    cuentas = [
+        (EMAIL_DEMO, f"Institucional (canjeó {CODIGO_CONVENIO}); la cuenta del guion"),
+        (laura.email, "Premium, a mitad de periodo y con alerta de riesgo"),
+        (andres.email, "Gratis"),
+        (f"papa{DOMINIO}", f"Familiar, titular (código {CODIGO_FAMILIAR}; ve el progreso de Camilo)"),
+        (f"camilo{DOMINIO}", "Familiar, integrante que comparte su progreso"),
+        (f"estudiante01..{ESTUDIANTES_SINTETICOS:02d}{DOMINIO}", "Institucional, sintéticos para el panel"),
+    ]
+    return cuentas, org
+
+
+def main(engine: Engine | None = None) -> None:
+    if engine is None:
+        from app.db.session import engine
+
     with Session(engine) as session:
-        seed_default_categories(session)
-        _limpiar(session)
-        cats = {c.nombre: c for c in session.exec(select(Category).where(Category.owner_id.is_(None))).all()}
-
-        org = Organization(nombre=UNIVERSIDAD, panel_token=secrets.token_urlsafe(18))
-        session.add(org)
-        session.flush()
-        session.add(LicenseCode(codigo=CODIGO_CONVENIO, tipo="convenio", organization_id=org.id))
-        _apoyos(session, org)
-
-        valentina = _persona(session, EMAIL_DEMO, "Valentina Rojas", org, tono="motivador")
-        _historia_de_valentina(session, valentina, cats, hoy)
-        for i in range(1, 31):
-            _estudiante_sintetico(session, i, org, cats, hoy)
-        _familia(session, cats, hoy)
-        session.commit()
-        # Las insignias de la historia ya se ganaron: así el primer inicio de sesión no las anuncia todas juntas.
-        for persona in session.exec(select(User).where(User.email.endswith(DOMINIO))).all():
-            sync_gamification(session, persona, hoy)
-        session.commit()
-
-        print("Demo lista.")
-        print(f"  Cuenta:   {EMAIL_DEMO} / {CLAVE_DEMO}")
-        print(f"  Convenio: {CODIGO_CONVENIO} (Institucional)")
-        print(f"  Familia:  papa{DOMINIO} / {CLAVE_DEMO} (titular; ve el progreso de Camilo)")
-        print(f"  Panel:    /panel/{org.id}?token={org.panel_token}")
+        cuentas, org = sembrar_demo(session)
+        panel = f"/panel/{org.id}?token={org.panel_token}"
+    print(f"Demo lista. Código de convenio: {CODIGO_CONVENIO} ({UNIVERSIDAD}). Clave de todas: {CLAVE_DEMO}")
+    for email, plan in cuentas:
+        print(f"  {email:<42} {plan}")
+    print(f"  Panel de Bienestar: {panel}")
 
 
 if __name__ == "__main__":

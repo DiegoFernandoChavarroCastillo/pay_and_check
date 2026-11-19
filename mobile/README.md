@@ -1,8 +1,8 @@
 # Pay & Check — app móvil
 
 App Flutter (solo Android por ahora) que consume el backend de `../backend`. El plan de construcción,
-fase por fase, está en `../plan-app-movil.md`; el estado actual, los problemas y las decisiones técnicas, en
-`../notas-iteracion-app-movil.md`.
+fase por fase, está en `../docs/historico/plan-app-movil.md`; el estado actual, los problemas y las decisiones técnicas, en
+`../docs/historico/notas-iteracion-app-movil.md`.
 
 ## Pantallas
 
@@ -146,7 +146,7 @@ llave de depuración, que solo sirve para probar en tu propio teléfono. El keys
 pierden, las personas que ya instalaron la app tendrán que desinstalarla para poder actualizar.
 
 > La app se ha probado en un teléfono (Moto G6, Android 9) en modo depuración con `flutter run`. El build de
-> **release** todavía no se ha completado en un PC de 12 GB de RAM; ver `../notas-iteracion-app-movil.md`.
+> **release** todavía no se ha completado en un PC de 12 GB de RAM; ver `../docs/historico/notas-iteracion-app-movil.md`.
 
 **Si el build muere por memoria** ("Out of Memory" / "Exhausted heap space"): cierra Docker Desktop y
 detén los procesos de Gradle que hayan quedado (`cd android && ./gradlew --stop`) antes de reintentar.
