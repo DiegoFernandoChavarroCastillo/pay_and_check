@@ -36,6 +36,18 @@ class Api {
 
   Future<void> deleteMe() => _dio.delete('/auth/me');
 
+  Future<List<Plan>> plans() => _lista(_dio.get('/plans'), Plan.fromJson);
+
+  Future<Subscription> subscription() async => Subscription.fromJson(await _json(_dio.get('/me/subscription')));
+
+  /// Cambio simulado: no hay pasarela de pago (docs/planes.md, D1).
+  Future<Subscription> changePlan(String plan) async =>
+      Subscription.fromJson(await _json(_dio.put('/me/subscription', data: {'plan': plan})));
+
+  /// Código de convenio (activa Institucional) o código familiar.
+  Future<Subscription> redeemCode(String codigo) async =>
+      Subscription.fromJson(await _json(_dio.post('/me/subscription/redeem', data: {'codigo': codigo})));
+
   // --- Presupuesto ---
   /// `null` si el usuario no tiene un presupuesto que cubra hoy.
   Future<BudgetSummary?> activeSummary() async {

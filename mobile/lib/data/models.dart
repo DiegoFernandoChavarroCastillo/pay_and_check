@@ -541,3 +541,62 @@ class Wrapped {
   final String? animoFrecuente;
   final String fraseCoach;
 }
+
+/// Un plan del catálogo (`GET /plans`). Precio en pesos con IVA.
+class Plan {
+  Plan.fromJson(Map<String, dynamic> j)
+      : codigo = j['codigo'] as String,
+        precio = j['precio_cop'] as int,
+        cupoIa = j['cupo_ia_mensual'] as int,
+        compartido = j['compartido'] as bool,
+        estadoDemo = j['estado_demo'] as String,
+        maxIntegrantes = j['max_integrantes'] as int?;
+
+  final String codigo;
+  final int precio;
+  final int cupoIa;
+  final bool compartido;
+
+  /// "real" o "simulado" (Premium y Familiar no cobran en el piloto).
+  final String estadoDemo;
+  final int? maxIntegrantes;
+}
+
+class Family {
+  Family.fromJson(Map<String, dynamic> j)
+      : codigo = j['codigo'] as String,
+        integrantes = j['integrantes'] as int,
+        maxIntegrantes = j['max_integrantes'] as int,
+        esTitular = j['es_titular'] as bool;
+
+  final String codigo;
+  final int integrantes;
+  final int maxIntegrantes;
+  final bool esTitular;
+}
+
+/// El plan de la persona y cuánto le queda de su cupo de IA este mes (`GET /me/subscription`).
+class Subscription {
+  Subscription.fromJson(Map<String, dynamic> j)
+      : plan = j['plan'] as String,
+        cupoIa = j['cupo_ia_mensual'] as int,
+        usadas = j['usadas'] as int,
+        restantes = j['restantes'] as int,
+        compartido = j['compartido'] as bool,
+        reiniciaEl = _date(j['reinicia_el']),
+        organizacion = j['organizacion'] as String?,
+        familia = j['familia'] == null ? null : Family.fromJson(j['familia'] as Map<String, dynamic>),
+        aviso = j['aviso'] as String?;
+
+  final String plan;
+  final int cupoIa;
+  final int usadas;
+  final int restantes;
+  final bool compartido;
+  final DateTime reiniciaEl;
+  final String? organizacion;
+  final Family? familia;
+
+  /// Aviso del backend para los planes simulados ("no hay cobro real").
+  final String? aviso;
+}

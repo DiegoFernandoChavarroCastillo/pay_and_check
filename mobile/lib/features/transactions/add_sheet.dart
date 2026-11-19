@@ -215,7 +215,14 @@ class _QuickAddScreenState extends ConsumerState<QuickAddScreen> {
 
     ExpenseDraft? draft;
     final source = widget.source ?? (_dictado ? 'voz' : 'texto');
-    await guarded(context, () async => draft = await ref.read(apiProvider).parseText(texto, source: source));
+    try {
+      draft = await ref.read(apiProvider).parseText(texto, source: source);
+    } catch (e) {
+      if (!mounted) return;
+      showSnack(errorMessage(e, context.l));
+      // Sin cupo de IA o con la IA caída: el formulario manual, con lo que se pueda adelantar sin IA.
+      if (esSinIA(e)) draft = borradorManual(texto);
+    }
     if (!mounted) return;
     setState(() => _busy = false);
     final borrador = draft;
@@ -428,7 +435,15 @@ class _ReceiptScanScreenState extends ConsumerState<ReceiptScanScreen> {
         return;
       }
 
-      final draft = await ref.read(apiProvider).parseReceipt(texto);
+      ExpenseDraft draft;
+      try {
+        draft = await ref.read(apiProvider).parseReceipt(texto);
+      } catch (e) {
+        if (!esSinIA(e)) rethrow;
+        // Sin IA el total del recibo es ambiguo (subtotal, cambio…): el monto lo escribe la persona.
+        showSnack(errorMessage(e, l));
+        draft = ExpenseDraft(textoOriginal: texto);
+      }
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -557,4 +572,11 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
       ),
     );
   }
+}
+
+/// Borrador del formulario manual cuando el registro con IA no está disponible:
+/// el texto como descripción y el primer monto que aparezca, sin categoría.
+ExpenseDraft borradorManual(String texto, {String? descripcion}) {
+  final corta = texto.length > 80 ? '${texto.substring(0, 80)}…' : texto;
+  return ExpenseDraft(monto: montoDelTexto(texto), descripcion: descripcion ?? corta, textoOriginal: texto);
 }
