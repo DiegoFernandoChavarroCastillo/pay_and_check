@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlmodel import Session, delete, select
 
+from app.core import rate_limit
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -71,18 +72,25 @@ def register(payload: RegisterRequest, session: Session = Depends(get_session)) 
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, session: Session = Depends(get_session)) -> TokenResponse:
+def login(
+    payload: LoginRequest, request: Request, session: Session = Depends(get_session)
+) -> TokenResponse:
+    ip = rate_limit.ip_del_cliente(request)
+    rate_limit.revisar_login(ip, payload.email)  # bloqueado: ni se mira la contraseña
     user = session.exec(select(User).where(User.email == payload.email)).first()
 
+    fallo = None
     if user is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas.")
-    if user.hashed_password is None:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "Esta cuenta usa Google para iniciar sesión."
-        )
-    if not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas.")
+        fallo = HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas.")
+    elif user.hashed_password is None:
+        fallo = HTTPException(status.HTTP_400_BAD_REQUEST, "Esta cuenta usa Google para iniciar sesión.")
+    elif not verify_password(payload.password, user.hashed_password):
+        fallo = HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas.")
+    if fallo is not None:
+        rate_limit.registrar_fallo_de_login(ip, payload.email)
+        raise fallo
 
+    rate_limit.limpiar_fallos_de_login(payload.email)
     return _tokens_for(user)
 
 

@@ -4,4 +4,6 @@
 set -e
 alembic upgrade head
 python -m app.db.seed
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
+# --proxy-headers / --forwarded-allow-ips: detrás del proxy de Render, la IP del cliente viene en
+# X-Forwarded-For; sin esto el límite de intentos de login vería la IP del proxy, la misma para todos.
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --proxy-headers --forwarded-allow-ips='*'

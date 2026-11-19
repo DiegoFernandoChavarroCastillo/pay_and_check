@@ -4,6 +4,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
+from app.core.rate_limit import limite_ia
 from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
@@ -22,7 +23,7 @@ _MENCIONA_INVERSION = re.compile(r"invers|invert|invest", re.IGNORECASE)
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
-@router.get("/weekly", response_model=WeeklyReportResponse)
+@router.get("/weekly", response_model=WeeklyReportResponse, dependencies=[Depends(limite_ia)])
 def weekly_report(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -80,7 +81,7 @@ def trends(
     return TrendsResponse.model_validate(asdict(datos))
 
 
-@router.get("/monthly-wrapped", response_model=MonthlyWrappedResponse)
+@router.get("/monthly-wrapped", response_model=MonthlyWrappedResponse, dependencies=[Depends(limite_ia)])
 def monthly_wrapped(
     mes: str | None = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM"),
     session: Session = Depends(get_session),

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
+from app.core.rate_limit import limite_ia
 from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
@@ -29,7 +30,7 @@ def _a_respuesta(mensaje: CoachMessage) -> ChatMessageResponse:
     )
 
 
-@router.post("/reaction", response_model=CoachTextResponse)
+@router.post("/reaction", response_model=CoachTextResponse, dependencies=[Depends(limite_ia)])
 def reaccion(
     payload: ReactionRequest,
     session: Session = Depends(get_session),
@@ -44,7 +45,7 @@ def reaccion(
     return CoachTextResponse(mensaje=mensaje)
 
 
-@router.get("/insights", response_model=list[InsightResponse])
+@router.get("/insights", response_model=list[InsightResponse], dependencies=[Depends(limite_ia)])
 def insights(
     refresh: bool = False,
     session: Session = Depends(get_session),
@@ -63,7 +64,7 @@ def historial(
     return [_a_respuesta(m) for m in coach_service.historial_chat(session, current_user.id)]
 
 
-@router.post("/chat", response_model=ChatMessageResponse)
+@router.post("/chat", response_model=ChatMessageResponse, dependencies=[Depends(limite_ia)])
 def chat(
     payload: ChatRequest,
     session: Session = Depends(get_session),

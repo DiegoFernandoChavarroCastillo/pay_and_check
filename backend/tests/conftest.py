@@ -15,8 +15,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.core import rate_limit
 from app.db.session import get_session
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def limites_en_cero():
+    # Los contadores del rate limit viven en la memoria del proceso: sin esto, un caso hereda los del anterior
+    # (los ids de usuario se repiten entre casos).
+    rate_limit.reiniciar()
 
 
 @pytest.fixture(autouse=True)

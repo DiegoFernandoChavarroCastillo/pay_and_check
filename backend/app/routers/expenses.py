@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, or_, select
 
+from app.core.rate_limit import limite_ia
 from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
@@ -102,7 +103,7 @@ def list_expenses(
     return session.exec(query).all()
 
 
-@router.post("/parse", response_model=ExpenseParseResponse)
+@router.post("/parse", response_model=ExpenseParseResponse, dependencies=[Depends(limite_ia)])
 def parse_expense(
     payload: ExpenseParseRequest,
     session: Session = Depends(get_session),
@@ -122,7 +123,7 @@ def parse_expense(
     return ExpenseParseResponse(**data)
 
 
-@router.post("/parse-receipt", response_model=ReceiptParseResponse)
+@router.post("/parse-receipt", response_model=ReceiptParseResponse, dependencies=[Depends(limite_ia)])
 def parse_receipt(
     payload: ReceiptParseRequest,
     session: Session = Depends(get_session),
@@ -143,7 +144,12 @@ def parse_receipt(
     return ReceiptParseResponse(**data)
 
 
-@router.post("/from-text", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/from-text",
+    response_model=ExpenseResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(limite_ia)],
+)
 def create_expense_from_text(
     payload: ExpenseParseRequest,
     session: Session = Depends(get_session),
