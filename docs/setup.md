@@ -81,6 +81,7 @@ Más detalle (SMS simulados, sistema de diseño, APK): `mobile/README.md`.
 |---|---|
 | `.github/workflows/backend-ci.yml` | En cambios de `backend/**`: `uv sync --frozen`, `ruff check`, `pytest` |
 | `.github/workflows/mobile-ci.yml` | CI de la app Flutter |
+| `.github/workflows/keep-alive.yml` | Cada 10 min hace `curl` a `$API_BASE_URL/health` para que Render (plan free) no se duerma (PS-39) |
 | `.github/workflows/mobile-release.yml` | Al empujar un tag `v*` compila el APK firmado y lo adjunta a un GitHub Release. Requiere secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` y variable `API_BASE_URL` (opcional `GOOGLE_SERVER_CLIENT_ID`) |
 | `backend/Dockerfile` | Multi-stage (`uv sync --frozen --no-dev`), usuario no root, `CMD sh /app/start.sh` |
 | `backend/start.sh` | `alembic upgrade head` → `python -m app.db.seed` → `uvicorn` en `$PORT` (def. 8000) |
@@ -92,8 +93,15 @@ Más detalle (SMS simulados, sistema de diseño, APK): `mobile/README.md`.
 elegir este repo y completar `DATABASE_URL` (la cadena de conexión de Neon), `GROQ_API_KEY` y, si aplica,
 `GOOGLE_CLIENT_ID`. Al crearlo, elegir la rama que tenga el código. El servicio aplica las migraciones y siembra
 las categorías en cada arranque (`backend/start.sh`). La URL que
-entrega Render es el `API_BASE_URL` de la app móvil. En el plan gratuito el servicio se duerme tras un rato
-sin uso y la primera petición tarda cerca de un minuto en responder.
+entrega Render es el `API_BASE_URL` de la app móvil.
+
+**Sin suspensión (PS-39).** En el plan gratuito Render duerme el servicio tras ~15 min sin tráfico; medido el
+20 nov 2026, la primera petición tardó 52,5 s. El `healthCheckPath` **no** lo evita. Lo evita
+`.github/workflows/keep-alive.yml`, que llama a `$API_BASE_URL/health` cada 10 minutos. `/health` hace
+`SELECT 1`, así que también despierta Neon. Un servicio encendido todo el mes usa ~720 de las 750 horas
+gratis, así que el costo es $0. GitHub puede atrasar el cron unos minutos, así que antes de una demo hay que
+correr el workflow a mano (*Actions → Keep alive → Run workflow*) unos 10 minutos antes. Si el cron no
+alcanzara, la alternativa es `plan: starter` en `render.yaml` (US$7 al mes, ~$28.000 COP), que nunca duerme.
 
 **Cualquier otra plataforma con Docker.**
 

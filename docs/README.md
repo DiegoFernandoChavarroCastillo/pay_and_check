@@ -25,6 +25,7 @@ App de finanzas personales para Android con un coach financiero. Un monorepo con
 - [api.md](api.md) — Endpoints HTTP por router, autenticación y errores.
 - [requirements.md](requirements.md) — Requisitos del producto.
 - [setup.md](setup.md) — Puesta en marcha local, variables de entorno, tests, CI y despliegue.
+- [sesion-codigo.md](sesion-codigo.md) — Guía de la sesión de código (PS-44): estructura, flujo de una petición y reglas de la IA.
 - [diagramas/](diagramas/) — PNG de los diagramas (componentes, contexto, casos de uso, datos, secuencia).
 - [negocio/](negocio/) — Modelo financiero (`.docx`) y plantilla de finanzas a 36 meses (`.xlsx`), con el costo de IA medido y la ronda de $150 M.
 - [../README.md](../README.md) — README del repo: qué hace la app hoy.

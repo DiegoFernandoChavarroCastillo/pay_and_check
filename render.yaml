@@ -5,6 +5,7 @@ services:
   - type: web
     name: pay-and-check-api
     runtime: docker
+    # Free duerme el servicio tras ~15 min sin tráfico; .github/workflows/keep-alive.yml lo mantiene despierto (PS-39).
     plan: free
     # Misma zona que la base de Neon (AWS us-east-2, Ohio): cada petición hace varias consultas.
     region: ohio

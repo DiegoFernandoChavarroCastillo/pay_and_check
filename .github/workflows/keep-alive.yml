@@ -1,0 +1,26 @@
+name: Keep alive
+
+# PS-39: el plan free de Render duerme el servicio tras ~15 min sin tráfico y la primera petición tarda ~50 s
+# (medido el 20 nov 2026: 52,5 s). Este cron llama a /health cada 10 minutos para que no se duerma; /health hace
+# SELECT 1, así que también despierta la base de Neon. Con un solo servicio encendido todo el mes se usan ~720 de
+# las 750 horas gratis de Render, así que no tiene costo.
+#
+# GitHub puede atrasar los cron unos minutos en horas de mucha carga, y desactiva los programados tras 60 días
+# sin actividad en el repo. Antes de una demo, correr igual "Run workflow" a mano 10 minutos antes.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /health
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          test -n "$API_BASE_URL" || { echo "Falta la variable API_BASE_URL"; exit 1; }
+          curl -fsS --retry 3 --retry-delay 10 --retry-all-errors --max-time 90 \
+            -o /dev/null -w "HTTP %{http_code} en %{time_total}s\n" "$API_BASE_URL/health"
