@@ -197,3 +197,41 @@ pruebas fijan el comportamiento actual.
   calcula ningún riesgo. Es un caso raro, pero hay que confirmar que es lo que se quiere.
 - **D6. Redondeo a centavos.** Todo se redondea a 0,01 con `ROUND_HALF_UP`, aunque la moneda principal (COP)
   no usa centavos en la práctica. Hay que decidir si la app debe mostrar enteros.
+
+## 6. Gastos que vienen
+
+Los gastos grandes previstos (matrícula, libros, pasajes) se cargan en `/planned-expenses` y se calculan en
+`services/previstos.py`. **No se descuentan del disponible**: son un aviso para apartar con tiempo, no un gasto.
+Solo "ya lo pagué" (`POST /planned-expenses/{id}/done`) registra el gasto de verdad.
+
+```
+semanas             = max(dias_hasta_la_fecha / 7, 1)
+por_semana          = redondear_hacia_arriba(monto / semanas)           (a pesos enteros)
+acumulado_i         = por_semana_1 + … + por_semana_i                   (por fecha; a igual fecha, por orden de creación)
+margen_semanal_i    = disponible_por_semana − acumulado_i
+```
+
+- **El margen se mide contra el disponible semanal del periodo actual** (`disponible_por_semana`, sección 2.5) y
+  es **acumulado**: cada gasto resta lo que hay que apartar para él *y para los que caen antes*. Si juntos no
+  alcanzan, los últimos de la lista quedan con margen negativo y la app muestra el aviso de "ajustado".
+- **Es una cota conservadora para los últimos:** supone que todos se van apartando a la vez. Cuando llegue la
+  fecha del primero, su apartado semanal deja de hacer falta, cosa que este cálculo no descuenta.
+- **Total por semana** (`total_por_semana`): la suma de los `por_semana` y lo que queda por semana después de
+  apartarla (`disponible_por_semana − total`). El coach las cita como "Total a apartar por semana para gastos que
+  vienen" y "Te queda por semana después de apartarlo"; si queda negativo, lo dice en palabras ("te faltan X").
+  Para el coach, `disponible_por_semana` es su `por_semana` de siempre (con menos de 7 días, el disponible total;
+  ver D4).
+- **Sin presupuesto activo hoy** no hay con qué comparar: `por_semana` y `margen_semanal` salen `null` y la app
+  oculta el recuadro, para no prometer que "llegas con el dinero". Tampoco hay cálculo para los que caen a más de
+  120 días.
+- **"Ya lo pagué"** con presupuesto activo hoy registra un gasto con el monto y la descripción del previsto, fecha
+  de hoy y categoría "otros" (ya descuenta del disponible). Sin presupuesto activo solo lo marca. Marcarlo dos
+  veces no duplica el gasto.
+
+### Mejora pendiente (opción B)
+
+Hoy, los previstos que caen **dentro del periodo actual** y los que caen **después** se acumulan juntos contra el
+mismo disponible semanal. Lo correcto sería **reservar** los que caen dentro del periodo (descontarlos del
+disponible, porque ese dinero ya tiene dueño) y **separar** los que caen después del cierre, que se pagarán con el
+presupuesto siguiente y no deberían restar al actual. Eso exige decidir cómo se muestran las reservas en el
+disponible y qué pasa con un previsto que se paga antes de tiempo.

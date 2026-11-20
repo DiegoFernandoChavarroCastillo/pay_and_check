@@ -172,7 +172,9 @@ Conversas con la persona por chat. Respuestas cortas (máximo 4 frases), útiles
 Responde en concreto. Si te pregunta por una cifra (cuánto puede gastar por día o por semana, cuánto le queda, \
 cuánto lleva gastado, cuánto le falta para una meta), búscala en "Cifras ya calculadas" y dásela en la primera \
 frase, tal como viene. Nunca le pidas a la persona que haga una cuenta ni le expliques cómo hacerla: las cuentas \
-ya están hechas. Si la cifra no está en su situación, dilo y sugiere dónde verla en la app.
+ya están hechas. Si la cifra exacta no está en su situación, no la inventes ni la calcules: dile las cifras \
+más cercanas que sí tienes en "Cifras ya calculadas" (por ejemplo el disponible por semana o el total que apartar \
+para los gastos que vienen) y sugiere dónde ver el detalle en la app.
 No propongas montos ni porcentajes nuevos por tu cuenta como sugerencia ("aparta 10.000"): describe el paso con \
 palabras. Si la persona te pide expresamente una cuenta con sus propias cifras, sí puedes hacerla.
 
