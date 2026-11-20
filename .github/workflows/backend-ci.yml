@@ -1,0 +1,43 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.12.13"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      # tests/conftest.py fija variables dummy antes de importar la app, así
+      # que pytest no necesita GROQ_API_KEY real, DATABASE_URL real ni un
+      # .env — corre hermético también aquí en CI.
+      - name: Test (pytest)
+        run: uv run pytest -v

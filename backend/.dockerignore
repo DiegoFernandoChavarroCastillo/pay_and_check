@@ -1,0 +1,10 @@
+# Nada de esto debe entrar al contexto de build: el .venv del host (que
+# ademas puede ser de otro sistema operativo) y los secretos locales.
+.venv/
+.env
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/

@@ -149,6 +149,9 @@ activemq-data/
 
 # Environments
 .env
+# Variantes locales con secretos (ej. .env.neon, la conexión a la base desplegada).
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -216,3 +219,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Flutter (mobile/): la plantilla de Python de arriba ignora "lib/", que en
+# Flutter es justo donde vive el código de la app.
+!mobile/lib/
+.idea/
+Claude outputs/

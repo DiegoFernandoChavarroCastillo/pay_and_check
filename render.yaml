@@ -1,0 +1,25 @@
+# Blueprint de Render (https://render.com/docs/blueprint-spec): crea el servicio
+# web del backend a partir de backend/Dockerfile. La base de datos es externa
+# (Neon): pega su cadena de conexión en DATABASE_URL al crear el servicio.
+services:
+  - type: web
+    name: pay-and-check-api
+    runtime: docker
+    # Free duerme el servicio tras ~15 min sin tráfico; .github/workflows/keep-alive.yml lo mantiene despierto (PS-39).
+    plan: free
+    # Misma zona que la base de Neon (AWS us-east-2, Ohio): cada petición hace varias consultas.
+    region: ohio
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    # Sin comando propio: el Dockerfile ya arranca con backend/start.sh, que migra, siembra las
+    # categorías por defecto y escucha en el puerto que asigna Render.
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false

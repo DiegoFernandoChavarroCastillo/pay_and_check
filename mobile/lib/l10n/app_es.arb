@@ -1,0 +1,824 @@
+{
+  "@@locale": "es",
+  "appName": "Pay & Check",
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "retry": "Reintentar",
+  "save": "Guardar",
+  "create": "Crear",
+  "delete": "Eliminar",
+  "add": "Registrar",
+  "send": "Enviar",
+  "name": "Nombre",
+  "amount": "Monto",
+  "description": "Descripción",
+  "category": "Categoría",
+  "date": "Fecha",
+  "invalidAmount": "Escribe un monto mayor que cero",
+  "requiredField": "Este campo es necesario",
+  "errorInvalidData": "Revisa los datos e inténtalo de nuevo.",
+  "errorNetwork": "No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.",
+  "errorGeneric": "Algo no salió como esperábamos. Inténtalo de nuevo.",
+  "loginTitle": "Hola de nuevo",
+  "loginSubtitle": "Tu dinero, a tu ritmo y sin culpas.",
+  "loginAction": "Entrar",
+  "continueWithGoogle": "Continuar con Google",
+  "goToRegister": "¿No tienes cuenta? Crea una",
+  "registerTitle": "Crea tu cuenta",
+  "registerSubtitle": "Un minuto ahora, y tu presupuesto siempre a la vista.",
+  "registerAction": "Crear cuenta",
+  "goToLogin": "Ya tengo cuenta",
+  "email": "Correo",
+  "invalidEmail": "Escribe un correo válido",
+  "password": "Contraseña",
+  "showPassword": "Mostrar contraseña",
+  "hidePassword": "Ocultar contraseña",
+  "passwordTooShort": "Usa al menos {min} caracteres",
+  "@passwordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "tabHome": "Inicio",
+  "tabTransactions": "Movimientos",
+  "tabCoach": "Coach",
+  "tabProgress": "Progreso",
+  "tabProfile": "Perfil",
+  "coachTagline": "Contigo, sin juzgar",
+  "badgesCount": "{n} de {total} insignias",
+  "@badgesCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeLocked": "Por desbloquear",
+  "homeGreeting": "Hola, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "streakDays": "{n, plural, =1{1 día} other{{n} días}}",
+  "@streakDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "noBudgetTitle": "Aún no tienes un presupuesto activo",
+  "noBudgetBody": "Dinos cuánto tienes y hasta cuándo debe alcanzarte, y te diremos cuánto puedes gastar cada día.",
+  "createBudget": "Crear presupuesto",
+  "editBudget": "Editar presupuesto",
+  "availablePerDay": "Disponible por día",
+  "availableTotal": "{amount} en total",
+  "@availableTotal": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "daysLeft": "{n, plural, =1{queda 1 día} other{quedan {n} días}}",
+  "@daysLeft": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "riskBody": "Al ritmo de ahora, el presupuesto alcanzaría hasta el {date}. Un pequeño ajuste esta semana lo estira hasta el final.",
+  "@riskBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "spent": "Gastado",
+  "extraIncome": "Ingresos",
+  "setAsideTotal": "Apartado",
+  "coachSays": "Tu coach dice",
+  "seeAll": "Ver todo",
+  "activeGoal": "Tu meta",
+  "activeChallenge": "Reto en curso",
+  "byCategory": "Por categoría",
+  "limitOf": "límite {amount}",
+  "@limitOf": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "toneMotivating": "Motivador",
+  "toneDirect": "Directo",
+  "toneHumorous": "Con humor",
+  "toneMinimal": "Minimalista",
+  "budgetDatesError": "La fecha final debe ser posterior a la inicial.",
+  "budgetExplain": "Tu presupuesto es el dinero con el que cuentas para un periodo, por ejemplo un semestre.",
+  "budgetAmount": "Dinero para el periodo",
+  "startDate": "Desde",
+  "endDate": "Hasta",
+  "coachToneQuestion": "¿Cómo quieres que te hable tu coach?",
+  "moodAnxious": "Ansiedad",
+  "moodWorried": "Inquietud",
+  "moodNeutral": "Neutral",
+  "moodCalm": "Calma",
+  "moodConfident": "Confianza",
+  "checkinQuestion": "¿Cómo te sientes hoy con tu dinero?",
+  "checkinDone": "Tu check-in de hoy",
+  "actionDone": "Hecho",
+  "whyThis": "Basado en:",
+  "coachTips": "Consejos",
+  "coachChat": "Chat",
+  "noInsights": "Cuando registres algunos gastos, aquí verás consejos hechos con tus propios datos.",
+  "coachDisclaimer": "El coach orienta sobre hábitos y presupuesto. No es asesoría financiera ni de inversión.",
+  "chatEmpty": "Pregúntale a tu coach cómo vas o qué puedes ajustar.",
+  "chatHint": "Escribe un mensaje",
+  "goals": "Metas",
+  "newGoal": "Nueva meta",
+  "goalName": "¿Para qué ahorras?",
+  "goalNameHint": "Viaje, portátil, fondo de emergencia…",
+  "goalTarget": "Monto objetivo",
+  "setAside": "Apartar",
+  "setAsideFor": "Apartar para {name}",
+  "@setAsideFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setAsideHint": "Lo apartado deja de contar como disponible.",
+  "setAsideAvailable": "Tienes {amount} disponible. Lo apartado deja de contar para tu gasto diario.",
+  "@setAsideAvailable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noGoals": "Una meta le da destino a lo que no gastas. Crea la primera.",
+  "goalReached": "Cumplida",
+  "goalVerified": "Apartado de verdad",
+  "undoContribution": "Devolver al disponible",
+  "deleteGoalTitle": "¿Eliminar la meta?",
+  "deleteGoalBody": "Lo que habías apartado vuelve a estar disponible.",
+  "challenges": "Retos",
+  "badges": "Insignias",
+  "newBadge": "Nueva insignia: {names}",
+  "@newBadge": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "pointsEarned": "+{n} puntos",
+  "@pointsEarned": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsShort": "{n} pts",
+  "@pointsShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsTotal": "{n} puntos",
+  "@pointsTotal": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsToNext": "faltan {n}",
+  "@pointsToNext": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "maxLevel": "nivel máximo",
+  "levelTitle": "Nivel {n} · {name}",
+  "@levelTitle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "metricSavings": "Sin gastar",
+  "metricSavingsHint": "Parte del presupuesto de este mes que aún no has gastado. Lo que apartas para metas está en Apartado.",
+  "daysOfWindow": "{n} de {total} días",
+  "@daysOfWindow": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+  "metricConsistency": "Constancia",
+  "metricConsistencyHint": "Días con registro en los últimos 30 días.",
+  "metricImprovement": "Mejora",
+  "metricImprovementHint": "Cambio de tu ahorro frente al mes anterior, en puntos porcentuales.",
+  "noChallenges": "Aún no hay retos. Vuelve cuando tengas algunos gastos registrados.",
+  "suggestedChallenges": "Retos para ti",
+  "acceptChallenge": "Aceptar reto",
+  "pastChallenges": "Historial",
+  "challengeDone": "Cumplido · +{n} puntos",
+  "@challengeDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "challengeMissed": "Esta vez no se dio. El siguiente es tuyo.",
+  "challengeSpentSoFar": "Llevas",
+  "challengeProgress": "Avance",
+  "endsOn": "Termina el {date}",
+  "@endsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "abandon": "Abandonar",
+  "abandonTitle": "¿Abandonar el reto?",
+  "abandonBody": "Puedes aceptar otro cuando quieras.",
+  "expenses": "Gastos",
+  "incomes": "Ingresos",
+  "search": "Buscar",
+  "allCategories": "Todas",
+  "dayToday": "Hoy",
+  "dayYesterday": "Ayer",
+  "noExpenses": "Aquí aparecerán tus gastos.",
+  "noIncomes": "Aquí aparecerá el dinero extra que recibas.",
+  "newExpense": "Nuevo gasto",
+  "editExpense": "Editar gasto",
+  "confirmExpense": "Confirma el gasto",
+  "confirmExpenseHint": "Esto fue lo que entendimos. Corrige lo que haga falta antes de guardar.",
+  "merchantOptional": "Comercio (opcional)",
+  "deleteExpenseTitle": "¿Eliminar el gasto?",
+  "deleteExpenseBody": "Tu disponible se recalcula al instante.",
+  "deleteIncomeTitle": "¿Eliminar el ingreso?",
+  "deleteIncomeBody": "Tu disponible se recalcula al instante.",
+  "addByText": "Escribir o dictar",
+  "addByTextHint": "Cuéntalo con tus palabras",
+  "addByReceipt": "Foto de un recibo",
+  "addByReceiptHint": "La foto no sale de tu teléfono",
+  "addByGallery": "Recibo desde la galería",
+  "addManual": "Formulario manual",
+  "addIncome": "Dinero que recibí",
+  "confirmIncome": "Confirma el ingreso",
+  "confirmIncomeHint": "Entendimos que recibiste este dinero. Corrige lo que haga falta antes de guardar.",
+  "addIncomeHint": "Amplía tu disponible sin cambiar el presupuesto original.",
+  "quickAddExample": "Ej.: me compré un helado de 5000",
+  "voiceStart": "Toca para dictar",
+  "voiceStop": "Detener",
+  "voiceListening": "Te escucho…",
+  "voiceUnavailable": "El dictado no está disponible en este teléfono. Puedes escribirlo.",
+  "analyze": "Continuar",
+  "receiptReading": "Leyendo el recibo…",
+  "receiptUnreadable": "No logramos leer texto en la foto. Prueba con más luz y el recibo plano.",
+  "sourceManual": "Manual",
+  "sourceText": "Texto",
+  "sourceVoice": "Voz",
+  "sourceReceipt": "Recibo",
+  "sourceSms": "SMS",
+  "sourceRecurring": "Gasto fijo",
+  "categories": "Categorías",
+  "newCategory": "Nueva categoría",
+  "editCategory": "Editar categoría",
+  "limitOptional": "Límite (opcional)",
+  "fixedExpense": "Gasto fijo",
+  "fixedExpenseHint": "Algo que sí o sí pagas, como transporte.",
+  "optionalExpense": "Opcional",
+  "defaultCategory": "predeterminada",
+  "defaultCategoryLimitHint": "Esta categoría viene con la app. Puedes ponerle tu propio límite de gasto.",
+  "recurringExpenses": "Gastos fijos",
+  "newRecurring": "Nuevo gasto fijo",
+  "weekday": "Día de la semana",
+  "frequency": "Se repite",
+  "freqWeekly": "Semanal",
+  "freqMonthly": "Mensual",
+  "dayOfMonth": "Día del mes",
+  "everyMonthDay": "el {n} de cada mes",
+  "@everyMonthDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "nextDue": "Próximo: {date}",
+  "@nextDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dueSince": "Por pagar desde el {date}",
+  "@dueSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "fixedReminderHint": "El día que toque te avisamos. Cuando lo marques como pagado, se descuenta de tu disponible.",
+  "paymentsDue": "Pagos por hacer",
+  "paidAction": "Ya lo pagué",
+  "skipAction": "Omitir",
+  "paymentLogged": "Pago registrado.",
+  "paymentSkipped": "Omitido. Te avisamos en el siguiente.",
+  "fixedDueTitle": "Hoy toca pagar: {name}",
+  "@fixedDueTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fixedDueBody": "{amount}. Márcalo como pagado y se descuenta de tu disponible.",
+  "@fixedDueBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "everyWeekday": "cada {day}",
+  "@everyWeekday": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noRecurring": "Arriendo, recibos, transporte: programa lo que pagas cada semana o cada mes y te avisamos el día que toca.",
+  "deleteRecurringTitle": "¿Eliminar el gasto fijo?",
+  "deleteRecurringBody": "Los pagos ya registrados se conservan.",
+  "sectionCoach": "Coach",
+  "sectionMoney": "Tu dinero",
+  "sectionReports": "Resúmenes",
+  "sectionApp": "Aplicación",
+  "coachTone": "Estilo del coach",
+  "reminder": "Recordatorio del check-in",
+  "reminderOff": "Desactivado",
+  "reminderTime": "Hora del recordatorio",
+  "reminderTitle": "¿Cómo va tu día?",
+  "reminderBody": "Un minuto para tu check-in y tus gastos de hoy.",
+  "reminderDenied": "Para recordarte, activa las notificaciones de la app en los ajustes del teléfono.",
+  "language": "Idioma",
+  "theme": "Apariencia",
+  "themeLight": "Clara",
+  "themeDark": "Oscura",
+  "themeSystem": "Como el teléfono",
+  "privacy": "Privacidad",
+  "logout": "Cerrar sesión",
+  "deleteAccount": "Eliminar mi cuenta",
+  "deleteAccountBody": "Se borran para siempre tu cuenta y todos tus datos: gastos, metas, retos, check-ins y conversaciones. No se puede deshacer.",
+  "privacyIntro": "Estos son los datos que usa la app y para qué.",
+  "privacyExpensesTitle": "Tus gastos, ingresos y metas",
+  "privacyExpensesBody": "Se guardan en nuestro servidor para calcular tu disponible, tus retos y tus puntos. No se venden ni se usan para publicidad.",
+  "privacyReceiptsTitle": "Fotos de recibos",
+  "privacyReceiptsBody": "El texto se reconoce en tu teléfono. La foto no se sube: al servidor solo viaja el texto reconocido.",
+  "privacyVoiceTitle": "Dictado por voz",
+  "privacyVoiceBody": "Lo convierte a texto el servicio de voz de tu teléfono. La app solo recibe el texto.",
+  "privacySmsTitle": "SMS del banco",
+  "privacySmsBody": "Solo si lo activas. La app lee tus SMS recientes en el teléfono para mostrarte los que parecen movimientos; nada se envía hasta que tú eliges registrar uno.",
+  "privacyAiTitle": "Inteligencia artificial",
+  "privacyAiBody": "Las frases, los textos de recibos y un resumen de tus cifras se envían a un servicio de IA para interpretarlos y redactar los consejos. El coach explica en qué dato se basa cada sugerencia.",
+  "privacyDeleteTitle": "Tú tienes el control",
+  "privacyDeleteBody": "Puedes eliminar tu cuenta y todos tus datos cuando quieras desde Perfil.",
+  "weeklyReport": "Reporte de la semana",
+  "weekSpent": "Gasto de la semana",
+  "weekPace": "Ritmo esperado",
+  "weekUnderPace": "Vas {amount} por debajo de tu ritmo semanal.",
+  "@weekUnderPace": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "weekOverPace": "Vas {amount} por encima de tu ritmo semanal. Aún hay semana para equilibrar.",
+  "@weekOverPace": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "wrappedTitle": "Tu mes en resumen",
+  "wrappedSpent": "{n, plural, =1{en 1 gasto registrado} other{en {n} gastos registrados}}",
+  "@wrappedSpent": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "wrappedDays": "días al tanto de tu dinero",
+  "wrappedTopCategory": "fue tu categoría principal: {pct}% del gasto",
+  "@wrappedTopCategory": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "wrappedBiggest": "tu gasto más grande: {desc}",
+  "@wrappedBiggest": {
+    "placeholders": {
+      "desc": {
+        "type": "String"
+      }
+    }
+  },
+  "wrappedVsLastMonth": "frente al mes anterior",
+  "wrappedGoals": "apartados para tus metas",
+  "wrappedPoints": "puntos ganados",
+  "wrappedMood": "tu ánimo más frecuente: {mood}",
+  "@wrappedMood": {
+    "placeholders": {
+      "mood": {
+        "type": "String"
+      }
+    }
+  },
+  "wrappedEmpty": "Este mes aún no tiene gastos registrados.",
+  "previousMonth": "Mes anterior",
+  "nextMonth": "Mes siguiente",
+  "analytics": "Análisis",
+  "thisWeek": "Esta semana",
+  "seeAnalytics": "Ver análisis",
+  "otherCategories": "Otras",
+  "analyticsEmpty": "Cuando registres gastos, aquí verás cómo se reparten y cómo cambian de una semana a otra.",
+  "analyticsEmptyWeek": "Sin gastos registrados en esta semana.",
+  "trend": "Tendencia",
+  "trendWeeks": "Semanas",
+  "trendDays": "Días",
+  "previousWeek": "Semana anterior",
+  "nextWeek": "Semana siguiente",
+  "weekMoreThanPrevious": "{pct}% más que a esta altura de la semana pasada",
+  "@weekMoreThanPrevious": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "weekLessThanPrevious": "{pct}% menos que a esta altura de la semana pasada",
+  "@weekLessThanPrevious": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "weekSameAsPrevious": "Igual que a esta altura de la semana pasada",
+  "weeklyAverage": "Promedio semanal: {amount}",
+  "@weeklyAverage": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "average": "Promedio",
+  "badgeUnlocked": "¡Nueva insignia!",
+  "great": "¡Genial!",
+  "notifications": "Notificaciones",
+  "notifDetected": "Movimientos detectados en tus SMS",
+  "notifApprove": "Aprobar",
+  "notifEdit": "Editar",
+  "notifIsExpense": "Gasto",
+  "notifIsIncome": "Ingreso",
+  "notifSavedExpense": "Gasto registrado.",
+  "notifSavedIncome": "Ingreso registrado.",
+  "smsTitle": "Notificaciones y SMS del banco",
+  "smsSubtitle": "Registra lo que te avisan Nequi, Daviplata y tu banco",
+  "smsExplain": "Con tu permiso, la app busca en tus SMS de los últimos 14 días los que parecen movimientos bancarios. Se leen en tu teléfono y nada se guarda hasta que tú lo confirmes.",
+  "smsAllow": "Permitir lectura de SMS",
+  "smsEmpty": "Estás al día: no hay movimientos por revisar.",
+  "smsUnavailable": "La lectura de SMS no está disponible en este dispositivo.",
+  "smsDismiss": "Descartar",
+  "smsRegister": "Registrar",
+  "policyTitle": "Política de privacidad",
+  "policyAcceptPrefix": "He leído y acepto la ",
+  "policyAcceptLink": "política de privacidad y el tratamiento de mis datos",
+  "policyRequired": "Para crear tu cuenta debes aceptar la política de privacidad.",
+  "policyRead": "Leer la política completa",
+  "policyVersion": "Versión {version}",
+  "@policyVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "consentTitle": "Antes de seguir",
+  "consentBody": "Para usar Pay&Check necesitamos que leas y aceptes nuestra política de privacidad. Explica qué datos guardamos, qué se envía al servicio de IA y cómo borrar tu cuenta.",
+  "consentUpdated": "Actualizamos la política de privacidad. Léela y acéptala para seguir usando la app.",
+  "consentAccept": "Acepto",
+  "consentDecline": "No acepto, cerrar sesión",
+  "smsConsentTitle": "Leer los SMS y las notificaciones de tu banco",
+  "smsConsentBody": "Si lo permites, la app lee en tu teléfono los SMS de los últimos 14 días y las notificaciones de tus apps de pago (Nequi, Daviplata, tu banco) para encontrar los que parecen movimientos.",
+  "smsConsentPoint1": "Se leen en tu teléfono y no se guardan en nuestro servidor. De las notificaciones solo se miran las de apps financieras.",
+  "smsConsentPoint2": "Solo cuando eliges registrar un movimiento, su texto se envía al servicio de IA para llenar el formulario, y tú confirmas antes de guardar.",
+  "smsConsentPoint3": "Puedes quitar el permiso cuando quieras en los ajustes de Android.",
+  "smsConsentAccept": "Permitir",
+  "smsConsentDecline": "Ahora no",
+  "deleteAccountConfirmTitle": "Confirma que quieres borrar tu cuenta",
+  "deleteAccountConfirmBody": "Escribe {palabra} para confirmar. Esta acción no se puede deshacer.",
+  "@deleteAccountConfirmBody": {
+    "placeholders": {
+      "palabra": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountWord": "BORRAR",
+  "deleteAccountDone": "Tu cuenta y tus datos fueron borrados.",
+  "myPlan": "Mi plan",
+  "planFree": "Gratis",
+  "planInstitutional": "Institucional",
+  "planPremium": "Premium",
+  "planFamily": "Familiar",
+  "planCurrent": "Tu plan actual",
+  "aiUsageTitle": "Solicitudes de IA este mes",
+  "aiUsageCount": "{usadas} de {cupo} usadas",
+  "@aiUsageCount": {
+    "placeholders": {
+      "usadas": {
+        "type": "int"
+      },
+      "cupo": {
+        "type": "int"
+      }
+    }
+  },
+  "aiUsageShared": "Compartidas con tu familia",
+  "aiUsageResets": "Se reinicia el {fecha}",
+  "@aiUsageResets": {
+    "placeholders": {
+      "fecha": {
+        "type": "String"
+      }
+    }
+  },
+  "aiUsageExhausted": "Ya usaste todo tu cupo de este mes. Puedes seguir registrando con el formulario manual.",
+  "planPricePerMonth": "{precio} al mes",
+  "@planPricePerMonth": {
+    "placeholders": {
+      "precio": {
+        "type": "String"
+      }
+    }
+  },
+  "planPaidByUniversity": "Lo paga tu universidad",
+  "planAiQuota": "{cupo} solicitudes de IA al mes",
+  "@planAiQuota": {
+    "placeholders": {
+      "cupo": {
+        "type": "int"
+      }
+    }
+  },
+  "planAiQuotaShared": "{cupo} solicitudes compartidas, hasta {max} personas",
+  "@planAiQuotaShared": {
+    "placeholders": {
+      "cupo": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "planSimulated": "Simulado: en el piloto no hay cobro real.",
+  "planChoose": "Cambiar a este plan",
+  "planChooseTitle": "¿Cambiar a {plan}?",
+  "@planChooseTitle": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "planChooseBody": "Es una simulación: no se te cobrará nada. Tu cupo de IA cambia de inmediato.",
+  "planInstitutionalHow": "Se activa con el código de convenio de tu universidad.",
+  "planChanged": "Listo: ahora tienes el plan {plan}.",
+  "@planChanged": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "planOrganization": "Convenio: {org}",
+  "@planOrganization": {
+    "placeholders": {
+      "org": {
+        "type": "String"
+      }
+    }
+  },
+  "familyCode": "Código de tu familia: {codigo}",
+  "@familyCode": {
+    "placeholders": {
+      "codigo": {
+        "type": "String"
+      }
+    }
+  },
+  "familyMembers": "{n} de {max} integrantes",
+  "@familyMembers": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "redeemTitle": "¿Tienes un código?",
+  "redeemHint": "Código de convenio o familiar",
+  "redeemAction": "Canjear",
+  "planOtherPlans": "Otros planes",
+  "draftPosition": "{n} de {total}",
+  "@draftPosition": {"placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+  "goalDeadline": "Fecha límite (opcional)",
+  "goalNoDeadline": "Sin fecha",
+  "clear": "Quitar",
+  "goalPerWeek": "Aparta {amount} por semana y llegas a tiempo.",
+  "@goalPerWeek": {"placeholders": {"amount": {"type": "String"}}},
+  "goalPerWeekTight": "Necesitas {amount} por semana, más de los {available} que hoy te deja el presupuesto. Prueba con una fecha más lejana.",
+  "@goalPerWeekTight": {"placeholders": {"amount": {"type": "String"}, "available": {"type": "String"}}},
+  "goalCreated": "Meta creada. Apartar un poco cada semana es lo que más ayuda.",
+  "daysUnit": "{n, plural, =1{día} other{días}}",
+  "@daysUnit": {"placeholders": {"n": {"type": "int"}}},
+  "spentOf": "de {total} · {pct} %",
+  "@spentOf": {"placeholders": {"total": {"type": "String"}, "pct": {"type": "int"}}},
+  "affordTitle": "¿Me alcanza?",
+  "affordHint": "Antes de comprar, mira cómo queda tu número del día. No se registra nada.",
+  "affordCheck": "Calcular",
+  "affordYes": "Te alcanza",
+  "affordNo": "Con esto te pasas del presupuesto",
+  "affordDaily": "Tu disponible por día baja de {before} a {after} durante los {days} días que quedan.",
+  "@affordDaily": {"placeholders": {"before": {"type": "String"}, "after": {"type": "String"}, "days": {"type": "int"}}},
+  "affordOver": "Te pasarías {amount} del presupuesto del periodo.",
+  "@affordOver": {"placeholders": {"amount": {"type": "String"}}},
+  "affordRisk": "A ese ritmo, el dinero alcanzaría hasta el {date}.",
+  "@affordRisk": {"placeholders": {"date": {"type": "String"}}},
+  "affordGoal": "{days, plural, =1{Equivale a 1 día de ahorro para tu meta {goal}.} other{Equivale a {days} días de ahorro para tu meta {goal}.}}",
+  "@affordGoal": {"placeholders": {"days": {"type": "int"}, "goal": {"type": "String"}}},
+  "affordSkip": "Mejor no",
+  "affordLog": "Registrar este gasto",
+  "addFromBank": "Desde notificaciones y SMS",
+  "addFromBankHint": "Nequi, Daviplata y tu banco",
+  "captureLocked": "La captura desde SMS y notificaciones del banco está en los planes Premium, Familiar e Institucional.",
+  "seePlans": "Ver planes",
+  "notifAccessTitle": "Notificaciones de Nequi, Daviplata y tu banco",
+  "notifAccessBody": "Con tu permiso, la app lee en tu teléfono las notificaciones de tus apps de pago y te propone los movimientos. Solo de apps financieras, y nada se guarda hasta que tú lo confirmes.",
+  "notifAccessAction": "Permitir acceso a notificaciones",
+  "notifAccessOn": "Leyendo notificaciones de tus apps de pago",
+  "planIncludes": "Incluye",
+  "featRegistro": "Registro manual, por voz y por foto",
+  "featNumeroDiario": "Tu número del día",
+  "featSimulador": "«¿Me alcanza?» antes de comprar",
+  "featMetasRetos": "Metas, retos e insignias",
+  "featCapturaAutomatica": "Captura automática de Nequi, Daviplata y SMS",
+  "featReportes": "Reporte semanal y resumen del mes",
+  "share": "Compartir",
+  "close": "Cerrar",
+  "copied": "Copiado",
+  "shareText": "Llevo mis finanzas con Pay&Check 💚",
+  "shareError": "No se pudo compartir la imagen.",
+  "shareFooter": "Sin culpa, con constancia · Pay&Check",
+  "shareBadgeTitle": "Nueva insignia",
+  "shareWrappedDays": "{n, plural, =1{1 día cuidando mi plata} other{{n} días cuidando mi plata}}",
+  "@shareWrappedDays": {"placeholders": {"n": {"type": "int"}}},
+  "shareWrappedGoals": "Aparté dinero para mis metas",
+  "shareWrappedBadges": "{n, plural, =1{1 insignia nueva} other{{n} insignias nuevas}}",
+  "@shareWrappedBadges": {"placeholders": {"n": {"type": "int"}}},
+  "shareWrappedPoints": "{n} puntos ganados",
+  "@shareWrappedPoints": {"placeholders": {"n": {"type": "int"}}},
+  "widgetNoBudget": "Crea tu presupuesto en la app",
+  "plannedTitle": "Gastos que vienen",
+  "plannedSubtitle": "Matrícula, libros, regalos: aparta con tiempo",
+  "plannedAdd": "Nuevo gasto previsto",
+  "plannedEmpty": "Anota aquí los gastos grandes que sabes que vienen y te digo cuánto apartar cada semana.",
+  "plannedInDays": "{n, plural, =0{hoy} =1{mañana} other{en {n} días}}",
+  "@plannedInDays": {"placeholders": {"n": {"type": "int"}}},
+  "plannedOk": "Aparta {amount} por semana y llegas con el dinero.",
+  "@plannedOk": {"placeholders": {"amount": {"type": "String"}}},
+  "plannedTight": "Necesitas apartar {amount} por semana: más de lo que hoy te deja tu presupuesto. Empieza ya o ajusta otros gastos.",
+  "@plannedTight": {"placeholders": {"amount": {"type": "String"}}},
+  "plannedDone": "Ya lo pagué",
+  "plannedDoneSnack": "Listo, uno menos.",
+  "plannedTuition": "Matrícula",
+  "plannedBooks": "Libros y materiales",
+  "plannedTrip": "Pasajes de vacaciones",
+  "plannedGifts": "Regalos de Navidad",
+  "plannedRent": "Arriendo",
+  "receivablesTitle": "Te deben",
+  "receivablesSubtitle": "Las vacas que pagaste por otros",
+  "receivablesEmpty": "Nadie te debe nada. Cuando pagues por varios, marca «Lo pagué por varias personas» al registrar.",
+  "receivablesTotal": "Te deben {amount}",
+  "@receivablesTotal": {"placeholders": {"amount": {"type": "String"}}},
+  "receivablesHint": "Tu gasto es solo tu parte; esto es lo de los demás.",
+  "receivableRemind": "Recordar",
+  "receivablePaid": "Ya me pagó",
+  "receivablePaidSnack": "{name} ya te pagó.",
+  "@receivablePaidSnack": {"placeholders": {"name": {"type": "String"}}},
+  "receivablesCard": "{n, plural, =1{Te deben {amount} de 1 vaca} other{Te deben {amount} de {n} vacas}}",
+  "@receivablesCard": {"placeholders": {"amount": {"type": "String"}, "n": {"type": "int"}}},
+  "receivableMessage": "Hola {name}, {what} salió a {amount} por persona. ¿Me lo pasas por Nequi o Daviplata? 🙌",
+  "@receivableMessage": {"placeholders": {"name": {"type": "String"}, "what": {"type": "String"}, "amount": {"type": "String"}}},
+  "splitToggle": "Lo pagué por varias personas",
+  "splitToggleHint": "Se registra solo tu parte y lo demás queda en «Te deben».",
+  "splitPeople": "¿Con quiénes?",
+  "splitPeopleHint": "Juan, Laura, Mateo",
+  "splitSaved": "Guardado. Te deben {amount}.",
+  "@splitSaved": {"placeholders": {"amount": {"type": "String"}}},
+  "splitShareMessage": "{what} salió a {amount} por persona. ¿Me lo pasan por Nequi o Daviplata? 🙌",
+  "@splitShareMessage": {"placeholders": {"what": {"type": "String"}, "amount": {"type": "String"}}},
+  "supportTitle": "Apoyos de mi universidad",
+  "supportEmpty": "Tu universidad aún no ha cargado apoyos. Se activan con el plan Institucional.",
+  "supportIntro": "{org} tiene estos apoyos para ti. Si alguno te sirve, escríbeles: es tu derecho como estudiante.",
+  "@supportIntro": {"placeholders": {"org": {"type": "String"}}},
+  "supportPrivacy": "«Me interesa» solo suma uno al total anónimo que ve la universidad: nunca sabrá que fuiste tú.",
+  "supportNoted": "Anotado. Escríbeles cuando quieras.",
+  "supportInterest": "Me interesa",
+  "supportInterested": "Te interesa",
+  "supportSuggestRisk": "Este mes el dinero viene justo. Tu universidad tiene apoyos que pueden ayudarte.",
+  "supportSuggestStress": "Has sentido preocupación por el dinero estos días. No estás solo: tu universidad tiene apoyos.",
+  "supportSee": "Ver apoyos de {org}",
+  "@supportSee": {"placeholders": {"org": {"type": "String"}}},
+  "repeatedTitle": "Gastos que se repiten",
+  "repeatedHint": "Gastos hormiga y suscripciones: juntos suman {amount} al semestre.",
+  "@repeatedHint": {"placeholders": {"amount": {"type": "String"}}},
+  "repeatedSubscription": "Suscripción",
+  "repeatedAnt": "Gasto hormiga · {n} veces en 3 meses",
+  "@repeatedAnt": {"placeholders": {"n": {"type": "int"}}},
+  "repeatedPerMonth": "{amount}/mes",
+  "@repeatedPerMonth": {"placeholders": {"amount": {"type": "String"}}},
+  "repeatedPerSemester": "{amount}/semestre",
+  "@repeatedPerSemester": {"placeholders": {"amount": {"type": "String"}}},
+  "affordCash": "De contado",
+  "affordCredit": "A cuotas",
+  "creditInstallments": "Cuotas",
+  "creditRate": "Tasa",
+  "creditInstallment": "Cuota de {amount} durante {n} meses",
+  "@creditInstallment": {"placeholders": {"amount": {"type": "String"}, "n": {"type": "int"}}},
+  "creditTotal": "Pagarías {total} en total: {interest} son intereses.",
+  "@creditTotal": {"placeholders": {"total": {"type": "String"}, "interest": {"type": "String"}}},
+  "creditMonthlyRate": "Equivale a {rate} % mensual.",
+  "@creditMonthlyRate": {"placeholders": {"rate": {"type": "String"}}},
+  "creditDaily": "Tu número del día bajaría de {before} a {after} durante {n} meses.",
+  "@creditDaily": {"placeholders": {"before": {"type": "String"}, "after": {"type": "String"}, "n": {"type": "int"}}},
+  "creditDisclaimer": "Es una cuenta para decidir, no una recomendación de ninguna entidad. Revisa siempre la tasa y los cargos que te ofrecen.",
+  "setAsideRealHint": "Apartar aquí no mueve dinero. Para guardarlo de verdad, pásalo a un bolsillo o meta:",
+  "openApp": "Abrir {name}",
+  "@openApp": {"placeholders": {"name": {"type": "String"}}},
+  "familyShareToggle": "Compartir mi progreso con quien paga el plan",
+  "familyShareHint": "Verá tu constancia, tus metas y si te alcanza el presupuesto. Nunca tus gastos.",
+  "familyProgressTitle": "Progreso de tu familia",
+  "familyProgressEmpty": "Comparte el código familiar para que se unan.",
+  "familyNotShared": "Aún no comparte su progreso.",
+  "familyStreak": "{n, plural, =1{1 día de racha} other{{n} días de racha}}",
+  "@familyStreak": {"placeholders": {"n": {"type": "int"}}},
+  "familyConsistency": "{pct} % de constancia",
+  "@familyConsistency": {"placeholders": {"pct": {"type": "int"}}},
+  "familyBudgetOk": "el presupuesto le alcanza",
+  "familyBudgetTight": "el presupuesto viene justo",
+  "familyGoals": "{n, plural, =1{1 meta} other{{n} metas}}",
+  "@familyGoals": {"placeholders": {"n": {"type": "int"}}},
+  "familyPrivacy": "Solo ves lo que cada uno decidió compartir, y nunca sus gastos.",
+  "featCoach": "Coach con consejos del día y chat",
+  "featIaAmpliada": "El doble de solicitudes de IA",
+  "planEverythingInFree": "Todo lo de Gratis, más:",
+  "featProgresoFamiliar": "Progreso compartido con quien paga el plan",
+  "featApoyos": "Apoyos de tu universidad y panel de Bienestar"
+}
