@@ -308,7 +308,7 @@ ampliaciones de `test_coach_cifras.py`, `test_budget_calculator.py`, `test_expen
 | 3 | Probar en el teléfono lo que falta de la ronda 2: widget, compartir la vaca por WhatsApp, Progreso, chat que crea la meta y familia (`papa@demo…`) | Equipo |
 | 4 | ~~Política de Google Play~~ **Decidido:** la versión de Play no pide `READ_SMS`; la captura va por notificaciones con divulgación destacada. Los SMS quedan solo en el APK del piloto (`docs/analisis-financiero-nov-2026.md` §8) | — |
 | 5 | Validar con Bienestar de la ECI los apoyos reales y el texto de consentimiento del convenio | Negocio |
-| 6 | Configurar en Render las variables `AI_FALLBACK_*` (cuenta de DeepInfra) y pasar a Render Starter antes del piloto | Equipo |
+| 6 | Configurar las variables `AI_FALLBACK_*` (cuenta de DeepInfra) en el backend de producción. *Actualización 21 nov:* el backend pasó a AWS EC2 ([ADR-011](decisiones/011-backend-aws-ec2.md)), así que ya no hace falta Render Starter; ver [pendientes.md](pendientes.md) | Equipo |
 | 7 | Negociar la licencia de plataforma con la ECI y actualizar el `.docx` del modelo financiero con las cifras nuevas | Negocio |
 | 8 | Hoja de ruta mostrada en el pitch: recompensas con comercios del campus, retos entre amigos, presupuesto alineado a la fecha de la mesada, lectura de correos del banco | — |
 

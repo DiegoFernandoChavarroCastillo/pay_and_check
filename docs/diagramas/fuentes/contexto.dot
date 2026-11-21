@@ -1,0 +1,35 @@
+// Diagrama de contexto general de Pay&Check. Regenerar: dot -Tpng -Gdpi=150 contexto.dot -o ../contextoGeneral.png
+digraph contexto {
+  graph [rankdir=LR, fontname="Helvetica", fontsize=13, pad=0.4, nodesep=0.5, ranksep=1.0, bgcolor="white"];
+  node  [fontname="Helvetica", fontsize=12, shape=box, style="rounded,filled", fillcolor="#ECECFF", color="#9370DB"];
+  edge  [fontname="Helvetica", fontsize=10, color="#555555"];
+
+  persona [label="Persona usuaria\n(Android, iPhone o PC)", shape=ellipse, fillcolor="#E6F7F1", color="#1F6F5C"];
+  sms     [label="SMS y notificaciones\ndel banco (solo Android)"];
+  disp    [label="Servicios del dispositivo\ncámara, micrófono,\nnotificaciones locales"];
+
+  subgraph cluster_pc {
+    label="Pay & Check"; style="rounded,filled"; fillcolor="#F6F6FF"; color="#9370DB";
+    apk  [label="App Flutter\nAPK Android"];
+    web  [label="App Flutter\nversión web"];
+    api  [label="API REST FastAPI"];
+    db   [label="PostgreSQL", shape=cylinder];
+    apk -> api [label="HTTPS + JSON, JWT"];
+    web -> api [label="HTTPS + JSON, JWT\n(CORS)"];
+    api -> db  [label="SQL"];
+  }
+
+  groq   [label="Groq\nLLM: parseo de texto y\nredacción del coach"];
+  google [label="Google Identity\ninicio de sesión"];
+  plat   [label="AWS EC2 + Caddy (API) · Neon (base)\nVercel (web) · Render (respaldo)\nGitHub Actions / Releases"];
+
+  persona -> apk [label="registra, consulta,\nchatea con el coach"];
+  persona -> web [label="lo mismo en el navegador\n(sin recibos ni SMS)"];
+  sms  -> apk [label="lectura con permiso"];
+  disp -> apk [dir=both];
+  api -> groq   [label="chat.completions"];
+  api -> google [label="verifica id_token"];
+  apk -> google [label="Google Sign-In", style=dashed];
+  web -> google [label="botón de Google", style=dashed];
+  plat -> api [label="aloja / compila / publica", style=dotted];
+}

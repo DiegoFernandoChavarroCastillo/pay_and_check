@@ -15,6 +15,8 @@ cada ADR, no se da por hecho. Origen: `docs/planFinal.md` §4.3 (ticket N-20 / P
 | [007](007-distribucion-apk.md) | Distribución por APK en el piloto, Google Play después | aceptada |
 | [008](008-planes-simulados-cupo-ia.md) | Planes simulados en el piloto y cupo de IA por plan | aceptada |
 | [009](009-capas-seguridad-ia.md) | Capas de seguridad de la IA | aceptada |
+| [010](010-version-web-respaldo.md) | Versión web (Flutter) en Vercel como respaldo para iPhone y PC; qué se oculta y el diseño adaptable | aceptada |
+| [011](011-backend-aws-ec2.md) | Backend de producción en AWS EC2 con Caddy; Render queda de respaldo | aceptada |
 
 ## Diferencias entre el plan y el código
 
@@ -29,6 +31,7 @@ Las encontré al verificar cada ADR contra el código:
 - **El rechazo fuera de alcance lo aplica el backend**, no la app (ADR-009).
 - **No se verifica el idioma** de la salida del coach (ADR-009).
 - **Google Play Billing:** solo está descrito, no implementado; las suscripciones no vencen (ADR-008).
+- **El backend de AWS se actualiza a mano:** no hay despliegue automático ni está documentada la instalación (ADR-011).
 
 ## Cómo agregar una decisión
 

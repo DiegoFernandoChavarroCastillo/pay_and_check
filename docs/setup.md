@@ -1,5 +1,7 @@
 # Configuración local, pruebas y despliegue
 
+> Cómo está montada hoy la producción (AWS, Vercel, Releases, Google Sign-In): [despliegue.md](despliegue.md).
+
 ## Requisitos
 
 - Backend: Docker + Docker Compose, **o** Python 3.12 + [`uv`](https://docs.astral.sh/uv/) y un PostgreSQL accesible.
@@ -18,7 +20,8 @@ Definidas en `backend/app/core/config.py`; plantilla en `backend/.env.example`.
 | `REFRESH_TOKEN_EXPIRE_DAYS` | no | `30` |
 | `GROQ_API_KEY` | no | Sin ella, el parseo con IA responde 503 y el coach usa textos de respaldo |
 | `GOOGLE_CLIENT_ID` | no | Client ID *web*; varios separados por coma (app Android y versión web). Sin él, `/auth/google` responde 401 |
-| `CORS_ORIGINS` | no | Orígenes separados por coma (`http://localhost:5173`) |
+| `CORS_ORIGINS` | no | Orígenes separados por coma (`http://localhost:5173`). La versión web necesita su dominio aquí (`https://pay-and-check-seven.vercel.app`) |
+| `AI_FALLBACK_URL`, `AI_FALLBACK_API_KEY`, `AI_FALLBACK_MODEL` | no | Proveedor de IA de respaldo compatible con OpenAI, para cuando Groq falla. Vacío = sin respaldo |
 
 ## Backend con Docker
 
@@ -64,6 +67,8 @@ La configuración se fija al compilar (`mobile/lib/core/config/app_config.dart`)
 |---|---|---|
 | `API_BASE_URL` | `http://10.0.2.2:8000` | URL del backend (localhost del PC desde el emulador) |
 | `GOOGLE_SERVER_CLIENT_ID` | vacío | Client ID web de Google; vacío oculta el botón de Google |
+| `GOOGLE_WEB_CLIENT_ID` | = `GOOGLE_SERVER_CLIENT_ID` | Solo versión web: cliente OAuth del botón de Google. Debe tener el dominio de la web en sus orígenes y estar en `GOOGLE_CLIENT_ID` del backend |
+| `PRIVACY_CONTACT` | vacío | Correo para ejercer derechos sobre los datos (aparece en la política) |
 
 ```bash
 cd mobile
@@ -73,7 +78,14 @@ adb reverse tcp:8000 tcp:8000
 flutter run --dart-define=API_BASE_URL=http://localhost:8000
 ```
 
-Más detalle (SMS simulados, sistema de diseño, APK): `mobile/README.md`.
+Versión web en local (el puerto 5173 ya está en `CORS_ORIGINS` por defecto):
+
+```bash
+flutter build web --release --dart-define=API_BASE_URL=http://localhost:8000
+cd build/web && python3 -m http.server 5173
+```
+
+Más detalle (SMS simulados, sistema de diseño, pantallas anchas, APK, web): `mobile/README.md`.
 
 ## CI/CD y despliegue
 
@@ -81,15 +93,20 @@ Más detalle (SMS simulados, sistema de diseño, APK): `mobile/README.md`.
 |---|---|
 | `.github/workflows/backend-ci.yml` | En cambios de `backend/**`: `uv sync --frozen`, `ruff check`, `pytest` |
 | `.github/workflows/mobile-ci.yml` | CI de la app Flutter |
-| `.github/workflows/keep-alive.yml` | Cada 10 min hace `curl` a `$API_BASE_URL/health` para que Render (plan free) no se duerma (PS-39) |
+| `.github/workflows/keep-alive.yml` | Cada 10 min hace `curl` a `$API_BASE_URL/health` (PS-39). Desde que `API_BASE_URL` apunta a AWS ya no mantiene despierto a Render ([pendientes.md](pendientes.md)) |
 | `.github/workflows/mobile-release.yml` | Al empujar un tag `v*` compila el APK firmado y lo adjunta a un GitHub Release. Requiere secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` y variable `API_BASE_URL` (opcional `GOOGLE_SERVER_CLIENT_ID`) |
+| `.github/workflows/web-deploy.yml` | En push a `main` que toque `mobile/` (o a mano): `flutter build web` y `vercel deploy --prod`. Requiere secreto `VERCEL_TOKEN` y variables `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; opcionales `WEB_API_BASE_URL` (def. Render), `GOOGLE_WEB_CLIENT_ID`, `PRIVACY_CONTACT` |
 | `backend/Dockerfile` | Multi-stage (`uv sync --frozen --no-dev`), usuario no root, `CMD sh /app/start.sh` |
 | `backend/start.sh` | `alembic upgrade head` → `python -m app.db.seed` → `uvicorn` en `$PORT` (def. 8000) |
 | `render.yaml` | Blueprint de Render: servicio web Docker, plan free, región `ohio`, `healthCheckPath: /health`, `JWT_SECRET` autogenerado; `DATABASE_URL`, `GROQ_API_KEY`, `GOOGLE_CLIENT_ID` se cargan a mano. La base es externa (Neon) |
 
 ### Desplegar
 
-**Render + Neon (camino previsto).** `render.yaml` en la raíz es un blueprint: en Render, *New → Blueprint*,
+El backend de producción corre hoy en **AWS EC2** ([ADR-011](decisiones/011-backend-aws-ec2.md)) y la web en
+**Vercel** ([ADR-010](decisiones/010-version-web-respaldo.md)); ver [despliegue.md](despliegue.md). Lo que sigue
+describe Render, que queda de respaldo, y cómo correr la imagen en cualquier plataforma.
+
+**Render + Neon (respaldo).** `render.yaml` en la raíz es un blueprint: en Render, *New → Blueprint*,
 elegir este repo y completar `DATABASE_URL` (la cadena de conexión de Neon), `GROQ_API_KEY` y, si aplica,
 `GOOGLE_CLIENT_ID`. Al crearlo, elegir la rama que tenga el código. El servicio aplica las migraciones y siembra
 las categorías en cada arranque (`backend/start.sh`). La URL que

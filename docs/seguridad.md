@@ -1,6 +1,7 @@
 # Modelo de amenazas — Pay&Check
 
-Modelo de amenazas corto del backend (FastAPI en Render, Postgres en Neon, IA vía Groq). Cada amenaza lleva el
+Modelo de amenazas corto del backend (FastAPI en AWS EC2 detrás de Caddy, con Render de respaldo; Postgres en
+Neon; IA vía Groq) y de sus dos clientes (APK Android y versión web en Vercel). Cada amenaza lleva el
 control que **existe hoy en el código**, citado por archivo y función. Lo que no está resuelto se marca como
 **riesgo aceptado** (decisión consciente para el piloto) o **riesgo abierto** (hallazgo pendiente de arreglo).
 
@@ -17,7 +18,7 @@ Documentos relacionados (algunos viven todavía en otras ramas):
 | Activo | Dónde vive | Por qué importa |
 |---|---|---|
 | Datos financieros de la persona (gastos, ingresos, presupuestos, metas, check-ins emocionales, chat del coach) | Postgres (Neon) | Información personal y sensible; es lo que la app promete cuidar. |
-| Credenciales | `users.hashed_password` (bcrypt), tokens JWT en el teléfono | Dan acceso a todo lo anterior. |
+| Credenciales | `users.hashed_password` (bcrypt), tokens JWT en el teléfono o en el navegador (versión web) | Dan acceso a todo lo anterior. |
 | Secretos del servidor | `JWT_SECRET`, `DATABASE_URL`, `GROQ_API_KEY`, `GOOGLE_CLIENT_ID` en variables de entorno | Con `JWT_SECRET` se falsifica cualquier sesión; con `DATABASE_URL` se lee toda la base. |
 | Saldo de la cuenta de Groq | Proveedor externo | Cada llamada cuesta: es el blanco del abuso económico. |
 | Prompts del sistema y reglas del coach | `backend/app/services/prompts.py` | Su filtración o anulación permite sacar al coach de su rol. |
@@ -70,6 +71,9 @@ Documentos relacionados (algunos viven todavía en otras ramas):
   lista explícita leída de `CORS_ORIGINS` (`Settings.cors_origins_list` en `backend/app/core/config.py`), nunca
   `*`. La autenticación va en la cabecera `Authorization: Bearer`, no en cookies, así que un sitio ajeno no
   puede montar un CSRF con la sesión de la persona.
+- **Desde la versión web (nov 2026)** CORS sí está en el camino crítico: `CORS_ORIGINS` debe listar
+  `https://pay-and-check-seven.vercel.app`. Se agrega el dominio exacto, nunca un comodín de `*.vercel.app`, que
+  dejaría llamar a la API desde cualquier proyecto de Vercel.
 - **Nota.** CORS solo protege a navegadores: la app móvil y cualquier script llaman a la API sin pasar por él.
   La defensa real de cada endpoint es `get_current_user`. `allow_methods` y `allow_headers` están abiertos
   (`["*"]`); con orígenes acotados es aceptable.
@@ -85,6 +89,24 @@ Documentos relacionados (algunos viven todavía en otras ramas):
   configuración en un 500.
 - **Riesgo aceptado.** No hay rotación periódica de secretos ni un gestor de secretos; un `.env` copiado en una
   máquina de desarrollo queda fuera de control.
+
+### A4b. Sesión guardada en el navegador (versión web)
+
+- **Control.** La versión web usa `flutter_secure_storage` para web, que cifra los tokens con WebCrypto antes de
+  guardarlos en el almacenamiento del navegador. La API solo acepta el token por cabecera, no por cookie, y el
+  sitio se sirve por HTTPS (Vercel) con `X-Content-Type-Options: nosniff` (`mobile/web/vercel.json`).
+- **Riesgo aceptado.** En un navegador la llave de cifrado vive en el mismo origen, así que un script inyectado
+  en la página (XSS) o una extensión maliciosa podría leer la sesión. Flutter no inyecta HTML con datos de la
+  persona, lo que reduce el XSS, pero no hay *Content-Security-Policy*. Para el piloto se acepta; en un
+  computador compartido conviene cerrar sesión.
+
+### A4c. Contraseñas débiles y abuso de canjes
+
+- **Control.** `backend/app/schemas/auth.py`, `NuevaContrasena`: al registrarse se exigen 8 caracteres y se
+  rechazan contraseñas obvias o de pocos caracteres distintos. `core/rate_limit.py`: `revisar_canje` limita los
+  códigos de plan fallidos a 5 cada 15 minutos (429 con `Retry-After`). `schemas/common.py`: montos entre 0 y
+  1.000 millones y textos con tope de largo; `services/validaciones.py` rechaza fechas futuras. Todo con
+  pruebas en `tests/test_validaciones_e2e.py` (hallazgos de la prueba de punta a punta del 20 nov 2026).
 
 ### A5. Prompt injection directa e indirecta
 
@@ -205,7 +227,9 @@ Detalle y propuestas en [docs/informe-adversarial.md](informe-adversarial.md).
 | A1 | Robo/falsificación de sesión | `security._decode_token`, `deps.get_current_user` | Controlado; sin revocación (aceptado) |
 | A2 | Fuerza bruta de login | `rate_limit.revisar_login` + bcrypt | Controlado; IP falsificable y contadores en memoria (aceptado) |
 | A3 | Origen web no autorizado | `CORSMiddleware` en `main.py`, Bearer sin cookies | Controlado |
-| A4 | Fuga de secretos | `config.Settings`, `.gitignore`, `render.yaml` | Controlado; sin rotación (aceptado) |
+| A4 | Fuga de secretos | `config.Settings`, `.gitignore`, `render.yaml` | Controlado; sin rotación (aceptado). Hay credenciales por rotar ([pendientes.md](pendientes.md)) |
+| A4b | Sesión en el navegador (web) | `flutter_secure_storage` web, HTTPS, token por cabecera | Parcial; sin CSP (aceptado) |
+| A4c | Contraseñas débiles, canjes por fuerza bruta, montos y fechas inválidos | `NuevaContrasena`, `revisar_canje`, `schemas/common.py`, `validaciones.py` | Controlado |
 | A5 | Prompt injection | Capas de `ia_seguridad.py` + contratos | Parcial; R1 y R3 abiertos |
 | A6 | Abuso económico de la IA | `rate_limit.limite_ia` + `ia_uso.cupo_agotado` | Controlado; R2 abierto, carrera del cupo (aceptado) |
 | A7 | Datos que salen a Groq | Agregados, nombres saneados, `ai_usage` sin texto | Controlado; texto libre y retención de Groq (aceptado) |
