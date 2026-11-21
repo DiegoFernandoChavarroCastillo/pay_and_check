@@ -554,13 +554,14 @@ def _redactar_insights(user: User, patrones: list[Pattern]) -> list[str]:
 def insights_del_dia(session: Session, user: User, today: date, refresh: bool = False) -> list[dict]:
     """Consejos accionables del día (C-04). Se cachean por día, tono e idioma
     para no gastar una llamada a la IA en cada apertura de la app."""
-    # La firma incluye qué patrones hay (y la fecha de agotamiento, si la hay): si cambian durante el día, el
-    # consejo guardado ya no coincide con el aviso de Inicio y se vuelve a redactar.
+    # La firma lleva la descripción de cada patrón, con sus cifras: si la persona registra o edita un gasto y las
+    # cifras cambian, el consejo guardado ya no dice lo mismo que Inicio y se vuelve a redactar. Antes solo
+    # contaba el tipo de patrón y el consejo seguía diciendo "llevas 30.500" después de editar los gastos.
     patrones = detect_patterns(session, user, today)
     firma = {
         "tono": user.coach_tone,
         "idioma": user.idioma,
-        "patrones": [p.descripcion if p.tipo == "en_riesgo" else p.tipo for p in patrones],
+        "patrones": [p.descripcion for p in patrones],
     }
     cache = session.exec(
         select(CoachMessage)
@@ -764,6 +765,11 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> t
             elif regla_rota and directa:
                 ia_uso.marcar_respaldo()
                 respuesta = directa
+            elif regla_rota and inyectado:
+                # Un intento de sacar el prompt o cambiar el rol que el filtro de salida atrapó: "ahora mismo no
+                # puedo responder" sonaba a que la IA falló. Se responde con la redirección de siempre.
+                ia_uso.marcar_bloqueo("inyeccion")
+                respuesta = _respaldo(user, "fuera_de_alcance")
             elif regla_rota:
                 respuesta = _respaldo(user, "chat", contexto=corto())
 

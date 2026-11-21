@@ -118,7 +118,7 @@ Planes simulados, sin pasarela de pago (ver [planes.md](planes.md)).
 | PUT | `/me/subscription` | Cambia de plan (`plan`); 422 si el cambio no es válido |
 | PUT | `/me/subscription/share-progress` | Un integrante de la familia decide si comparte su progreso con el titular |
 | GET | `/me/family/progress` | Para el titular: racha, constancia, metas y si el presupuesto alcanza de cada integrante que comparte. Nunca gastos |
-| POST | `/me/subscription/redeem` | Canjea un código de convenio (activa Institucional) o familiar (une a una familia); 404 si el código no existe, 422 si no se puede usar |
+| POST | `/me/subscription/redeem` | Canjea un código de convenio (activa Institucional) o familiar (une a una familia); 404 si el código no existe, 422 si no se puede usar, 429 tras 5 códigos inválidos en 15 minutos |
 
 ### Universidad — `routers/support.py`, `routers/panel.py`
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, func, select
 
-from app.core.time import today_for
+from app.core.time import fmt_fecha, today_for
 from app.db.session import get_session
 from app.deps import get_current_user
 from app.models.budget import Budget
@@ -52,12 +52,33 @@ def _desglose_por_categoria(session: Session, budget: Budget) -> list[CategoriaD
     return desglose
 
 
+def _validar_sin_solape(session: Session, user: User, budget: Budget) -> None:
+    """Dos presupuestos con días en común dejaban ambiguo a cuál va un gasto y cuál es el "activo"
+    (`find_budget_for_date` toma el más reciente). Los rangos son inclusivos en ambos extremos."""
+    query = (
+        select(Budget)
+        .where(Budget.owner_id == user.id)
+        .where(Budget.fecha_inicio <= budget.fecha_fin)
+        .where(Budget.fecha_fin >= budget.fecha_inicio)
+    )
+    if budget.id is not None:
+        query = query.where(Budget.id != budget.id)
+    otro = session.exec(query).first()
+    if otro is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Ya tienes un presupuesto del {fmt_fecha(otro.fecha_inicio, user.idioma, True)} al "
+            f"{fmt_fecha(otro.fecha_fin, user.idioma, True)}. Edítalo o elige fechas que no se crucen con él.",
+        )
+
+
 @router.post("", response_model=BudgetResponse, status_code=status.HTTP_201_CREATED)
 def create_budget(
     payload: BudgetCreate,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> Budget:
+    _validar_sin_solape(session, current_user, Budget(owner_id=current_user.id, **payload.model_dump()))
     budget = Budget(owner_id=current_user.id, **payload.model_dump())
     session.add(budget)
     session.commit()
@@ -191,6 +212,8 @@ def update_budget(
 
     if budget.fecha_fin <= budget.fecha_inicio:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "fecha_fin debe ser posterior a fecha_inicio.")
+    with session.no_autoflush:
+        _validar_sin_solape(session, current_user, budget)
 
     session.add(budget)
     session.commit()

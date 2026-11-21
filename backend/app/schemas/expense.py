@@ -4,31 +4,33 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.common import Descripcion, Monto
+
 # "recurrente" no se acepta desde la API: solo lo asigna el pago de un gasto fijo.
 ExpenseSourceInput = Literal["manual", "texto", "voz", "ocr", "sms"]
 
 
 class ExpenseCreate(BaseModel):
-    monto: Decimal
+    monto: Monto
     category_id: int
-    descripcion: str
+    descripcion: Descripcion
     fecha: date
     source: ExpenseSourceInput = "manual"
-    comercio: str | None = None
+    comercio: Descripcion | None = None
     # El texto/voz/recibo original, cuando el gasto se confirma tras un parseo con IA.
-    texto_original: str | None = None
+    texto_original: str | None = Field(default=None, max_length=6000)
 
 
 class ExpenseUpdate(BaseModel):
-    monto: Decimal | None = None
+    monto: Monto | None = None
     category_id: int | None = None
-    descripcion: str | None = None
-    comercio: str | None = None
+    descripcion: Descripcion | None = None
+    comercio: Descripcion | None = None
     fecha: date | None = None
 
 
 class ExpenseParseRequest(BaseModel):
-    texto: str
+    texto: str = Field(min_length=1, max_length=500)
 
 
 class ExpenseParseResponse(BaseModel):

@@ -30,6 +30,7 @@ from app.services.groq_client import (
     parse_expense_text,
     parse_receipt_text,
 )
+from app.services.validaciones import validar_fecha_no_futura
 
 SIN_CAPTURA_AUTOMATICA = (
     "La captura desde SMS y notificaciones del banco está en los planes Premium, Familiar e Institucional."
@@ -70,6 +71,7 @@ def create_expense(
         # La captura automática (SMS y notificaciones del banco) es de los planes pagos (docs/planes.md).
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, SIN_CAPTURA_AUTOMATICA)
 
+    validar_fecha_no_futura(payload.fecha, current_user)
     budget = find_budget_for_date(session, current_user.id, payload.fecha)
     if budget is None:
         raise HTTPException(
@@ -183,6 +185,7 @@ def create_expense_from_text(
             "El texto describe un ingreso, no un gasto: regístralo como ingreso.",
         )
 
+    validar_fecha_no_futura(data["fecha"], current_user)
     budget = find_budget_for_date(session, current_user.id, data["fecha"])
     if budget is None:
         raise HTTPException(
@@ -194,6 +197,8 @@ def create_expense_from_text(
     expense = None
     for mov in [data, *data.get("adicionales", [])]:
         if mov.get("tipo") == "ingreso":
+            continue
+        if mov["fecha"] > today_for(current_user):
             continue
         destino = budget if mov is data else find_budget_for_date(session, current_user.id, mov["fecha"])
         if destino is None:
@@ -231,6 +236,7 @@ def update_expense(
 
     nueva_fecha = updates.get("fecha", expense.fecha)
     if "fecha" in updates:
+        validar_fecha_no_futura(nueva_fecha, current_user)
         # La fecha cambió: hay que re-derivar (y validar) su presupuesto.
         budget = find_budget_for_date(session, current_user.id, nueva_fecha)
         if budget is None:

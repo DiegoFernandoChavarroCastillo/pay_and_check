@@ -87,12 +87,18 @@ class LimiteDeTasa:
 
 LIMITE_IA = LimiteDeTasa(MAX_SOLICITUDES_IA, VENTANA_IA_S)
 LIMITE_LOGIN = LimiteDeTasa(MAX_FALLOS_LOGIN, VENTANA_LOGIN_S)
+# Canjes fallidos de códigos de convenio o de familia por persona: sin límite se podían probar códigos
+# ("ECI-2001", "ECI-2002"…) hasta dar con uno válido y activar un plan pago gratis.
+MAX_FALLOS_CANJE = 5
+VENTANA_CANJE_S = 15 * 60
+LIMITE_CANJE = LimiteDeTasa(MAX_FALLOS_CANJE, VENTANA_CANJE_S)
 
 
 def reiniciar() -> None:
     """Borra todos los contadores (las pruebas, entre un caso y otro)."""
     LIMITE_IA.vaciar()
     LIMITE_LOGIN.vaciar()
+    LIMITE_CANJE.vaciar()
 
 
 def _demasiadas(espera: int, mensaje: str) -> HTTPException:
@@ -134,3 +140,14 @@ def registrar_fallo_de_login(ip: str, email: str) -> None:
 def limpiar_fallos_de_login(email: str) -> None:
     """Entrar bien perdona los fallos de esa cuenta; los de la IP siguen contando."""
     LIMITE_LOGIN.olvidar(f"email:{email}")
+
+
+def revisar_canje(user_id: int) -> None:
+    """Lanza 429 si la persona ya acumuló demasiados códigos inválidos seguidos."""
+    espera = LIMITE_CANJE.espera(f"canje:{user_id}")
+    if espera:
+        raise _demasiadas(espera, "Demasiados códigos inválidos. Intenta de nuevo en {espera} segundos.")
+
+
+def registrar_fallo_de_canje(user_id: int) -> None:
+    LIMITE_CANJE.registrar(f"canje:{user_id}")

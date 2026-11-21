@@ -134,39 +134,22 @@ def _gastos(db_engine):
         return otros, list(session.exec(select(Expense)).all())
 
 
-def test_ya_lo_pague_con_presupuesto_registra_el_gasto_y_descuenta(client, auth_headers, db_engine, con_presupuesto):
+def test_ya_lo_pague_solo_lo_marca_y_no_registra_ningun_gasto(client, auth_headers, db_engine, con_presupuesto):
+    """El gasto lo confirma la persona en la app (formulario prellenado): si el backend lo creaba solo y ya estaba
+    registrado a mano, quedaba contado dos veces."""
     planned_id = _prever(client, auth_headers, "Libros", 70000, 14)
 
-    assert client.post(f"/planned-expenses/{planned_id}/done", headers=auth_headers).status_code == 204
-
-    otros, gastos = _gastos(db_engine)
-    [gasto] = gastos
-    assert (gasto.monto, gasto.descripcion, gasto.fecha) == (Decimal("70000"), "Libros", HOY)
-    assert (gasto.category_id, gasto.source) == (otros, "manual")
-    with Session(db_engine) as session:
-        presupuesto = get_active_budget_for_user(session, gasto.user_id, HOY)
-        assert gasto.budget_id == presupuesto.id
-        assert summary_for(session, presupuesto, HOY).disponible_total == Decimal("210000")  # 280.000 − 70.000
-    assert _lista(client, auth_headers) == []  # ya no está pendiente
-
-
-def test_ya_lo_pague_dos_veces_no_duplica_el_gasto(client, auth_headers, db_engine, con_presupuesto):
-    planned_id = _prever(client, auth_headers, "Libros", 70000, 14)
-
-    for _ in range(2):
+    for _ in range(2):  # marcarlo dos veces tampoco hace nada raro
         assert client.post(f"/planned-expenses/{planned_id}/done", headers=auth_headers).status_code == 204
 
-    assert len(_gastos(db_engine)[1]) == 1
-
-
-def test_ya_lo_pague_sin_presupuesto_solo_lo_marca(client, auth_headers, db_engine, categorias, fijar_hoy):
-    fijar_hoy(HOY)
-    planned_id = _prever(client, auth_headers, "Libros", 70000, 14)
-
-    assert client.post(f"/planned-expenses/{planned_id}/done", headers=auth_headers).status_code == 204
-
     assert _gastos(db_engine)[1] == []
-    assert _lista(client, auth_headers) == []
+    assert _lista(client, auth_headers) == []  # ya no está pendiente
+    with Session(db_engine) as session:
+        from app.models.user import User
+
+        user = session.exec(select(User)).one()
+        presupuesto = get_active_budget_for_user(session, user.id, HOY)
+        assert summary_for(session, presupuesto, HOY).disponible_total == Decimal("280000")
 
 
 def test_ya_lo_pague_de_otra_persona_es_404(client, make_user, db_engine, con_presupuesto):

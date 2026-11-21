@@ -202,7 +202,7 @@ pruebas fijan el comportamiento actual.
 
 Los gastos grandes previstos (matrícula, libros, pasajes) se cargan en `/planned-expenses` y se calculan en
 `services/previstos.py`. **No se descuentan del disponible**: son un aviso para apartar con tiempo, no un gasto.
-Solo "ya lo pagué" (`POST /planned-expenses/{id}/done`) registra el gasto de verdad.
+El gasto de verdad lo registra la persona cuando paga ("Ya lo pagué" abre el formulario de gasto prellenado).
 
 ```
 semanas             = max(dias_hasta_la_fecha / 7, 1)
@@ -224,9 +224,10 @@ margen_semanal_i    = disponible_por_semana − acumulado_i
 - **Sin presupuesto activo hoy** no hay con qué comparar: `por_semana` y `margen_semanal` salen `null` y la app
   oculta el recuadro, para no prometer que "llegas con el dinero". Tampoco hay cálculo para los que caen a más de
   120 días.
-- **"Ya lo pagué"** con presupuesto activo hoy registra un gasto con el monto y la descripción del previsto, fecha
-  de hoy y categoría "otros" (ya descuenta del disponible). Sin presupuesto activo solo lo marca. Marcarlo dos
-  veces no duplica el gasto.
+- **"Ya lo pagué"** (`POST /planned-expenses/{id}/done`) solo marca el previsto como hecho. La app pregunta si el
+  pago ya está registrado: si no, abre el formulario de gasto prellenado (monto, descripción, fecha de hoy) y marca el
+  previsto al guardarlo. Antes el backend creaba el gasto solo, y si la persona ya lo había registrado a mano quedaba
+  contado dos veces (hallazgo de la prueba en el teléfono, 20 nov 2026).
 
 ### Mejora pendiente (opción B)
 
@@ -235,3 +236,17 @@ mismo disponible semanal. Lo correcto sería **reservar** los que caen dentro de
 disponible, porque ese dinero ya tiene dueño) y **separar** los que caen después del cierre, que se pagarán con el
 presupuesto siguiente y no deberían restar al actual. Eso exige decidir cómo se muestran las reservas en el
 disponible y qué pasa con un previsto que se paga antes de tiempo.
+
+## 7. Validaciones que protegen las cifras
+
+Agregadas tras la prueba de punta a punta en el teléfono (20 nov 2026). Sin ellas, datos válidos para la API daban
+cifras falsas:
+
+- **Montos:** gastos, ingresos, presupuestos y límites deben ser mayores que cero y como mucho $1.000.000.000
+  (`schemas/common.py`). Un gasto de −$5.000 subía el disponible; uno enorme reventaba la columna con un 500.
+- **Sin fechas futuras:** un gasto o ingreso no puede tener fecha posterior a hoy (`services/validaciones.py`). Un
+  ingreso que aún no llegaba ya subía el disponible por día. Lo que viene se anota en Gastos que vienen o Gastos fijos.
+- **Presupuestos sin cruces:** dos presupuestos de la misma persona no pueden compartir días (409). Con cruces,
+  `find_budget_for_date` elegía el más reciente y un gasto podía caer en uno u otro.
+- **Puntos de metas:** devolver el aporte o borrar la meta quita los puntos de "primer aporte" y "meta cumplida", y no
+  se puede apartar más de lo que le falta a la meta. Antes se podían ganar puntos sin ahorrar nada.
