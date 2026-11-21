@@ -5,6 +5,7 @@ import '../../core/format.dart';
 import '../../core/motion.dart';
 import '../../core/native.dart';
 import '../../core/notifications.dart';
+import '../../core/responsive.dart';
 import '../../core/settings.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
@@ -132,6 +133,93 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
     });
 
     final tieneBudget = ref.watch(summaryProvider).value != null;
+    final pestanas = IndexedStack(
+      index: _index,
+      children: [
+        HomeScreen(onOpenCoach: () => _irA(2)),
+        const TransactionsScreen(),
+        const CoachScreen(),
+        const ProgressScreen(),
+        const ProfileScreen(),
+      ],
+    );
+    final destinos = [
+      (Icons.home_outlined, Icons.home_rounded, l.tabHome),
+      (Icons.receipt_long_outlined, Icons.receipt_long, l.tabTransactions),
+      (Icons.auto_awesome_outlined, Icons.auto_awesome, l.tabCoach),
+      (Icons.emoji_events_outlined, Icons.emoji_events, l.tabProgress),
+      (Icons.person_outline, Icons.person, l.tabProfile),
+    ];
+
+    // Tableta o computador: las pestañas pasan a un riel a la izquierda, con "Registrar" arriba, y el
+    // contenido usa el resto del ancho.
+    final ancho = Ancho.of(context);
+    if (!ancho.esCompacto) {
+      final extendido = ancho == Ancho.expandido;
+      return Scaffold(
+        body: SafeArea(
+          child: Row(
+            children: [
+              NavigationRail(
+                extended: extendido,
+                minExtendedWidth: 220,
+                selectedIndex: _index,
+                onDestinationSelected: _irA,
+                labelType: extendido ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+                groupAlignment: -0.85,
+                leading: Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: extendido ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                    children: [
+                      _Marca(extendido: extendido),
+                      const SizedBox(height: 20),
+                      if (tieneBudget)
+                        extendido
+                            ? FloatingActionButton.extended(
+                                elevation: 0,
+                                onPressed: () => showAddSheet(context),
+                                icon: const Icon(Icons.add),
+                                label: Text(l.add),
+                              )
+                            : FloatingActionButton(
+                                elevation: 0,
+                                tooltip: l.add,
+                                onPressed: () => showAddSheet(context),
+                                child: const Icon(Icons.add),
+                              ),
+                    ],
+                  ),
+                ),
+                destinations: [
+                  for (final (icono, activo, nombre) in destinos)
+                    NavigationRailDestination(icon: Icon(icono), selectedIcon: Icon(activo), label: Text(nombre)),
+                ],
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, c) => AnchoInformado(
+                    ancho: c.maxWidth,
+                    child: FadeTransition(
+                      opacity: CurvedAnimation(parent: _fundido, curve: kMotionCurve),
+                      child: IndexedStack(
+                        index: _index,
+                        children: [
+                          // Inicio es un tablero: con espacio, dos columnas. El resto son listas y chat.
+                          ContenidoCentrado(maxWidth: AnchoMax.tablero, child: pestanas.children[0]),
+                          for (final p in pestanas.children.skip(1)) ContenidoCentrado(child: p),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       // El contenido pasa por detrás de la barra inferior: así flota de verdad. Con el teclado abierto la
       // barra queda tapada, y el contenido (el campo del chat) debe terminar justo encima del teclado.
@@ -140,16 +228,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
         bottom: false,
         child: FadeTransition(
           opacity: CurvedAnimation(parent: _fundido, curve: kMotionCurve),
-          child: IndexedStack(
-            index: _index,
-            children: [
-              HomeScreen(onOpenCoach: () => _irA(2)),
-              const TransactionsScreen(),
-              const CoachScreen(),
-              const ProgressScreen(),
-              const ProfileScreen(),
-            ],
-          ),
+          child: pestanas,
         ),
       ),
       floatingActionButton: _index <= 1 && tieneBudget
@@ -176,16 +255,34 @@ class _ShellScreenState extends ConsumerState<ShellScreen> with SingleTickerProv
                 _irA(i);
               },
               destinations: [
-                NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: l.tabHome),
-                NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: l.tabTransactions),
-                NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), selectedIcon: const Icon(Icons.auto_awesome), label: l.tabCoach),
-                NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events), label: l.tabProgress),
-                NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l.tabProfile),
+                for (final (icono, activo, nombre) in destinos)
+                  NavigationDestination(icon: Icon(icono), selectedIcon: Icon(activo), label: nombre),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Logo y nombre arriba del riel lateral (solo en pantallas anchas).
+class _Marca extends StatelessWidget {
+  const _Marca({required this.extendido});
+
+  final bool extendido;
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = Image.asset('assets/brand/isotipo.png', width: 40, height: 40, fit: BoxFit.contain);
+    if (!extendido) return logo;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        logo,
+        const SizedBox(width: 10),
+        Text(context.l.appName, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }

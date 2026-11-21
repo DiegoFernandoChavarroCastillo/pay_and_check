@@ -210,6 +210,27 @@ void main() {
     await _capturar(tester, 'letra_grande_movimientos');
   });
 
+  // Versión web en un computador y en una tableta: riel lateral, columnas y pantallas centradas.
+  for (final (nombre, tamano) in [('pc', const Size(1440, 900)), ('tableta', const Size(1024, 768))]) {
+    testWidgets('pantalla ancha ($nombre)', (tester) async {
+      tester.view
+        ..physicalSize = tamano
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(RepaintBoundary(key: _marco, child: await appDePrueba(_ApiLlena())));
+      await _capturar(tester, '${nombre}_inicio');
+      for (final (i, pestana) in ['Movimientos', 'Coach', 'Progreso', 'Perfil'].indexed) {
+        await tester.tap(find.descendant(of: find.byType(NavigationRail), matching: find.byType(Icon)).at(i + 2)); // 0 es "Registrar", 1 es Inicio
+        await _capturar(tester, '${nombre}_$pestana');
+      }
+      await tester.tap(find.descendant(of: find.byType(NavigationRail), matching: find.byIcon(Icons.add)));
+      await _capturar(tester, '${nombre}_registrar');
+      await tester.tap(find.text('Escribir o dictar').first, warnIfMissed: false);
+      await _capturar(tester, '${nombre}_dictar');
+    });
+  }
+
   for (final brillo in Brightness.values) {
     final modo = brillo.name;
 

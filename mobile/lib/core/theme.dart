@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'responsive.dart';
+
 /// Verde profundo: transmite calma y dinero sin el rojo/verde de "bien/mal"
 /// que la app evita a propósito (principio de cero culpa).
 const _seed = Color(0xFF1F6F5C);
@@ -173,9 +175,17 @@ ThemeData buildTheme(Brightness brightness) {
       linearTrackColor: scheme.surfaceContainerHighest,
       circularTrackColor: scheme.surfaceContainerHighest,
     ),
-    // Las pantallas nuevas entran con un fundido y un desliz corto.
+    // Las pantallas nuevas entran con un fundido y un desliz corto, igual en todas las plataformas. En una
+    // pantalla ancha, además, se muestran como una columna centrada.
     pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {TargetPlatform.android: FadeForwardsPageTransitionsBuilder()},
+      builders: {
+        TargetPlatform.android: PaginaCentradaTransitionsBuilder(FadeForwardsPageTransitionsBuilder()),
+        TargetPlatform.fuchsia: PaginaCentradaTransitionsBuilder(FadeForwardsPageTransitionsBuilder()),
+        TargetPlatform.linux: PaginaCentradaTransitionsBuilder(FadeForwardsPageTransitionsBuilder()),
+        TargetPlatform.windows: PaginaCentradaTransitionsBuilder(FadeForwardsPageTransitionsBuilder()),
+        TargetPlatform.iOS: PaginaCentradaTransitionsBuilder(FadeForwardsPageTransitionsBuilder()),
+        TargetPlatform.macOS: PaginaCentradaTransitionsBuilder(FadeForwardsPageTransitionsBuilder()),
+      },
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
