@@ -1,6 +1,6 @@
 # Política de privacidad de Pay&Check
 
-**Versión 2026-11.** Este texto es el mismo que muestra la app (`mobile/lib/features/auth/privacy_policy.dart`).
+**Versión 2026-11-21.** Este texto es el mismo que muestra la app (`mobile/lib/features/auth/privacy_policy.dart`).
 Si cambia uno, cambia el otro, y se sube la versión en la app (`politicaVersion`, `core/config/app_config.dart`) y en
 el backend (`POLITICA_VERSION`, `app/core/config.py`). Con la versión nueva, cada cuenta vuelve a ver la política y
 la acepta al entrar.
@@ -11,7 +11,7 @@ Esta página está lista para publicarse en una URL pública (GitHub Pages) y en
 
 ## Quién es responsable
 
-Pay&Check es un proyecto académico en fase piloto. El equipo de Pay&Check es el responsable del tratamiento de tus
+Pay&Check está en fase piloto. El equipo de Pay&Check es el responsable del tratamiento de tus
 datos personales, conforme a la Ley 1581 de 2012 (habeas data) y al Decreto 1377 de 2013.
 
 ## Qué datos guardamos
@@ -32,6 +32,13 @@ datos personales, conforme a la Ley 1581 de 2012 (habeas data) y al Decreto 1377
   los ajustes de Android, con el mismo consentimiento de los SMS. La app solo mira las notificaciones de una lista
   fija de apps financieras (`BankNotificationListener.kt`), las guarda en tu teléfono (las últimas 300) y nada
   sale de él hasta que eliges registrar un movimiento.
+
+## En la versión web
+
+En la versión para el navegador no hay lectura de SMS, de notificaciones ni de recibos. La voz se convierte en texto
+con el servicio de dictado del propio navegador, que según el navegador puede procesarla en los servidores de su
+proveedor (Google en Chrome, Apple en Safari). Tu sesión queda guardada, cifrada, en el navegador hasta que cierres
+sesión.
 
 ## Qué se envía al servicio de IA
 
@@ -56,7 +63,8 @@ legales sobre ti.
 
 ## Dónde se guardan y por cuánto tiempo
 
-En proveedores en la nube: la API en Render y la base de datos PostgreSQL en Neon. Tus datos se guardan mientras
+En proveedores en la nube: la API en Amazon Web Services (con Render como respaldo), la base de datos PostgreSQL
+en Neon y la versión web en Vercel, que solo sirve la app y no guarda tus datos. Tus datos se guardan mientras
 tengas cuenta. Al borrar tu cuenta se elimina todo de inmediato y para siempre.
 
 ## Cómo los protegemos

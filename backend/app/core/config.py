@@ -37,4 +37,4 @@ settings = Settings()
 
 # Versión de la política de privacidad vigente (docs/privacidad.md). La app manda la que mostró al aceptarla; al
 # publicar una nueva, se cambia aquí y en la app, y quien aceptó una anterior la vuelve a ver al entrar.
-POLITICA_VERSION = "2026-11"
+POLITICA_VERSION = "2026-11-21"

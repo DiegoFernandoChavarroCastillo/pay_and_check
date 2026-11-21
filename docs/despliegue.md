@@ -135,6 +135,20 @@ Proyecto de Google Cloud con número `360030321900`. Hacen falta dos credenciale
   lista de usuarios de prueba.
 - Existe un segundo cliente web (`360030321900-iauvmenob…`) que no se usa.
 
+## Cambiar la política de privacidad
+
+La versión de la política vive en dos lugares: `POLITICA_VERSION` en `backend/app/core/config.py` y
+`politicaVersion` en `mobile/lib/core/config/app_config.dart`. El backend rechaza con 422 un registro o una
+aceptación que no traiga la versión vigente, y marca a cada cuenta con una versión anterior para que la acepte de
+nuevo al entrar. Por eso los tres clientes y el servidor deben cambiar **juntos**:
+
+1. Fusionar el cambio en `main`. La web se publica sola (`web-deploy.yml`).
+2. Actualizar el backend de AWS **enseguida**. Mientras la web va adelante del backend, registrarse en la web
+   falla.
+3. Publicar un APK nuevo (`git tag vX.Y.Z`). Un APK anterior no puede registrar cuentas ni aceptar la política
+   nueva: quien lo tenga debe actualizar.
+4. Si Render sigue de respaldo, desplegarlo también.
+
 ## Verificación después de desplegar
 
 1. `curl https://paycheck-swnt.duckdns.org/health` responde `{"status":"ok"}`.

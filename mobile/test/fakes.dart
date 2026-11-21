@@ -34,7 +34,7 @@ const userJson = {
   'coach_tone': 'motivador',
   'idioma': 'es',
   'zona_horaria': 'America/Bogota',
-  'politica_version': '2026-11',
+  'politica_version': '2026-11-21',
   'politica_vigente': true,
   'sms_consent_at': '2026-11-01T00:00:00Z',
 };
@@ -200,7 +200,7 @@ class FakeApi extends Api {
 
   @override
   Future<User> acceptPolicy() async {
-    usuario = {...usuario, 'politica_version': '2026-11', 'politica_vigente': true};
+    usuario = {...usuario, 'politica_version': '2026-11-21', 'politica_vigente': true};
     return User.fromJson(usuario);
   }
 

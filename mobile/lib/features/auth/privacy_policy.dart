@@ -16,7 +16,7 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
     return [
       (
         'Who is responsible',
-        'Pay&Check is an academic project in a pilot phase. The Pay&Check team is responsible for the processing '
+        'Pay&Check is in a pilot phase. The Pay&Check team is responsible for the processing '
             'of your personal data under Colombian Law 1581 of 2012 (habeas data) and Decree 1377 of 2013.',
       ),
       (
@@ -39,6 +39,13 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
             'nothing leaves it until you choose to log a transaction.',
       ),
       (
+        'In the web version',
+        'In the browser version there is no reading of SMS, notifications or receipts. Voice is turned into text '
+            'by the browser\'s own dictation service, which, depending on the browser, may process it on its '
+            'provider\'s servers (Google in Chrome, Apple in Safari). Your session is stored, encrypted, in the '
+            'browser until you log out.',
+      ),
+      (
         'What is sent to the AI service',
         'To understand what you write and draft the coach\'s messages we use Groq, an AI service whose servers '
             'are in the United States (international data transfer). If Groq does not respond, the same request '
@@ -57,7 +64,9 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
       ),
       (
         'Where it is stored and for how long',
-        'On cloud providers: the API on Render and the PostgreSQL database on Neon. Your data is kept while '
+        'On cloud providers: the API on Amazon Web Services (with Render as a backup), the PostgreSQL database '
+            'on Neon and the web version on Vercel, which only serves the app and does not store your data. Your '
+            'data is kept while '
             'your account exists. When you delete your account, everything is deleted immediately and for good.',
       ),
       (
@@ -87,7 +96,7 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
   return [
     (
       'Quién es responsable',
-      'Pay&Check es un proyecto académico en fase piloto. El equipo de Pay&Check es el responsable del '
+      'Pay&Check está en fase piloto. El equipo de Pay&Check es el responsable del '
           'tratamiento de tus datos personales, conforme a la Ley 1581 de 2012 (habeas data) y al Decreto 1377 de '
           '2013.',
     ),
@@ -111,6 +120,13 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
           'nada sale de él hasta que eliges registrar un movimiento.',
     ),
     (
+      'En la versión web',
+      'En la versión para el navegador no hay lectura de SMS, de notificaciones ni de recibos. La voz se convierte '
+          'en texto con el servicio de dictado del propio navegador, que según el navegador puede procesarla en los '
+          'servidores de su proveedor (Google en Chrome, Apple en Safari). Tu sesión queda guardada, cifrada, en el '
+          'navegador hasta que cierres sesión.',
+    ),
+    (
       'Qué se envía al servicio de IA',
       'Para entender lo que escribes y redactar los mensajes del coach usamos Groq, un servicio de IA con '
           'servidores en Estados Unidos (transferencia internacional de datos). Si Groq no responde, la misma '
@@ -129,7 +145,8 @@ List<(String, String)> politicaDePrivacidad(String idioma) {
     ),
     (
       'Dónde se guardan y por cuánto tiempo',
-      'En proveedores en la nube: la API en Render y la base de datos PostgreSQL en Neon. Tus datos se guardan '
+      'En proveedores en la nube: la API en Amazon Web Services (con Render como respaldo), la base de datos '
+          'PostgreSQL en Neon y la versión web en Vercel, que solo sirve la app y no guarda tus datos. Tus datos se guardan '
           'mientras tengas cuenta. Al borrar tu cuenta se elimina todo de inmediato y para siempre.',
     ),
     (

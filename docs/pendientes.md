@@ -33,7 +33,7 @@ punto; el seguimiento se hace en Jira.
 
 | # | Qué | Detalle |
 |---|---|---|
-| 12 | Actualizar la **política de privacidad** | Dice que la API está en Render y presenta Pay&Check como proyecto académico; tampoco menciona la versión web (sesión en el navegador, dictado del navegador). El texto vive en [privacidad.md](privacidad.md) **y** en la app (`privacy_policy.dart`) y deben cambiar juntos. Hay que decidir si se sube `POLITICA_VERSION`, que obliga a cada cuenta a aceptarla de nuevo |
+| 12 | Publicar la política de privacidad **2026-11-21** en orden | Backend, web y APK deben llevar la misma versión. Ver [despliegue.md](despliegue.md#cambiar-la-política-de-privacidad) |
 | 13 | Validar con Bienestar Universitario de la ECI los apoyos reales y el texto de consentimiento del convenio | |
 | 14 | Negociar la licencia de plataforma con la ECI y actualizar el modelo financiero | [negocio/](negocio/) |
 | 15 | Registrar en Jira el trabajo de los PR #5 a #9 | Hallazgos de la prueba en dispositivo, versión web, diseño adaptable y documentación |

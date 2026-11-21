@@ -22,7 +22,7 @@ const String googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', 
 /// Versión de la política de privacidad que muestra la app. Debe ser la misma
 /// `POLITICA_VERSION` del backend (`app/core/config.py`): al cambiar el texto
 /// se suben las dos y cada cuenta la vuelve a aceptar al entrar.
-const String politicaVersion = '2026-11';
+const String politicaVersion = '2026-11-21';
 
 /// Correo para ejercer los derechos sobre los datos (Ley 1581 de 2012). Se fija
 /// con `--dart-define=PRIVACY_CONTACT=...`; si está vacío, la política remite a
