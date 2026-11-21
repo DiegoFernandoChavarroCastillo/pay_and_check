@@ -11,6 +11,8 @@ name: Web deploy
 #   Variables:  VERCEL_ORG_ID, VERCEL_PROJECT_ID (de .vercel/project.json al hacer `vercel link`)
 #               WEB_API_BASE_URL (opcional; por defecto el backend de Render). Debe ser HTTPS y tener el
 #               dominio de Vercel en CORS_ORIGINS.
+#               GOOGLE_WEB_CLIENT_ID (opcional): cliente OAuth web con el dominio de Vercel en sus orígenes de
+#               JavaScript. Debe estar también en GOOGLE_CLIENT_ID del backend. Sin él se usa GOOGLE_SERVER_CLIENT_ID.
 on:
   push:
     branches: [main]
@@ -58,7 +60,8 @@ jobs:
         run: |
           flutter build web --release --no-wasm-dry-run \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
-            --dart-define=PRIVACY_CONTACT="${{ vars.PRIVACY_CONTACT }}"
+            --dart-define=PRIVACY_CONTACT="${{ vars.PRIVACY_CONTACT }}" \
+            --dart-define=GOOGLE_WEB_CLIENT_ID="${{ vars.GOOGLE_WEB_CLIENT_ID || vars.GOOGLE_SERVER_CLIENT_ID }}"
 
       - name: Deploy to Vercel
         working-directory: mobile/build/web

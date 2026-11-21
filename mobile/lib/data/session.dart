@@ -73,6 +73,16 @@ class SessionController extends AsyncNotifier<User?> {
     await login(email, password);
   }
 
+  /// Versión web: Google no deja abrir el selector desde un botón propio, solo desde el suyo
+  /// (`GoogleWebButton`). Al elegir la cuenta llega un evento con el id_token y la app entra con él.
+  Future<void> prepareGoogleWeb() async {
+    if (_googleListo) return;
+    await GoogleSignIn.instance.initialize(clientId: googleWebClientId);
+    _googleListo = true;
+  }
+
+  Future<void> loginWithGoogleIdToken(String idToken) async => _entrar(await _api.loginWithGoogle(idToken));
+
   /// Devuelve false si el usuario canceló el selector de cuentas.
   Future<bool> loginWithGoogle() async {
     final google = GoogleSignIn.instance;

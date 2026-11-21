@@ -177,9 +177,15 @@ un iPhone, Safari → Compartir → "Agregar a pantalla de inicio" la abre a pan
 computador se ve como una columna del ancho de un celular (`WebFrame` en `lib/app.dart`).
 
 Lo que solo existe en Android se oculta con `kIsWeb`: foto y galería de recibos (ML Kit), captura de SMS y
-notificaciones del banco, recordatorios (notificaciones locales), widget, botones para abrir Nequi/Daviplata y
-"Continuar con Google" (en web Google exige otro botón y otra credencial). Notificaciones queda solo con los
-gastos fijos por pagar. El dictado por voz depende del navegador: bien en Chrome, irregular en Safari.
+notificaciones del banco, recordatorios (notificaciones locales), widget y botones para abrir Nequi/Daviplata.
+Notificaciones queda solo con los gastos fijos por pagar.
+
+**Google en web.** El navegador no deja abrir el selector de cuentas desde un botón propio: se muestra el botón
+oficial de Google (`features/auth/google_button/`, importado de forma condicional porque no compila para
+Android) y la sesión llega por `GoogleSignIn.instance.authenticationEvents`. Usa `--dart-define=GOOGLE_WEB_CLIENT_ID`
+(por defecto, `GOOGLE_SERVER_CLIENT_ID`): ese cliente OAuth *web* debe tener el dominio de la web en "Orígenes
+autorizados de JavaScript", y su ID debe estar en `GOOGLE_CLIENT_ID` del backend, que acepta varios separados por
+coma. El dictado por voz depende del navegador: bien en Chrome, irregular en Safari.
 
 ```bash
 flutter build web --release --dart-define=API_BASE_URL=https://pay-and-check-api.onrender.com

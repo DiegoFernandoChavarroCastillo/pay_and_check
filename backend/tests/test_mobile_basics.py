@@ -184,3 +184,20 @@ def test_google_sin_client_id_configurado_rechaza_cualquier_token(client, monkey
     r = client.post("/auth/google", json={"id_token": "cualquier-token"})
     assert r.status_code == 401
     assert "no está configurado" in r.json()["detail"]
+
+
+def test_google_acepta_varios_client_id_separados_por_coma(monkeypatch):
+    """La app Android y la versión web pueden usar clientes OAuth distintos del mismo proyecto."""
+    from app.core.config import settings
+    from app.services import google_auth
+
+    vistos = {}
+
+    def falso_verify(token, request, audience):
+        vistos["audience"] = audience
+        return {"sub": "123", "email": "a@b.co"}
+
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", "android-web.apps , vercel.apps")
+    monkeypatch.setattr(google_auth.google_id_token, "verify_oauth2_token", falso_verify)
+    assert google_auth.verify_google_token("t")["email"] == "a@b.co"
+    assert vistos["audience"] == ["android-web.apps", "vercel.apps"]
