@@ -33,6 +33,7 @@
   "password": "Contraseña",
   "showPassword": "Mostrar contraseña",
   "hidePassword": "Ocultar contraseña",
+  "passwordRequired": "Escribe tu contraseña",
   "passwordTooShort": "Usa al menos {min} caracteres",
   "@passwordTooShort": {
     "placeholders": {
@@ -97,6 +98,14 @@
     }
   },
   "riskBody": "Al ritmo de ahora, el presupuesto alcanzaría hasta el {date}. Un pequeño ajuste esta semana lo estira hasta el final.",
+  "riskOverBody": "Ya gastaste {amount} más de lo que tenías para este presupuesto. Revisa qué gastos puedes frenar o registra un ingreso si te llegó dinero.",
+  "@riskOverBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "@riskBody": {
     "placeholders": {
       "date": {
@@ -172,6 +181,15 @@
   "goalReached": "Cumplida",
   "goalVerified": "Apartado de verdad",
   "undoContribution": "Devolver al disponible",
+  "undoContributionTitle": "¿Devolver este aporte?",
+  "undoContributionBody": "{amount} vuelven a tu disponible y dejan de contar para la meta.",
+  "@undoContributionBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "deleteGoalTitle": "¿Eliminar la meta?",
   "deleteGoalBody": "Lo que habías apartado vuelve a estar disponible.",
   "challenges": "Retos",
@@ -285,6 +303,7 @@
   "addByReceiptHint": "La foto no sale de tu teléfono",
   "addByGallery": "Recibo desde la galería",
   "addManual": "Formulario manual",
+  "editIncome": "Editar ingreso",
   "addIncome": "Dinero que recibí",
   "confirmIncome": "Confirma el ingreso",
   "confirmIncomeHint": "Entendimos que recibiste este dinero. Corrige lo que haga falta antes de guardar.",
@@ -421,6 +440,14 @@
     }
   },
   "weekOverPace": "Vas {amount} por encima de tu ritmo semanal. Aún hay semana para equilibrar.",
+  "weekFarOverPace": "Vas {amount} por encima de tu ritmo semanal, más de una semana entera de gasto. Revisa qué puedes recortar o ajusta tu presupuesto.",
+  "@weekFarOverPace": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "@weekOverPace": {
     "placeholders": {
       "amount": {
@@ -733,10 +760,21 @@
   "@plannedInDays": {"placeholders": {"n": {"type": "int"}}},
   "plannedOk": "Aparta {amount} por semana y llegas con el dinero.",
   "@plannedOk": {"placeholders": {"amount": {"type": "String"}}},
-  "plannedTight": "Necesitas apartar {amount} por semana: más de lo que hoy te deja tu presupuesto. Empieza ya o ajusta otros gastos.",
+  "plannedTight": "Este necesita {amount} por semana, pero sumado a los que vienen antes pide más de lo que hoy te deja tu presupuesto. Empieza ya o ajusta otros gastos.",
   "@plannedTight": {"placeholders": {"amount": {"type": "String"}}},
   "plannedDone": "Ya lo pagué",
   "plannedDoneSnack": "Listo, uno menos.",
+  "plannedDoneTitle": "¿Ya registraste este pago?",
+  "plannedDoneBody": "Si aún no está en tus movimientos, regístralo ahora por {amount} para que se descuente de tu disponible.",
+  "plannedDoneRegister": "Registrarlo ahora",
+  "plannedDoneAlready": "Ya está registrado",
+  "@plannedDoneBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "plannedTuition": "Matrícula",
   "plannedBooks": "Libros y materiales",
   "plannedTrip": "Pasajes de vacaciones",

@@ -397,6 +397,14 @@ class FakeApi extends Api {
   Future<void> createPlanned(String descripcion, double monto, DateTime fecha) async =>
       previstosCreados.add({'descripcion': descripcion, 'monto': monto});
 
+  final previstosPagados = <int>[];
+
+  @override
+  Future<void> plannedDone(int id) async {
+    previstosPagados.add(id);
+    previstos.removeWhere((p) => p['id'] == id);
+  }
+
   @override
   Future<int> splitExpense(Json datos) async {
     vacas.add(datos);

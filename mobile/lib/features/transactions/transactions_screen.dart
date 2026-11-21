@@ -10,6 +10,7 @@ import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../../l10n/gen/app_localizations.dart';
+import 'add_sheet.dart' show IncomeFormScreen;
 import 'expense_form_screen.dart';
 
 IconData sourceIcon(String source) => switch (source) {
@@ -47,7 +48,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Widget build(BuildContext context) {
     final l = context.l;
     final categorias = ref.watch(categoriesProvider).value ?? const <Category>[];
-    final nombres = {for (final c in categorias) c.id: c.nombre};
+    final nombres = {for (final c in categorias) c.id: catLabel(context, c.nombre)};
 
     return Column(
       children: [
@@ -96,7 +97,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           padding: const EdgeInsets.only(right: 8),
                           child: FilterChip(
                             showCheckmark: false,
-                            label: Text(c.nombre),
+                            label: Text(catLabel(context, c.nombre)),
                             selected: _categoryId == c.id,
                             onSelected: (v) => setState(() => _categoryId = v ? c.id : null),
                           ),
@@ -201,6 +202,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       title: ingreso.descripcion,
                       subtitle: shortDate(context, ingreso.fecha),
                       amount: ingreso.monto,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => IncomeFormScreen(existing: ingreso)),
+                      ),
                       trailing: IconButton(
                         tooltip: l.delete,
                         icon: const Icon(Icons.delete_outline),

@@ -160,6 +160,9 @@ class Api {
   Future<void> createIncome(double monto, String descripcion, DateTime fecha) =>
       _dio.post('/incomes', data: {'monto': monto, 'descripcion': descripcion, 'fecha': isoDate(fecha)});
 
+  Future<void> updateIncome(int id, double monto, String descripcion, DateTime fecha) =>
+      _dio.patch('/incomes/$id', data: {'monto': monto, 'descripcion': descripcion, 'fecha': isoDate(fecha)});
+
   Future<void> deleteIncome(int id) => _dio.delete('/incomes/$id');
 
   Future<List<RecurringExpense>> recurring() => _lista(_dio.get('/recurring-expenses'), RecurringExpense.fromJson);

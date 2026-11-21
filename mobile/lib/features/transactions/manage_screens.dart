@@ -26,7 +26,7 @@ class CategoriesScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(actual == null ? l.newCategory : (soloLimite ? actual.nombre : l.editCategory)),
+          title: Text(actual == null ? l.newCategory : (soloLimite ? catLabel(context, actual.nombre) : l.editCategory)),
           content: Form(
             key: form,
             child: Column(
@@ -113,7 +113,7 @@ class CategoriesScreen extends ConsumerWidget {
           children: [
             for (final c in categorias)
               ListTile(
-                title: Text(c.nombre),
+                title: Text(catLabel(context, c.nombre)),
                 subtitle: Text(
                   [
                     c.tipo == 'fijo' ? l.fixedExpense : l.optionalExpense,
@@ -168,7 +168,7 @@ class RecurringScreen extends ConsumerWidget {
                   DropdownButtonFormField<int>(
                     initialValue: categoryId,
                     decoration: InputDecoration(labelText: l.category),
-                    items: [for (final c in categorias) DropdownMenuItem(value: c.id, child: Text(c.nombre))],
+                    items: [for (final c in categorias) DropdownMenuItem(value: c.id, child: Text(catLabel(context, c.nombre)))],
                     onChanged: (v) => setState(() => categoryId = v!),
                   ),
                   const SizedBox(height: 12),
@@ -241,7 +241,7 @@ class RecurringScreen extends ConsumerWidget {
     final l = context.l;
     final dias = weekdayNames(context);
     final categorias = ref.watch(categoriesProvider).value ?? const <Category>[];
-    final nombres = {for (final c in categorias) c.id: c.nombre};
+    final nombres = {for (final c in categorias) c.id: catLabel(context, c.nombre)};
 
     return Scaffold(
       appBar: AppBar(title: Text(l.recurringExpenses)),

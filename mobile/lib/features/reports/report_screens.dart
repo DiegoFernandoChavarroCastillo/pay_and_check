@@ -62,7 +62,10 @@ class WeeklyReportScreen extends ConsumerWidget {
                     Text(
                       bajoRitmo
                           ? l.weekUnderPace(money(-reporte.diferencia))
-                          : l.weekOverPace(money(reporte.diferencia)),
+                          // Pasarse más de una semana entera de ritmo no se equilibra "con lo que queda de semana".
+                          : reporte.diferencia >= reporte.ritmoEsperado
+                              ? l.weekFarOverPace(money(reporte.diferencia))
+                              : l.weekOverPace(money(reporte.diferencia)),
                     ),
                   ],
                 ),
@@ -164,7 +167,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
       (Icons.payments_outlined, money(w.gastoTotal), l.wrappedSpent(w.numGastos)),
       (Icons.event_available_outlined, '${w.diasConRegistro}', l.wrappedDays),
       if (w.categoriaTop != null)
-        (Icons.pie_chart_outline, w.categoriaTop!, l.wrappedTopCategory(w.categoriaTopPct ?? 0)),
+        (Icons.pie_chart_outline, catLabel(context, w.categoriaTop!), l.wrappedTopCategory(w.categoriaTopPct ?? 0)),
       if (w.gastoMayor != null)
         (Icons.north_east, money(w.gastoMayorMonto ?? 0), l.wrappedBiggest(w.gastoMayor!)),
       if (w.variacionPct != null)

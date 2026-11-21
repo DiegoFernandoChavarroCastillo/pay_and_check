@@ -475,11 +475,23 @@ class MilesFormatter extends TextInputFormatter {
 
 /// Fecha elegible con el selector del sistema.
 class DateField extends StatelessWidget {
-  const DateField({super.key, required this.label, required this.value, required this.onChanged});
+  const DateField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.firstDate,
+    this.lastDate,
+  });
 
   final String label;
   final DateTime value;
   final ValueChanged<DateTime> onChanged;
+
+  /// Límites del selector. Gastos e ingresos usan `lastDate: today()`: una fecha futura contaba en el
+  /// disponible de hoy aunque el dinero aún no hubiera llegado (o salido), y el backend la rechaza.
+  final DateTime? firstDate;
+  final DateTime? lastDate;
 
   @override
   Widget build(BuildContext context) {
@@ -488,8 +500,8 @@ class DateField extends StatelessWidget {
         final elegida = await showDatePicker(
           context: context,
           initialDate: value,
-          firstDate: DateTime(value.year - 2),
-          lastDate: DateTime(value.year + 3),
+          firstDate: firstDate ?? DateTime(value.year - 2),
+          lastDate: lastDate ?? DateTime(value.year + 3),
         );
         if (elegida != null) onChanged(elegida);
       },

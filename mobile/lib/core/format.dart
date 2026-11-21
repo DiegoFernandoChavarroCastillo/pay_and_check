@@ -58,8 +58,34 @@ String errorMessage(Object error, AppLocalizations l) {
   if (error is DioException) {
     final data = error.response?.data;
     if (data is Map && data['detail'] is String) return data['detail'] as String;
+    // Validaciones propias del backend ("Esa contraseña es muy fácil de adivinar…") llegan como la lista de
+    // errores de FastAPI con el prefijo "Value error, ": se muestra el mensaje, que ya está escrito para la persona.
+    if (data is Map && data['detail'] is List) {
+      for (final e in data['detail'] as List) {
+        final msg = e is Map ? e['msg'] : null;
+        if (msg is String && msg.startsWith('Value error, ')) return msg.substring('Value error, '.length);
+      }
+    }
     if (error.response?.statusCode == 422) return l.errorInvalidData;
     if (error.response == null) return l.errorNetwork;
   }
   return l.errorGeneric;
 }
+
+/// Las categorías por defecto viven en la base con su nombre en español ("comida", "transporte"…) y así las
+/// usan la IA y los colores. En inglés solo cambia lo que se muestra; las propias se muestran tal cual.
+const _categoriasEn = {
+  'comida': 'Food',
+  'transporte': 'Transport',
+  'entretenimiento': 'Entertainment',
+  'salud': 'Health',
+  'servicios': 'Utilities',
+  'otros': 'Other',
+  'compras': 'Shopping',
+  'estudio': 'Education',
+  'vivienda': 'Housing',
+  'deudas': 'Debt',
+};
+
+String catLabel(BuildContext context, String nombre) =>
+    Localizations.localeOf(context).languageCode == 'en' ? (_categoriasEn[nombre] ?? nombre) : nombre;
