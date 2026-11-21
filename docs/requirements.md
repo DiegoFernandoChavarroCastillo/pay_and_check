@@ -35,9 +35,10 @@ Las apps de finanzas suelen ser contadores pasivos que la gente abandona por per
 **Supuestos y dependencias.**
 
 - La persona concede los permisos de cámara, micrófono, SMS y notificaciones solo si quiere usar esas funciones.
-- El backend corre en Render (plan gratuito, se duerme) con PostgreSQL en Neon.
+- El backend corre en AWS EC2 detrás de Caddy (HTTPS), con Render como respaldo y PostgreSQL en Neon
+  ([despliegue.md](despliegue.md)).
 - Si Groq falla o falta la clave, la app sigue funcionando con formulario manual y textos de respaldo.
-- La app se distribuye como APK directo, sin tienda.
+- La app se distribuye como APK directo, sin tienda, y como versión web en Vercel para iPhone y computador.
 
 ## 3. Requerimientos funcionales
 
@@ -104,7 +105,7 @@ El sistema debe cubrir 40 requerimientos en siete módulos; todos están impleme
 | RNF-12 | Localización | Español e inglés; "hoy" se calcula con la zona horaria de la persona (por defecto America/Bogota) |
 | RNF-13 | Portabilidad | La API puede ser reutilizada por otros clientes sin cambiar la lógica |
 | RNF-14 | Despliegue | Backend en contenedor Docker; CI y APK de release con GitHub Actions |
-| RNF-15 | Compatibilidad | Android; los SMS requieren código nativo Kotlin aislado en un solo módulo |
+| RNF-15 | Compatibilidad | Android (APK) y navegadores modernos (versión web, también en iPhone); los SMS requieren código nativo Kotlin aislado en un solo módulo y no existen en web. El diseño se adapta desde celular hasta computador |
 | RNF-16 | Documentación | API documentada con OpenAPI en `/docs` |
 
 ## 5. Restricciones, riesgos y criterios de aceptación

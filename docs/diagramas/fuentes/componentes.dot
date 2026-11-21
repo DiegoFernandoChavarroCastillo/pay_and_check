@@ -1,0 +1,41 @@
+// Diagrama de componentes. Regenerar: dot -Tpng -Gdpi=150 componentes.dot -o ../diagramaComponentes.png
+digraph componentes {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=13, pad=0.4, nodesep=0.4, ranksep=0.7, bgcolor="white", compound=true];
+  node  [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", fillcolor="#ECECFF", color="#9370DB"];
+  edge  [fontname="Helvetica", fontsize=10, color="#555555"];
+
+  subgraph cluster_cliente {
+    label="Cliente Flutter — APK Android y web (Vercel)"; style="rounded,filled"; fillcolor="#F6F6FF"; color="#9370DB";
+    screens [label="features/*\nhome · transactions · coach · progress · reports ·\nbudget · planning · profile · sms · auth · support"];
+    resp    [label="core/responsive.dart\ncelular · riel lateral · dos columnas"];
+    prov    [label="data/providers.dart\n(Riverpod)"];
+    apicli  [label="data/api.dart + core/api/api_client.dart\n(Dio, JWT, refresh)"];
+    store   [label="flutter_secure_storage\ntokens (en web: navegador)", shape=cylinder];
+    local   [label="Solo Android: ML Kit OCR · notificaciones locales ·\ncanal nativo SMS y avisos del banco · widget\n(en web: solo speech_to_text)"];
+    screens -> prov -> apicli;
+    screens -> resp [arrowhead=none];
+    apicli -> store [arrowhead=none];
+    screens -> local [arrowhead=none];
+  }
+
+  subgraph cluster_backend {
+    label="Backend — FastAPI (app/)"; style="rounded,filled"; fillcolor="#F6F6FF"; color="#9370DB";
+    routers [label="routers/\nauth · budgets · categories · expenses · incomes ·\nrecurring_expenses · planned · receivables · checkins ·\ncoach · goals · gamification · reports · plans · support · panel"];
+    deps    [label="deps.get_current_user\ncore/security (JWT, bcrypt)\ncore/rate_limit"];
+    services[label="services/\nbudget_calculator · budget_totals · patterns · coach ·\ngamification · recurring_expenses · previstos · credito ·\nsimulador · hormiga · trends · weekly_report · wrapped ·\nplanes · familia · apoyos · panel · validaciones"];
+    ia      [label="services/groq_client.py + prompts.py\nia_seguridad · ia_uso"];
+    gauth   [label="services/google_auth.py\n(uno o varios Client ID)"];
+    models  [label="models/ (SQLModel)"];
+    routers -> deps; routers -> services; routers -> gauth; services -> ia; services -> models; routers -> models;
+  }
+
+  db     [label="PostgreSQL 16\nNeon · Alembic", shape=cylinder];
+  groq   [label="Groq API (LLM)\n+ respaldo opcional"];
+  google [label="Google Identity"];
+
+  apicli -> routers [label="HTTPS + JSON\nBearer JWT"];
+  models -> db [label="SQL / psycopg2"];
+  ia -> groq [label="chat.completions"];
+  gauth -> google [label="verifica id_token"];
+  screens -> google [label="Google Sign-In", style=dashed];
+}

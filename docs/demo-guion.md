@@ -8,9 +8,10 @@
 | # | Qué | Cómo |
 |---|---|---|
 | 1 | Datos de demo frescos | `cd backend && uv run python -m app.db.seed_demo` (idempotente). Anota la URL del panel que imprime. |
-| 2 | Backend despierto | Si es Render: abrir `https://<render>/health` 2 minutos antes (el plan gratis tarda ~1 min en despertar). Si es el PC: `uvicorn app.main:app --host 0.0.0.0 --port 8000` y `adb reverse tcp:8000 tcp:8000`. |
+| 2 | Backend despierto | Producción (AWS): `https://paycheck-swnt.duckdns.org/health` responde `{"status":"ok"}`. Si se usa Render de respaldo, abrir su `/health` 2 minutos antes (tarda ~1 min en despertar). Si es el PC: `uvicorn app.main:app --host 0.0.0.0 --port 8000` y `adb reverse tcp:8000 tcp:8000`. Checklist completa en [despliegue.md](despliegue.md#antes-de-una-demo). |
 | 3 | IA con margen | Groq gratis permite 8.000 tokens por minuto: para la demo, la llave de pago o no repetir el chat muchas veces seguidas. Si la IA cae, la app sigue funcionando con sus textos de respaldo (eso también se puede mostrar). |
-| 4 | APK de release | `flutter build apk --release --dart-define=API_BASE_URL=<url>` e instalarlo: sin la cinta DEBUG. |
+| 4 | APK de release | Instalar el del último Release (<https://github.com/PAY-CHECK-SWNT/pay_and_check/releases/latest/download/pay-and-check.apk>, v0.1.3 o posterior). Si el teléfono tiene un APK de depuración, desinstalarlo antes. |
+| 4b | Jurados con iPhone | Mostrarles <https://pay-and-check-seven.vercel.app> (Safari → *Agregar a pantalla de inicio*). Misma cuenta y mismos datos; sin recibos, SMS ni recordatorios. |
 | 5 | Sesión | Entrar **después** del paso 1 (la semilla recrea las cuentas y cierra cualquier sesión abierta) con **valentina@demo.payandcheck.app / Demo2026!** (plan Institucional por el convenio `ECI-2026`). Del correo a la contraseña, pasar con la tecla «siguiente»: el teclado desplaza el formulario y un toque puede caer en «Crea una». Para mostrar el plan Familiar, en otro teléfono o después: **papa@demo.payandcheck.app / Demo2026!** |
 | 5b | Widget | Mantener presionada la pantalla de inicio → Widgets → «Pay & Check: tu día». Abrir la app una vez para que se llene. |
 | 6 | Notificaciones | Ajustes → Acceso a notificaciones → activar Pay & Check. Para la notificación de prueba, ver §3, paso 3. |
@@ -58,6 +59,7 @@
 | ¿Cuánto les cuesta la IA por usuario? | Lo medimos: cada llamada queda en `ai_usage` con sus tokens. Una solicitud cuesta $0,36 en Groq y $0,80 con respaldo, reintentos y margen de seguridad: unos $122 al mes por cuenta pagada, el 2 % del precio. Tenemos un proveedor de respaldo con el mismo modelo (DeepInfra) por si Groq falla. |
 | ¿Cuánto piden y cuándo llegan al equilibrio? | $150 M (antes $163 M; el mínimo es $105 M). Equilibrio en el mes 14 con el plan base y en el 12 con la licencia de plataforma. La ronda alcanza aun creciendo al 8 % y sin la licencia (equilibrio en el mes 23, caja mínima de $28 M). |
 | ¿Y la privacidad? | Ley 1581: consentimiento explícito y versionado, los SMS y las notificaciones se leen en el teléfono, borrado total de la cuenta y un panel institucional solo agregado. |
+| ¿Y si tengo iPhone? | La misma app corre en el navegador: <https://pay-and-check-seven.vercel.app>, instalable desde Safari. Lo que necesita el teléfono Android (leer SMS, notificaciones del banco, recibos en el dispositivo) se oculta allí. |
 | ¿Google Play deja leer SMS? | Play restringe `READ_SMS`. Por eso la captura principal es por notificaciones (`NotificationListenerService`), que es como llegan los pagos de Nequi y Daviplata; los SMS quedan como respaldo para la distribución por APK. |
 | ¿Por qué pagaría la universidad? | Porque recibe el panel de bienestar financiero y es un beneficio para sus estudiantes a $4.998 por estudiante activo, la mitad del Premium. |
 | ¿Qué los diferencia de Bankity o MonAi? | La captura y el dictado son requisito básico; el diferencial es decidir antes de gastar (contado y cuotas), el coach que no inventa cifras y el canal universitario con apoyos y panel. |

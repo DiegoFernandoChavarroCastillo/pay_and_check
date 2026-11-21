@@ -1,13 +1,13 @@
 # Modelo de datos
 
 Tablas definidas en `backend/app/models/*` (SQLModel) y versionadas con Alembic (`backend/alembic/versions/`,
-9 migraciones desde `6a4686a52aeb_init`). Montos en `Numeric(12, 2)`.
+14 migraciones desde `6a4686a52aeb_init`). Montos en `Numeric(12, 2)`.
 
 ## Diagrama 3 — Entidad-relación
 
 ```mermaid
 erDiagram
-    groups ||--o{ users : "group_id (reservado)"
+    groups ||--o{ users : "group_id (familia)"
     users ||--o{ budgets : "owner_id"
     users ||--o{ categories : "owner_id (nulo = por defecto)"
     users ||--o{ category_limits : "user_id"
@@ -30,6 +30,18 @@ erDiagram
     categories |o--o{ challenges : "category_id"
     users ||--o{ achievements : "user_id"
     users ||--o{ point_events : "user_id"
+    users ||--o{ planned_expenses : "user_id"
+    users ||--o{ receivables : "user_id"
+    expenses |o--o{ receivables : "expense_id (la vaca)"
+    users ||--o{ ai_usage : "user_id"
+    users ||--|| subscriptions : "user_id (una por persona)"
+    organizations |o--o{ subscriptions : "organization_id"
+    license_codes |o--o{ subscriptions : "license_code_id"
+    organizations |o--o{ license_codes : "convenio"
+    groups |o--o{ license_codes : "familiar"
+    organizations ||--o{ support_resources : "organization_id"
+    support_resources ||--o{ support_interests : "resource_id"
+    users ||--o{ support_interests : "user_id"
 
     users {
         int id PK
@@ -41,6 +53,9 @@ erDiagram
         string idioma
         string zona_horaria
         int group_id FK
+        string politica_version
+        datetime politica_aceptada_at
+        datetime sms_consent_at
     }
     budgets {
         int id PK
@@ -156,6 +171,72 @@ erDiagram
         int id PK
         string nombre
     }
+    planned_expenses {
+        int id PK
+        int user_id FK
+        string descripcion
+        decimal monto
+        date fecha
+        bool hecho
+    }
+    receivables {
+        int id PK
+        int user_id FK
+        int expense_id FK "nullable"
+        string persona
+        decimal monto
+        date fecha
+        bool pagado
+    }
+    ai_usage {
+        int id PK
+        int user_id FK
+        string tarea
+        string modelo
+        int tokens_entrada
+        int tokens_salida
+        bool exito
+        bool uso_respaldo
+        string bloqueado_por
+        string mes
+    }
+    organizations {
+        int id PK
+        string nombre UK
+        bool activa
+        string panel_token
+    }
+    license_codes {
+        int id PK
+        string codigo UK
+        string tipo "convenio | familiar"
+        int organization_id FK
+        int group_id FK
+        int max_usos
+        int usos
+    }
+    subscriptions {
+        int id PK
+        int user_id FK,UK
+        string plan
+        int organization_id FK
+        int license_code_id FK
+        bool es_titular
+        bool comparte_progreso
+    }
+    support_resources {
+        int id PK
+        int organization_id FK
+        string tipo
+        string titulo
+        string contacto
+        bool activo
+    }
+    support_interests {
+        int id PK
+        int user_id FK
+        int resource_id FK
+    }
 ```
 
 ## Reglas de integridad
@@ -174,7 +255,9 @@ erDiagram
 
 ## Notas
 
-- `groups` y `users.group_id` están preparados para un modo familiar/grupal **no usado** en el MVP.
+- `groups` agrupa a las personas del plan Familiar (código `license_codes.tipo='familiar'`); `subscriptions` dice el plan de cada cuenta y si comparte su progreso con el titular. `organizations` son las universidades con convenio: tienen apoyos (`support_resources`) y un token para su panel agregado.
+- `planned_expenses` son los gastos grandes que vienen (matrícula); «Ya lo pagué» solo marca `hecho` y no crea un gasto. `receivables` es lo que le deben a la persona por una vaca.
+- `ai_usage` registra cada llamada a la IA (tarea, tokens, latencia, si usó el respaldo o la bloqueó una capa de seguridad) **sin el texto**; con él se calcula el cupo mensual.
 - Un `Expense`, `Income` o `GoalContribution` pertenece al `Budget` cuyo rango contiene su `fecha`
   (`services/budget_lookup.find_budget_for_date`); fuera de todo presupuesto la API responde 400.
 - `GoalContribution` es dinero virtual: se descuenta del disponible del presupuesto (`apartado_total`).

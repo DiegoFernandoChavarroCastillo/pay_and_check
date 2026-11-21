@@ -1,13 +1,27 @@
 # Pay&Check
 
-App de finanzas personales para Android con un coach financiero. Registra gastos e ingresos con muy poca
+App de finanzas personales con un coach financiero, para Android y, como respaldo para iPhone y computador, en
+la web. Registra gastos e ingresos con muy poca
 fricción (texto, voz, foto de un recibo o SMS del banco), dice **cuánto se puede gastar hoy** y acompaña con un
 coach que no regaña y con retos e insignias verificados con datos reales.
 
 El repo es un monorepo con dos piezas:
 
 - `backend/`: API REST en Python 3.12 + FastAPI + SQLModel/Alembic + PostgreSQL. IA con [Groq](https://console.groq.com/).
-- `mobile/`: app Flutter, solo Android (detalle en [mobile/README.md](mobile/README.md)).
+- `mobile/`: app Flutter. Se compila para Android (APK) y para web (Vercel); detalle en
+  [mobile/README.md](mobile/README.md).
+
+## Pruébala
+
+| Dónde | Cómo |
+|---|---|
+| **Android** | Descargar e instalar <https://github.com/PAY-CHECK-SWNT/pay_and_check/releases/latest/download/pay-and-check.apk> (ver [Instalar el APK](#instalar-el-apk)) |
+| **iPhone o computador** | Abrir <https://pay-and-check-seven.vercel.app>. En iPhone, Safari → Compartir → *Agregar a pantalla de inicio* |
+
+Las dos usan el mismo backend (`https://paycheck-swnt.duckdns.org`, en AWS) y las mismas cuentas. La versión web
+no tiene lo que solo existe en Android: recibos por foto, captura de SMS y notificaciones del banco,
+recordatorios y widget ([ADR-010](docs/decisiones/010-version-web-respaldo.md)). Cómo está montado todo:
+[docs/despliegue.md](docs/despliegue.md). Lo que falta: [docs/pendientes.md](docs/pendientes.md).
 
 ## Qué hace hoy
 
@@ -28,6 +42,7 @@ El repo es un monorepo con dos piezas:
 - **Universidad y familia**: panel web de Bienestar Universitario (agregado, anonimato k ≥ 5), apoyos de la
   universidad sugeridos cuando el mes viene difícil, y progreso agregado para quien paga el plan Familiar.
 - **Widget de Android** con el número del día y un botón para registrar.
+- **Versión web** con diseño adaptable: en un computador o una tableta, menú lateral e Inicio en dos columnas.
 - **Planes** Gratis, Premium, Familiar e Institucional (simulados, sin pasarela de pago): se diferencian por
   funciones, no solo por cupo de IA (ver [docs/planes.md](docs/planes.md)).
 
@@ -115,8 +130,8 @@ La app se distribuye como un APK firmado adjunto a un GitHub Release (ver
 instalación desde "orígenes desconocidos".
 
 1. En el teléfono, abrir la página del último release
-   (<https://github.com/DiegoFernandoChavarroCastillo/pay_and_check/releases/latest>, o escanear el QR de la
-   presentación) y descargar `pay-and-check-<versión>.apk`.
+   (<https://github.com/PAY-CHECK-SWNT/pay_and_check/releases/latest>, o escanear el QR de la presentación) y
+   descargar `pay-and-check-<versión>.apk`.
 2. Abrir el archivo descargado desde la notificación o desde la app *Archivos*.
 3. Android avisa que esa app no tiene permiso para instalar apps desconocidas. Tocar **Configuración**,
    activar **Permitir de esta fuente** y volver.
@@ -135,16 +150,24 @@ que desinstalar la versión vieja primero. Para compilar el APK uno mismo, ver
 
 ## Desplegar
 
-`render.yaml` es un blueprint de Render; la base de datos vive en Neon. El contenedor aplica las migraciones y
-siembra las categorías en cada arranque (`backend/start.sh`). Pasos, variables y CI en
-[docs/setup.md](docs/setup.md).
+| Pieza | Dónde | Cómo se publica |
+|---|---|---|
+| API | AWS EC2 detrás de Caddy (HTTPS); Render de respaldo | A mano en la instancia ([ADR-011](docs/decisiones/011-backend-aws-ec2.md)); `render.yaml` para Render |
+| Base de datos | Neon (PostgreSQL) | Migraciones al arrancar la API (`backend/start.sh`) |
+| App Android | GitHub Releases | `git tag vX.Y.Z && git push origin vX.Y.Z` |
+| Versión web | Vercel | Sola, en cada push a `main` que toque `mobile/` |
+
+Detalle, variables, Google Sign-In y checklist antes de una demo en [docs/despliegue.md](docs/despliegue.md);
+puesta en marcha local y CI en [docs/setup.md](docs/setup.md).
 
 ## Documentación
 
 | Documento | Qué contiene |
 |---|---|
 | [docs/README.md](docs/README.md) | Índice de toda la documentación técnica |
-| [docs/iteracion-jurado-nov-2026.md](docs/iteracion-jurado-nov-2026.md) | **Lo último:** auditoría como inversor, correcciones, análisis de competidores, funciones añadidas, análisis financiero y ajustes tras probar en el teléfono (nov 2026) |
+| [docs/despliegue.md](docs/despliegue.md) | **Producción hoy:** AWS, Vercel, Releases y Google Sign-In |
+| [docs/pendientes.md](docs/pendientes.md) | **Lo que falta** antes de la presentación y después |
+| [docs/iteracion-jurado-nov-2026.md](docs/iteracion-jurado-nov-2026.md) | Auditoría como inversor, correcciones, análisis de competidores, funciones añadidas, análisis financiero y ajustes tras probar en el teléfono (nov 2026) |
 | [docs/demo-guion.md](docs/demo-guion.md) | Guion de la demo, preguntas difíciles del jurado y checklist |
 | [docs/analisis-financiero-nov-2026.md](docs/analisis-financiero-nov-2026.md) | Costos medidos de IA, proveedores comparados, escenarios a 36 meses y decisiones de planes y precios |
 | [docs/api.md](docs/api.md) | Endpoints HTTP, autenticación y errores |
@@ -155,5 +178,5 @@ siembra las categorías en cada arranque (`backend/start.sh`). Pasos, variables 
 | [docs/informe-adversarial.md](docs/informe-adversarial.md) | Resultados de la suite adversarial de *prompt injection* |
 | [docs/planes.md](docs/planes.md) | Planes y cupo de IA |
 | [docs/negocio/](docs/negocio/) | Modelo financiero (documento) y plantilla de finanzas a 36 meses, con costos de IA medidos |
-| [docs/setup.md](docs/setup.md) | Puesta en marcha, variables de entorno, CI y despliegue |
-| [mobile/README.md](mobile/README.md) | App móvil: pantallas, diseño, SMS simulados, APK |
+| [docs/setup.md](docs/setup.md) | Puesta en marcha, variables de entorno y CI |
+| [mobile/README.md](mobile/README.md) | App: pantallas, diseño (también para pantallas anchas), SMS simulados, APK y versión web |

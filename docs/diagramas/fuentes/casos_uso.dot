@@ -1,0 +1,43 @@
+// Casos de uso (mismo contenido que docs/use-cases.md). Regenerar: dot -Tpng -Gdpi=110 casos_uso.dot -o ../casosUso.png
+digraph casos {
+  graph [rankdir=LR, fontname="Helvetica", fontsize=13, pad=0.3, nodesep=0.12, ranksep=1.4, bgcolor="white"];
+  node  [fontname="Helvetica", fontsize=10, shape=ellipse, style=filled, fillcolor="#ECECFF", color="#9370DB"];
+  edge  [color="#888888", arrowhead=none];
+
+  U  [label="Persona\nusuaria", shape=circle, fillcolor="#E6F7F1", color="#1F6F5C", fontsize=12];
+  T  [label="Titular\nFamiliar", shape=circle, fillcolor="#E6F7F1", color="#1F6F5C"];
+  B  [label="Bienestar\nUniversitario", shape=circle, fillcolor="#E6F7F1", color="#1F6F5C"];
+  G  [label="Groq\nLLM", shape=circle, fillcolor="#FFF4E0", color="#E0A23B"];
+  GI [label="Google\nIdentity", shape=circle, fillcolor="#FFF4E0", color="#E0A23B"];
+
+  subgraph cluster_sys {
+    label="Pay & Check  (en web no están UC10, UC11 ni los recordatorios)"; style="rounded"; color="#9370DB";
+    subgraph cluster_cuenta { label="Cuenta"; style="rounded,dashed";
+      UC1 [label="UC1 Registrarse / iniciar sesión"]; UC2 [label="UC2 Iniciar sesión con Google"];
+      UC3 [label="UC3 Editar perfil"]; UC4 [label="UC4 Borrar cuenta y datos"]; }
+    subgraph cluster_pres { label="Presupuesto"; style="rounded,dashed";
+      UC5 [label="UC5 Definir presupuesto"]; UC6 [label="UC6 Ver disponible por día"]; UC7 [label="UC7 Categorías y límites"]; }
+    subgraph cluster_mov { label="Movimientos"; style="rounded,dashed";
+      UC8 [label="UC8 Gasto manual"]; UC9 [label="UC9 Gasto por texto o voz"]; UC10 [label="UC10 Gasto por foto de recibo"];
+      UC11 [label="UC11 Gasto desde SMS / aviso"]; UC12 [label="UC12 Registrar ingreso"]; UC13 [label="UC13 Confirmar borrador"];
+      UC14 [label="UC14 Consultar y editar"]; UC15 [label="UC15 Gastos fijos"]; }
+    subgraph cluster_coach { label="Coach"; style="rounded,dashed";
+      UC16 [label="UC16 Check-in emocional"]; UC17 [label="UC17 Reacción tras un gasto"];
+      UC18 [label="UC18 Consejos del día"]; UC19 [label="UC19 Chat con el coach"]; }
+    subgraph cluster_prog { label="Progreso y reportes"; style="rounded,dashed";
+      UC20 [label="UC20 Metas"]; UC21 [label="UC21 Retos"]; UC22 [label="UC22 Puntos e insignias"];
+      UC23 [label="UC23-25 Tendencia, reporte\nsemanal y resumen mensual"]; }
+    subgraph cluster_dec { label="Decidir antes de gastar"; style="rounded,dashed";
+      UC26 [label="UC26 ¿Me alcanza?"]; UC27 [label="UC27 Gastos que vienen"]; UC28 [label="UC28 Vacas y «Te deben»"]; }
+    subgraph cluster_planes { label="Planes y universidad"; style="rounded,dashed";
+      UC29 [label="UC29 Planes y códigos"]; UC30 [label="UC30 Compartir progreso"]; UC31 [label="UC31 Progreso de la familia"];
+      UC32 [label="UC32 Apoyos de la universidad"]; UC33 [label="UC33 Panel agregado (k ≥ 5)"]; }
+  }
+
+  U -> {UC1 UC2 UC3 UC4 UC5 UC6 UC7 UC8 UC9 UC10 UC11 UC12 UC14 UC15 UC16 UC18 UC19 UC20 UC21 UC22 UC23 UC26 UC27 UC28 UC29 UC30 UC32};
+  T -> UC31; B -> UC33;
+  {UC9 UC10 UC11} -> UC13 [style=dashed, arrowhead=vee, label="include", fontsize=8, fontname="Helvetica"];
+  {UC8 UC13} -> UC17 [style=dashed, arrowhead=vee, label="extend", fontsize=8, fontname="Helvetica"];
+  {UC9 UC10 UC11 UC17 UC18 UC19 UC23} -> G;
+  UC2 -> GI;
+}

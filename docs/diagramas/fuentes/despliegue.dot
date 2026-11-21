@@ -1,0 +1,32 @@
+// Diagrama de despliegue. Regenerar: dot -Tpng -Gdpi=150 despliegue.dot -o ../diagramaDespliegue.png
+digraph despliegue {
+  graph [rankdir=LR, fontname="Helvetica", fontsize=13, pad=0.4, nodesep=0.45, ranksep=0.9, bgcolor="white"];
+  node  [fontname="Helvetica", fontsize=12, shape=box, style="rounded,filled", fillcolor="#ECECFF", color="#9370DB"];
+  edge  [fontname="Helvetica", fontsize=10, color="#555555"];
+
+  subgraph cluster_clientes {
+    label="Clientes"; style="rounded"; color="#9370DB";
+    apk [label="APK Android\nGitHub Releases\n…/latest/download/pay-and-check.apk"];
+    web [label="Versión web (PWA)\npay-and-check-seven.vercel.app"];
+  }
+  vercel [label="Vercel\narchivos estáticos + CDN"];
+  subgraph cluster_aws {
+    label="AWS EC2 — paycheck-swnt.duckdns.org"; style="rounded,filled"; fillcolor="#F6F6FF"; color="#9370DB";
+    caddy [label="Caddy\nHTTPS (Let's Encrypt)"];
+    api   [label="uvicorn + FastAPI\n(main)"];
+    caddy -> api;
+  }
+  render [label="Render (plan free)\nrespaldo, dormido", style="rounded,dashed,filled", fillcolor="#F2F2F2"];
+  neon   [label="Neon\nPostgreSQL", shape=cylinder];
+  groq   [label="Groq\ngpt-oss-20b"];
+  google [label="Google Identity\ncliente web + cliente Android (SHA-1)"];
+  gha    [label="GitHub Actions\nbackend-ci · mobile-ci ·\nmobile-release (tag v*) ·\nweb-deploy (push a main) · keep-alive"];
+
+  apk -> caddy [label="HTTPS + JWT"];
+  web -> caddy [label="HTTPS + JWT, CORS"];
+  vercel -> web [style=dotted, label="sirve"];
+  api -> neon; api -> groq; api -> google [label="verifica id_token"];
+  render -> neon [style=dashed];
+  gha -> apk [label="APK firmado"];
+  gha -> vercel [label="flutter build web\nvercel deploy"];
+}
