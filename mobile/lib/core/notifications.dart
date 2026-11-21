@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,8 @@ class ReminderService {
   /// Programa el recordatorio todos los días a `hora`. Devuelve false si el
   /// usuario no concedió el permiso de notificaciones.
   Future<bool> schedule(TimeOfDay hora, {required String title, required String body}) async {
+    // En la versión web no hay notificaciones locales; Perfil ni siquiera muestra el recordatorio.
+    if (kIsWeb) return false;
     await _init();
     final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     if (await android?.requestNotificationsPermission() == false) return false;
@@ -51,6 +54,7 @@ class ReminderService {
   }
 
   Future<void> cancel() async {
+    if (kIsWeb) return;
     await _init();
     await _plugin.cancel(id: _id);
   }
@@ -59,6 +63,7 @@ class ReminderService {
   /// los que ya no correspondan. Con [pedirPermiso] se solicita el permiso de notificaciones si falta;
   /// sin él, no se le pregunta nada a la persona.
   Future<void> syncFixed(List<FixedReminder> avisos, {bool pedirPermiso = false}) async {
+    if (kIsWeb) return;
     await _init();
     if (pedirPermiso && avisos.isNotEmpty) {
       await _plugin

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -111,6 +112,12 @@ class SmsInbox extends Notifier<SmsInboxState> {
   Set<String> get _ids => (ref.read(sharedPreferencesProvider).getStringList(_revisados) ?? const []).toSet();
 
   Future<void> cargar({bool pedirPermiso = false}) async {
+    // En la versión web no hay SMS ni notificaciones de otras apps: la bandeja queda "al día" y Notificaciones
+    // muestra solo los gastos fijos por pagar.
+    if (kIsWeb) {
+      if (ref.mounted) state = const SmsInboxState(permiso: true, notificaciones: true);
+      return;
+    }
     final fuente = ref.read(smsSourceProvider);
     try {
       // Sin el consentimiento de la app (PS-48) no se leen SMS, aunque Android ya tenga el permiso: la bandeja
@@ -282,7 +289,7 @@ class NotificationsScreen extends ConsumerWidget {
     final pagos = ref.watch(pendingPaymentsProvider).value ?? const <PendingPayment>[];
     final titulo = Theme.of(context).textTheme.titleMedium;
 
-    final bloqueada = capturaBloqueada(ref);
+    final bloqueada = !kIsWeb && capturaBloqueada(ref);
     // Arriba de todo, lo que falta para que la captura funcione: el plan o el acceso a las notificaciones.
     final Widget? aviso = bloqueada
         ? _AvisoCaptura(

@@ -15,13 +15,13 @@ def verify_google_token(token: str) -> dict[str, str]:
     """
     # Sin Client ID no hay contra qué validar la audiencia del token: se
     # rechaza siempre, en vez de arriesgarse a aceptar tokens emitidos para otra app.
-    if not settings.GOOGLE_CLIENT_ID:
+    # Puede haber varios Client ID separados por coma: el de la app Android y el de la versión web.
+    audiencias = [c.strip() for c in settings.GOOGLE_CLIENT_ID.split(",") if c.strip()]
+    if not audiencias:
         raise GoogleTokenError("El inicio de sesión con Google no está configurado.")
 
     try:
-        idinfo = google_id_token.verify_oauth2_token(
-            token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
-        )
+        idinfo = google_id_token.verify_oauth2_token(token, google_requests.Request(), audiencias)
     except ValueError as exc:
         raise GoogleTokenError("Token de Google inválido o expirado.") from exc
 

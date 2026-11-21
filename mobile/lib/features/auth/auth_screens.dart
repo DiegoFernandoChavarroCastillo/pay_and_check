@@ -1,12 +1,17 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/widgets.dart';
 import '../coach/coach_widgets.dart';
 import '../../data/session.dart';
 import '../../l10n/gen/app_localizations.dart';
+import 'google_button/google_button.dart';
 import 'privacy_policy.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -21,9 +26,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _google;
+  bool _googleWebListo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb && googleWebClientId.isNotEmpty) _prepararGoogleWeb();
+  }
+
+  /// En web el botón es de Google: al elegir la cuenta llega un evento con el id_token.
+  Future<void> _prepararGoogleWeb() async {
+    try {
+      await ref.read(sessionProvider.notifier).prepareGoogleWeb();
+    } catch (_) {
+      return; // Sin Google (bloqueado por el navegador, sin red): queda el login con correo.
+    }
+    _google = GoogleSignIn.instance.authenticationEvents.listen((evento) {
+      if (evento is! GoogleSignInAuthenticationEventSignIn || !mounted) return;
+      final idToken = evento.user.authentication.idToken;
+      if (idToken == null) return;
+      _run(() => ref.read(sessionProvider.notifier).loginWithGoogleIdToken(idToken));
+    }, onError: (_) {});
+    if (mounted) setState(() => _googleWebListo = true);
+  }
 
   @override
   void dispose() {
+    _google?.cancel();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -53,13 +83,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _PasswordField(controller: _password, onSubmitted: _login),
         const SizedBox(height: 20),
         SaveButton(saving: _busy, onPressed: _login, label: l.loginAction),
-        if (googleServerClientId.isNotEmpty) ...[
+        // En web, Google exige su propio botón (otro flujo y otra credencial): por ahora solo correo.
+        if (googleServerClientId.isNotEmpty && !kIsWeb) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _busy ? null : () => _run(() => ref.read(sessionProvider.notifier).loginWithGoogle()),
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             icon: const Icon(Icons.account_circle_outlined),
             label: Text(l.continueWithGoogle),
+          ),
+        ],
+        if (_googleWebListo) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: LayoutBuilder(
+              builder: (context, c) => GoogleWebButton(
+                oscuro: Theme.of(context).brightness == Brightness.dark,
+                ancho: c.maxWidth,
+              ),
+            ),
           ),
         ],
         const SizedBox(height: 12),

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     AI_FALLBACK_URL: str = ""
     AI_FALLBACK_API_KEY: str = ""
     AI_FALLBACK_MODEL: str = "openai/gpt-oss-20b"
+    # Uno o varios Client ID web de Google separados por coma (app Android y versión web).
     GOOGLE_CLIENT_ID: str = ""
     # Orígenes permitidos por CORS, separados por coma (ver .env.example).
     # No estaba contemplada en la Fase 0; se agregó al llegar a la Fase 1

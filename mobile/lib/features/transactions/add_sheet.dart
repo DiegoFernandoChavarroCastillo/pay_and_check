@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -50,7 +51,8 @@ void showAddSheet(BuildContext context) {
                 large: true,
                 onTap: () => elegir(() => _abrir(context, const QuickAddScreen())),
               ),
-              BentoRow(
+              // En la versión web no hay lector de recibos (ML Kit) ni captura del banco: son de Android.
+              if (!kIsWeb) BentoRow(
                 children: [
                   _AddTile(
                     icon: Icons.photo_camera_outlined,
@@ -87,7 +89,7 @@ void showAddSheet(BuildContext context) {
                 ],
               ),
               // La captura automática no queda escondida en Perfil: es la forma de registrar con menos esfuerzo.
-              _AddTile(
+              if (!kIsWeb) _AddTile(
                 icon: Icons.notifications_active_outlined,
                 title: l.addFromBank,
                 subtitle: l.addFromBankHint,

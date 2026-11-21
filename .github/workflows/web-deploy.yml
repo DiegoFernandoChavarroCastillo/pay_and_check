@@ -1,0 +1,70 @@
+name: Web deploy
+
+# Compila la versión web de la app (Flutter) y la publica en Vercel. Es el respaldo para quien no tiene
+# Android (iPhone, computador): misma app, sin lo que solo existe en Android (SMS, recibos, widget, recordatorios).
+#
+# Vercel no trae Flutter: la app se compila aquí y a Vercel solo sube la carpeta build/web (archivos estáticos,
+# con el vercel.json que viene de mobile/web/).
+#
+# Requiere en el repositorio (Settings > Secrets and variables > Actions):
+#   Secret:     VERCEL_TOKEN (vercel.com > Account Settings > Tokens)
+#   Variables:  VERCEL_ORG_ID, VERCEL_PROJECT_ID (de .vercel/project.json al hacer `vercel link`)
+#               WEB_API_BASE_URL (opcional; por defecto el backend de Render). Debe ser HTTPS y tener el
+#               dominio de Vercel en CORS_ORIGINS.
+#               GOOGLE_WEB_CLIENT_ID (opcional): cliente OAuth web con el dominio de Vercel en sus orígenes de
+#               JavaScript. Debe estar también en GOOGLE_CLIENT_ID del backend. Sin él se usa GOOGLE_SERVER_CLIENT_ID.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/web-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      API_BASE_URL: ${{ vars.WEB_API_BASE_URL || 'https://pay-and-check-api.onrender.com' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check deploy configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          test -n "$VERCEL_TOKEN" || { echo "Falta el secreto VERCEL_TOKEN"; exit 1; }
+          test -n "$VERCEL_ORG_ID" || { echo "Falta la variable VERCEL_ORG_ID"; exit 1; }
+          test -n "$VERCEL_PROJECT_ID" || { echo "Falta la variable VERCEL_PROJECT_ID"; exit 1; }
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build web
+        run: |
+          flutter build web --release --no-wasm-dry-run \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=PRIVACY_CONTACT="${{ vars.PRIVACY_CONTACT }}" \
+            --dart-define=GOOGLE_WEB_CLIENT_ID="${{ vars.GOOGLE_WEB_CLIENT_ID || vars.GOOGLE_SERVER_CLIENT_ID }}"
+
+      - name: Deploy to Vercel
+        working-directory: mobile/build/web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@66.6.0 deploy --prod --yes --token "$VERCEL_TOKEN"
