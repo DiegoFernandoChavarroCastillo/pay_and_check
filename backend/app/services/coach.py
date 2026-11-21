@@ -271,12 +271,22 @@ def contexto_financiero(
             f"  - Meta de ahorro activa: {nombre}: objetivo {fmt(objetivo)}, ahorrado {fmt(ahorrado)}, "
             f"falta {fmt(falta)}{hasta}."
         )
-    for previsto in previstos.proximos(session, user, today):
+    proximos = previstos.proximos(session, user, today)
+    for previsto in proximos:
         lineas.append(
             f"  - Gasto grande previsto: {sanear_dato(previsto.gasto.descripcion)}, {fmt(previsto.gasto.monto)}, "
             f"el {f(previsto.gasto.fecha)} (en {previsto.dias} días): apartar {fmt(previsto.por_semana)} por semana "
             "lo cubre."
         )
+    if proximos and budget is not None:
+        total, queda = previstos.total_por_semana(proximos, c.por_semana)
+        lineas.append(f"  - Total a apartar por semana para gastos que vienen: {fmt(total)}.")
+        if queda is not None and queda >= 0:
+            lineas.append(f"  - Te queda por semana después de apartarlo: {fmt(queda)}.")
+        elif queda is not None:  # los montos van sin signo menos: el sentido va en palabras
+            lineas.append(
+                f"  - Con tu ritmo actual te faltan {fmt(-queda)} por semana para poder apartarlo todo."
+            )
     for descripcion, monto, fecha, vencido in c.fijos:
         estado = "vencido y por pagar desde" if vencido else "vence el"
         lineas.append(f"  - Gasto fijo {descripcion}: {fmt(monto)}, {estado} {f(fecha)}.")
