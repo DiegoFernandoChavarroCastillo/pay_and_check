@@ -173,8 +173,20 @@ Antes hay que cargar en GitHub (Settings → Secrets and variables → Actions):
 ## Versión web (Vercel)
 
 La misma app compilada para el navegador, para quien no tiene Android (los iPhone del jurado, por ejemplo). En
-un iPhone, Safari → Compartir → "Agregar a pantalla de inicio" la abre a pantalla completa con el ícono. En un
-computador se ve como una columna del ancho de un celular (`WebFrame` en `lib/app.dart`).
+un iPhone, Safari → Compartir → "Agregar a pantalla de inicio" la abre a pantalla completa con el ícono.
+
+**Pantallas anchas** (`lib/core/responsive.dart`). Depende del ancho, no de la plataforma, así que también aplica a
+una tableta Android; un celular nunca llega a esos anchos.
+
+| Ancho | Diseño |
+|---|---|
+| < 600 px | El de siempre: barra abajo y botón flotante "Registrar" |
+| 600–1200 px | Riel lateral con íconos y "Registrar" arriba; Inicio en dos columnas desde 840 px |
+| > 1200 px | Riel con nombres y logo; el contenido se centra (Inicio hasta 1180 px, el resto hasta 760 px) |
+
+Las pantallas que se abren encima (formularios, reportes, ajustes) se muestran como una columna centrada: lo
+hace `PaginaCentradaTransitionsBuilder` desde el tema, sin tocar cada pantalla. Para revisar el diseño sin
+navegador, `flutter test tool/screenshots_test.dart` deja también capturas `pc_*` y `tableta_*`.
 
 Lo que solo existe en Android se oculta con `kIsWeb`: foto y galería de recibos (ML Kit), captura de SMS y
 notificaciones del banco, recordatorios (notificaciones locales), widget y botones para abrir Nequi/Daviplata.

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -61,40 +60,6 @@ class PayAndCheckApp extends ConsumerWidget {
       locale: idioma == null ? null : Locale(idioma),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      builder: kIsWeb ? (context, child) => WebFrame(child: child!) : null,
-    );
-  }
-}
-
-/// En la versión web, en una pantalla ancha (computador, tableta acostada) la app se ve como en el teléfono:
-/// una columna centrada del ancho de un celular. En un celular no cambia nada.
-class WebFrame extends StatelessWidget {
-  const WebFrame({super.key, required this.child});
-
-  static const ancho = 460.0;
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    if (media.size.width <= ancho + 40) return child;
-    final scheme = Theme.of(context).colorScheme;
-    return ColoredBox(
-      color: scheme.surfaceContainerHighest,
-      child: Center(
-        child: Container(
-          width: ancho,
-          decoration: BoxDecoration(
-            boxShadow: [BoxShadow(color: scheme.shadow.withValues(alpha: 0.12), blurRadius: 24)],
-          ),
-          // Las pantallas leen el ancho de MediaQuery para acomodarse: debe ser el de la columna, no el de la ventana.
-          child: MediaQuery(
-            data: media.copyWith(size: Size(ancho, media.size.height)),
-            child: ClipRect(child: child),
-          ),
-        ),
-      ),
     );
   }
 }

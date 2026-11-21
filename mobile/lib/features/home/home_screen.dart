@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/charts.dart';
 import '../../core/format.dart';
 import '../../core/motion.dart';
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../../data/models.dart';
@@ -119,9 +120,9 @@ class _Dashboard extends ConsumerWidget {
     final apila = BentoRow.stacks(context);
     Widget alto(Widget hijo) => apila ? hijo : Expanded(child: hijo);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: staggered([
+    // Lo del día (cifra, check-in, aviso, gastado) va primero; en una pantalla ancha, a la izquierda, y lo
+    // demás (semana, coach, metas) a la derecha.
+    final delDia = <Widget>[
         // La cifra que importa hoy, con el avance del periodo alrededor de los días que quedan.
         Padding(
           padding: const EdgeInsets.only(bottom: AppTokens.gap),
@@ -259,6 +260,8 @@ class _Dashboard extends ConsumerWidget {
             ],
           ),
         ),
+    ];
+    final complementos = <Widget>[
         // Apoyos de la universidad (solo si las cifras lo justifican) y lo que le deben por vacas.
         const SupportSuggestionCard(),
         const ReceivablesCard(),
@@ -366,8 +369,9 @@ class _Dashboard extends ConsumerWidget {
               ],
             ),
           ),
-      ]),
-    );
+    ];
+    final animadas = staggered([...delDia, ...complementos]);
+    return DosColumnas(principal: animadas.sublist(0, delDia.length), secundaria: animadas.sublist(delDia.length));
   }
 }
 
