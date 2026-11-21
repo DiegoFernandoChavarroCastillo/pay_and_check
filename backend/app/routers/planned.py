@@ -4,8 +4,6 @@ from sqlmodel import Session, select
 from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
-from app.models.category import Category
-from app.models.expense import Expense
 from app.models.planned_expense import PlannedExpense
 from app.models.user import User
 from app.schemas.extras import PlannedExpenseCreate, PlannedExpenseResponse
@@ -70,25 +68,12 @@ def crear(
 def marcar_hecho(
     planned_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ) -> None:
-    """"Ya lo pagué": lo marca hecho y, si hay un presupuesto activo hoy, registra el gasto (fecha de hoy,
-    categoría "otros") para que descuente del disponible. Sin presupuesto solo lo marca. Marcarlo otra vez no
-    duplica el gasto."""
+    """"Ya lo pagué": solo lo marca hecho. El gasto lo registra la persona desde la app, que abre el formulario
+    prellenado para que lo confirme: si el backend lo creaba solo y la persona ya lo había registrado a mano,
+    quedaba contado dos veces."""
     gasto = _propio(session, current_user, planned_id)
-    if gasto.hecho:
-        return
     gasto.hecho = True
     session.add(gasto)
-
-    today = today_for(current_user)
-    budget = get_active_budget_for_user(session, current_user.id, today)
-    otros = session.exec(select(Category).where(Category.owner_id.is_(None), Category.nombre == "otros")).first()
-    if budget is not None and otros is not None:
-        session.add(
-            Expense(
-                user_id=current_user.id, budget_id=budget.id, category_id=otros.id, monto=gasto.monto,
-                descripcion=gasto.descripcion, source="manual", fecha=today,
-            )
-        )  # fmt: skip
     session.commit()
 
 

@@ -719,7 +719,7 @@ class _Propuesta extends ConsumerWidget {
               ],
               Expanded(
                 child: Text(
-                  [if (!p.esIngreso) ?p.categoria, ?p.descripcion].join(' · '),
+                  [if (!p.esIngreso && p.categoria != null) catLabel(context, p.categoria!), ?p.descripcion].join(' · '),
                   style: theme.textTheme.bodyMedium?.copyWith(color: tinta),
                 ),
               ),

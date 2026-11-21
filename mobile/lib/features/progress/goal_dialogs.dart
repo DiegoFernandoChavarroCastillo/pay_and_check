@@ -30,7 +30,9 @@ Future<void> showGoalDialog(
 }) async {
   final form = GlobalKey<FormState>();
   final nombre = TextEditingController(text: nombreInicial ?? '');
-  final objetivo = TextEditingController(text: objetivoInicial == null ? '' : objetivoInicial.round().toString());
+  final objetivo = TextEditingController(
+    text: objetivoInicial == null ? '' : MilesFormatter.agrupar(objetivoInicial.round().toString()),
+  );
   DateTime? limite = limiteInicial;
   final porSemanaDisponible = ref.read(summaryProvider).value?.disponiblePorSemana;
 

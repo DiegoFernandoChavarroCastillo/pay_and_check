@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.extras import ReceivableResponse, ReceivableSummary, SplitCreate, SplitResponse
 from app.services.budget_lookup import find_budget_for_date
 from app.services.category_lookup import validate_category_access
+from app.services.validaciones import validar_fecha_no_futura
 
 router = APIRouter(tags=["receivables"])
 
@@ -23,6 +24,7 @@ def dividir_gasto(
     """Una vaca: quien pagó registra como gasto solo su parte, y la de cada uno de los demás queda por cobrar.
     Las partes de los demás se redondean al peso hacia abajo; lo que sobra por redondeo va en la parte propia."""
     validate_category_access(session, current_user.id, payload.category_id)
+    validar_fecha_no_futura(payload.fecha, current_user)
     budget = find_budget_for_date(session, current_user.id, payload.fecha)
     if budget is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "La fecha del gasto no cae dentro de ningún presupuesto tuyo.")

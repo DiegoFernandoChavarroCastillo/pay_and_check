@@ -91,6 +91,12 @@ def resumen_de_respaldo(summary: WeeklySummary) -> str:
             f"Esta semana llevas {fmt(summary.gasto_total_semana)}, por debajo de tu ritmo semanal de "
             f"{fmt(summary.ritmo_esperado_semanal)}. Vas con margen: buen momento para apartar algo a una meta."
         )
+    if summary.diferencia_vs_ritmo >= summary.ritmo_esperado_semanal:
+        # Pasarse más de una semana entera de ritmo no se equilibra con "un gasto pequeño".
+        return (
+            f"Esta semana llevas {fmt(summary.gasto_total_semana)}, más del doble de tu ritmo semanal de "
+            f"{fmt(summary.ritmo_esperado_semanal)}. Revisa qué gastos puedes recortar o ajusta tu presupuesto."
+        )
     return (
         f"Esta semana llevas {fmt(summary.gasto_total_semana)}, por encima de tu ritmo semanal de "
         f"{fmt(summary.ritmo_esperado_semanal)}. Aún hay semana para equilibrar: elige un gasto pequeño que "

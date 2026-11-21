@@ -195,12 +195,16 @@ class _Dashboard extends ConsumerWidget {
             ),
           ),
         ),
+        // El check-in va justo después del número del día: más abajo, el botón flotante "Registrar" tapaba
+        // "Calma" y "Confianza" (y el aviso de riesgo, al aparecer, lo empujaba aún más abajo).
+        const CheckinCard(),
         // El aviso se despliega y se recoge en vez de aparecer de golpe.
         AnimatedSize(
           duration: motion(context),
           curve: kMotionCurve,
           alignment: Alignment.topCenter,
-          child: summary.enRiesgo && summary.fechaAgotamiento != null
+          // Con el disponible ya en negativo, "un pequeño ajuste lo estira" no es verdad: se dice cuánto se pasó.
+          child: summary.disponibleTotal < 0 || (summary.enRiesgo && summary.fechaAgotamiento != null)
               ? SectionCard(
                   color: tokens.goals.container,
                   child: Row(
@@ -210,7 +214,9 @@ class _Dashboard extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          l.riskBody(shortDate(context, summary.fechaAgotamiento!)),
+                          summary.disponibleTotal < 0
+                              ? l.riskOverBody(money(-summary.disponibleTotal))
+                              : l.riskBody(shortDate(context, summary.fechaAgotamiento!)),
                           style: theme.textTheme.bodyMedium?.copyWith(color: tokens.goals.onContainer),
                         ),
                       ),
@@ -257,7 +263,6 @@ class _Dashboard extends ConsumerWidget {
         const SupportSuggestionCard(),
         const ReceivablesCard(),
         if (tendencias != null) _WeekCard(trends: tendencias),
-        const CheckinCard(),
         if (insights.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 8, top: 4),
@@ -348,7 +353,9 @@ class _Dashboard extends ConsumerWidget {
               children: [
                 for (final c in [...summary.desglose]..sort((a, b) => b.gastado.compareTo(a.gastado)))
                   LabeledProgress(
-                    label: c.limite == null ? c.categoria : '${c.categoria} · ${l.limitOf(money(c.limite!))}',
+                    label: c.limite == null
+                        ? catLabel(context, c.categoria)
+                        : '${catLabel(context, c.categoria)} · ${l.limitOf(money(c.limite!))}',
                     value: money(c.gastado),
                     // Con límite, la barra es el avance hacia él; sin límite, su peso en el gasto total.
                     progress: c.limite != null

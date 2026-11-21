@@ -3,17 +3,19 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.common import Monto, Nombre
+
 
 class CategoryCreate(BaseModel):
-    nombre: str
+    nombre: Nombre
     tipo: Literal["fijo", "opcional"] = "opcional"
-    limite: Decimal | None = None
+    limite: Monto | None = None
 
 
 class CategoryUpdate(BaseModel):
-    nombre: str | None = None
+    nombre: Nombre | None = None
     tipo: Literal["fijo", "opcional"] | None = None
-    limite: Decimal | None = None
+    limite: Monto | None = None
 
 
 class CategoryResponse(BaseModel):

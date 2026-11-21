@@ -124,17 +124,20 @@ Usa datos de mentira; los emojis salen como recuadros porque el entorno de prueb
 
 ## Textos y traducciones
 
-Todos los textos (español e inglés) viven en una sola tabla en `tool/gen_arb.py`. Tras cambiarla:
+Los textos viven en `lib/l10n/app_es.arb` (plantilla) y `lib/l10n/app_en.arb`. Edítalos ahí, con la misma clave
+en los dos archivos, y regenera las clases:
 
 ```bash
-python tool/gen_arb.py   # regenera lib/l10n/app_es.arb y app_en.arb
 flutter gen-l10n         # regenera lib/l10n/gen/ (no se versiona)
 ```
+
+> **No ejecutes `tool/gen_arb.py`.** Fue la tabla original, pero quedó desactualizada: desde noviembre de 2026 más
+> de 180 claves solo existen en los `.arb`, y el script las borraría.
 
 ## Generar un APK
 
 ```bash
-flutter build apk --release --dart-define=API_BASE_URL=https://<tu-backend>
+flutter build apk --release --target-platform android-arm,android-arm64 --dart-define=API_BASE_URL=https://<tu-backend>
 ```
 
 El APK queda en `build/app/outputs/flutter-apk/app-release.apk` y se instala con `adb install` o copiándolo

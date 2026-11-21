@@ -15,7 +15,7 @@ def test_registro_duplicado_con_password_falla(client):
         "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "secret123", "nombre": "Ana"}
     )
     r = client.post(
-        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "x", "nombre": "Ana2"}
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "ana@test.com", "password": "clave8xyz", "nombre": "Ana2"}
     )
     assert r.status_code == 400
 
@@ -108,11 +108,11 @@ def test_registro_sobre_cuenta_solo_google_agrega_password(client, monkeypatch):
     client.post("/auth/google", json={"id_token": "whatever"})
 
     r = client.post(
-        "/auth/register", json={**ACEPTA_POLITICA, "email": "beto@test.com", "password": "newpass", "nombre": "Beto"}
+        "/auth/register", json={**ACEPTA_POLITICA, "email": "beto@test.com", "password": "clave9xyz", "nombre": "Beto"}
     )
     assert r.status_code == 201
 
-    r = client.post("/auth/login", json={"email": "beto@test.com", "password": "newpass"})
+    r = client.post("/auth/login", json={"email": "beto@test.com", "password": "clave9xyz"})
     assert r.status_code == 200
 
 
@@ -127,7 +127,8 @@ def test_el_correo_no_distingue_mayusculas(client):
     assert r.status_code == 200
     # Y no se puede registrar "otra" cuenta que solo cambie las mayúsculas.
     r = client.post(
-        "/auth/register", json={**ACEPTA_POLITICA, "email": "JUAN.RAMIREZ@test.com", "password": "x", "nombre": "Otro"}
+        "/auth/register",
+        json={**ACEPTA_POLITICA, "email": "JUAN.RAMIREZ@test.com", "password": "clave8xyz", "nombre": "Otro"},
     )
     assert r.status_code == 400
 

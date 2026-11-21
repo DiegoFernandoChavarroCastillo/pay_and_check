@@ -8,6 +8,7 @@ import '../../data/api.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../transactions/expense_form_screen.dart';
 
 /// Gastos grandes que vienen (matrícula, libros, regalos…): "¿me alcanza?" llevado al semestre. Por cada uno,
 /// cuánto apartar por semana y si el ritmo de hoy lo permite.
@@ -91,12 +92,7 @@ class _PrevistoCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 FilledButton.tonal(
-                  onPressed: () async {
-                    if (await guarded(context, () => ref.read(apiProvider).plannedDone(p.id))) {
-                      ref.invalidate(plannedProvider);
-                      showSnack(l.plannedDoneSnack);
-                    }
-                  },
+                  onPressed: () => _yaLoPague(context, ref, p),
                   child: Text(l.plannedDone),
                 ),
               ],
@@ -180,5 +176,43 @@ Future<void> showPlannedDialog(BuildContext context, WidgetRef ref) async {
         ..invalidate(plannedProvider)
         ..invalidate(insightsProvider);
     }
+  }
+}
+
+
+/// "Ya lo pagué": nada se registra sin que la persona lo confirme (la misma regla del registro por texto y de los
+/// SMS). Antes el backend creaba el gasto solo y, si la persona ya lo había registrado a mano, quedaba dos veces.
+Future<void> _yaLoPague(BuildContext context, WidgetRef ref, PlannedExpense p) async {
+  final l = context.l;
+  final eleccion = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l.plannedDoneTitle),
+      content: Text(l.plannedDoneBody(money(p.monto))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
+        TextButton(onPressed: () => Navigator.pop(ctx, 'ya'), child: Text(l.plannedDoneAlready)),
+        FilledButton(onPressed: () => Navigator.pop(ctx, 'registrar'), child: Text(l.plannedDoneRegister)),
+      ],
+    ),
+  );
+  if (eleccion == null || !context.mounted) return;
+
+  if (eleccion == 'registrar') {
+    final guardado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExpenseFormScreen(
+          draft: ExpenseDraft(monto: p.monto, descripcion: p.descripcion, fecha: today()),
+        ),
+      ),
+    );
+    if (guardado != true || !context.mounted) return;
+  }
+
+  if (await guarded(context, () => ref.read(apiProvider).plannedDone(p.id))) {
+    ref.invalidate(plannedProvider);
+    refreshData(ref);
+    showSnack(l.plannedDoneSnack);
   }
 }

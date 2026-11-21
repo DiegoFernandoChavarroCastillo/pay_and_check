@@ -284,7 +284,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                           ChoiceChip(
                             avatar: CircleAvatar(backgroundColor: colores[c.nombre], radius: 6),
                             showCheckmark: false,
-                            label: Text(c.nombre),
+                            label: Text(catLabel(context, c.nombre)),
                             selected: c.id == seleccion,
                             onSelected: (_) {
                               tapFeedback();
@@ -296,7 +296,12 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                DateField(label: l.date, value: _fecha, onChanged: (d) => setState(() => _fecha = d)),
+                DateField(
+                  label: l.date,
+                  value: _fecha,
+                  lastDate: today(),
+                  onChanged: (d) => setState(() => _fecha = d),
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _comercio,

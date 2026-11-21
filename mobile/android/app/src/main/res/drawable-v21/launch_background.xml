@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pantalla de arranque: color de marca con el símbolo de la app. -->
+<!-- Pantalla de arranque: el isotipo claro (docs/pay-and-check-logos) sobre el mismo fondo claro del ícono. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@color/brand" />
-    <item android:width="120dp" android:height="120dp" android:gravity="center"
-        android:drawable="@drawable/ic_launcher_foreground" />
+    <item android:drawable="@color/ic_launcher_background" />
+    <item android:width="200dp" android:height="200dp" android:gravity="center"
+        android:drawable="@mipmap/ic_launcher_foreground" />
 </layer-list>

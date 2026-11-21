@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
+from app.core import rate_limit
 from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
@@ -79,9 +80,11 @@ def canjear_codigo(
     current_user: User = Depends(get_current_user),
 ) -> SuscripcionResponse:
     """Canjea un código de convenio (activa Institucional) o un código familiar (une a una familia)."""
+    rate_limit.revisar_canje(current_user.id)
     try:
         planes.canjear(session, current_user, payload.codigo, today_for(current_user))
     except planes.CodigoNoEncontrado as exc:
+        rate_limit.registrar_fallo_de_canje(current_user.id)
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     except planes.PlanError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc

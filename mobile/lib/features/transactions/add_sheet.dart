@@ -492,10 +492,20 @@ class _ReceiptScanScreenState extends ConsumerState<ReceiptScanScreen> {
 }
 
 class IncomeFormScreen extends ConsumerStatefulWidget {
-  const IncomeFormScreen({super.key, this.draft, this.siguientes = const [], this.posicion = 1, this.total = 1});
+  const IncomeFormScreen({
+    super.key,
+    this.draft,
+    this.existing,
+    this.siguientes = const [],
+    this.posicion = 1,
+    this.total = 1,
+  });
 
   /// Ingreso propuesto por la IA a partir de un texto; se precarga para confirmar.
   final ExpenseDraft? draft;
+
+  /// Ingreso ya registrado que se edita (HU-014: un ingreso se puede editar, no solo borrar).
+  final Income? existing;
   final List<ExpenseDraft> siguientes;
   final int posicion;
   final int total;
@@ -506,9 +516,11 @@ class IncomeFormScreen extends ConsumerStatefulWidget {
 
 class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   final _form = GlobalKey<FormState>();
-  late final _monto = TextEditingController(text: MilesFormatter.agrupar(widget.draft?.monto?.round().toString() ?? ''));
-  late final _descripcion = TextEditingController(text: widget.draft?.descripcion ?? '');
-  late DateTime _fecha = widget.draft?.fecha ?? today();
+  late final _monto = TextEditingController(
+    text: MilesFormatter.agrupar((widget.existing?.monto ?? widget.draft?.monto)?.round().toString() ?? ''),
+  );
+  late final _descripcion = TextEditingController(text: widget.existing?.descripcion ?? widget.draft?.descripcion ?? '');
+  late DateTime _fecha = widget.existing?.fecha ?? widget.draft?.fecha ?? today();
   bool _saving = false;
 
   @override
@@ -523,7 +535,13 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
     setState(() => _saving = true);
     final ok = await guarded(
       context,
-      () => ref.read(apiProvider).createIncome(parseMoney(_monto.text)!, _descripcion.text.trim(), _fecha),
+      () {
+        final api = ref.read(apiProvider);
+        final existing = widget.existing;
+        return existing == null
+            ? api.createIncome(parseMoney(_monto.text)!, _descripcion.text.trim(), _fecha)
+            : api.updateIncome(existing.id, parseMoney(_monto.text)!, _descripcion.text.trim(), _fecha);
+      },
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -538,7 +556,7 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
   Widget build(BuildContext context) {
     final l = context.l;
     final esConfirmacion = widget.draft != null;
-    final titulo = esConfirmacion ? l.confirmIncome : l.addIncome;
+    final titulo = widget.existing != null ? l.editIncome : (esConfirmacion ? l.confirmIncome : l.addIncome);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.total > 1 ? '$titulo · ${l.draftPosition(widget.posicion, widget.total)}' : titulo),
@@ -566,7 +584,7 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
                   ],
                 ),
               )
-            else ...[
+            else if (widget.existing == null) ...[
               Text(l.addIncomeHint, style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 16),
             ],
@@ -579,7 +597,12 @@ class _IncomeFormScreenState extends ConsumerState<IncomeFormScreen> {
               validator: (v) => (v ?? '').trim().isEmpty ? l.requiredField : null,
             ),
             const SizedBox(height: 12),
-            DateField(label: l.date, value: _fecha, onChanged: (d) => setState(() => _fecha = d)),
+            DateField(
+                  label: l.date,
+                  value: _fecha,
+                  lastDate: today(),
+                  onChanged: (d) => setState(() => _fecha = d),
+                ),
             const SizedBox(height: 24),
             SaveButton(saving: _saving, onPressed: _save),
           ],

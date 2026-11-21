@@ -157,7 +157,7 @@ class _CategoryDonutState extends State<CategoryDonut> {
                   ),
                   if (tocada != null)
                     Text(
-                      tocada.label,
+                      catLabel(context, tocada.label),
                       style: theme.textTheme.labelSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -186,7 +186,12 @@ class _CategoryDonutState extends State<CategoryDonut> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(p.label, style: theme.textTheme.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    catLabel(context, p.label),
+                    style: theme.textTheme.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(

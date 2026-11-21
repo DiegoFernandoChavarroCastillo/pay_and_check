@@ -186,8 +186,8 @@ def test_reto_de_reducir_categoria_se_verifica_solo_y_no_duplica_puntos(
     )
     assert r.status_code == 400
 
+    fijar_hoy(date(2026, 3, 12))  # antes de registrar: un gasto no puede tener fecha futura
     gastar(30000, date(2026, 3, 10), ENTRETENIMIENTO, "cine")
-    fijar_hoy(date(2026, 3, 12))
     en_curso = client.get("/challenges", headers=auth_headers).json()[0]
     assert (en_curso["estado"], Decimal(en_curso["valor_actual"])) == ("activo", Decimal("30000.00"))
     puntos_antes = _perfil(client, auth_headers)["puntos"]
@@ -218,6 +218,7 @@ def test_reto_fallido_no_da_puntos_y_sin_linea_base_no_se_crea(
     client.post(
         "/challenges", json={"plantilla": "reducir_categoria", "category_id": ENTRETENIMIENTO}, headers=auth_headers
     )
+    fijar_hoy(date(2026, 3, 11))  # un gasto no puede tener fecha futura
     gastar(45000, date(2026, 3, 11), ENTRETENIMIENTO)
 
     fijar_hoy(date(2026, 3, 16))

@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 
 from app.core.config import POLITICA_VERSION
+from app.schemas.common import Nombre
 
 CoachTone = Literal["motivador", "directo", "humoristico", "minimalista"]
 Idioma = Literal["es", "en"]
@@ -32,7 +33,7 @@ class UserResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    nombre: str | None = None
+    nombre: Nombre | None = None
     coach_tone: CoachTone | None = None
     idioma: Idioma | None = None
     zona_horaria: str | None = None

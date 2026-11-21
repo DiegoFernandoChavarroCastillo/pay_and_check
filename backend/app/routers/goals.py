@@ -6,11 +6,13 @@ from sqlmodel import Session, delete, select
 from app.core.time import today_for
 from app.db.session import get_session
 from app.deps import get_current_user
+from app.models.gamification import PointEvent
 from app.models.goal import Goal, GoalContribution
 from app.models.user import User
 from app.schemas.goal import ContributionCreate, GoalCreate, GoalResponse, GoalUpdate
 from app.services.budget_lookup import get_active_budget_for_user
 from app.services.budget_totals import summary_for
+from app.services.patterns import fmt
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
@@ -57,6 +59,17 @@ def _reevaluar_estado(session: Session, goal: Goal, today) -> None:
     session.add(goal)
 
 
+def _revocar_puntos(session: Session, user: User, goal: Goal, *, borrada: bool) -> None:
+    """Los puntos de una meta valen mientras el dinero siga apartado. Sin esto se podía crear una meta de $1.000,
+    apartar, cobrar los puntos de "meta cumplida" y devolver el dinero, una y otra vez."""
+    claves = []
+    if borrada or goal.estado != "cumplida":
+        claves.append(f"meta:{goal.id}")
+    if borrada or not _aportes(session, goal.id):
+        claves.append(f"primer_aporte:{goal.id}")
+    session.exec(delete(PointEvent).where(PointEvent.user_id == user.id, PointEvent.clave.in_(claves)))
+
+
 @router.post("", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
 def create_goal(
     payload: GoalCreate,
@@ -92,6 +105,7 @@ def update_goal(
 
     # Cambiar el objetivo puede cumplir o "des-cumplir" la meta.
     _reevaluar_estado(session, goal, today_for(current_user))
+    _revocar_puntos(session, current_user, goal, borrada=False)
     session.commit()
     session.refresh(goal)
     return _a_respuesta(session, goal)
@@ -106,6 +120,7 @@ def delete_goal(
     """Borra la meta y sus aportes: ese dinero vuelve a estar disponible."""
     goal = _get_owned_goal(session, current_user.id, goal_id)
     session.exec(delete(GoalContribution).where(GoalContribution.goal_id == goal.id))
+    _revocar_puntos(session, current_user, goal, borrada=True)
     session.delete(goal)
     session.commit()
 
@@ -130,7 +145,14 @@ def add_contribution(
     if payload.monto > disponible:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"Solo tienes {disponible} disponible para apartar.",
+            f"Solo tienes ${fmt(max(disponible, Decimal('0')))} disponible para apartar.",
+        )
+    falta = goal.monto_objetivo - sum((a.monto for a in _aportes(session, goal.id)), Decimal("0"))
+    if payload.monto > falta:
+        # Apartar de más no acerca la meta y saca dinero del día a día sin razón.
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"A esta meta solo le faltan ${fmt(max(falta, Decimal('0')))}.",
         )
 
     session.add(
@@ -161,6 +183,7 @@ def delete_contribution(
     session.delete(aporte)
     session.flush()
     _reevaluar_estado(session, goal, today_for(current_user))
+    _revocar_puntos(session, current_user, goal, borrada=False)
     session.commit()
     session.refresh(goal)
     return _a_respuesta(session, goal)

@@ -9,6 +9,7 @@ from app.models.income import Income
 from app.models.user import User
 from app.schemas.income import IncomeCreate, IncomeResponse, IncomeUpdate
 from app.services.budget_lookup import find_budget_for_date
+from app.services.validaciones import validar_fecha_no_futura
 
 router = APIRouter(prefix="/incomes", tags=["incomes"])
 
@@ -26,6 +27,7 @@ def create_income(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> Income:
+    validar_fecha_no_futura(payload.fecha, current_user)
     budget = find_budget_for_date(session, current_user.id, payload.fecha)
     if budget is None:
         raise HTTPException(
@@ -74,6 +76,7 @@ def update_income(
 
     nueva_fecha = updates.get("fecha", income.fecha)
     if "fecha" in updates:
+        validar_fecha_no_futura(nueva_fecha, current_user)
         budget = find_budget_for_date(session, current_user.id, nueva_fecha)
         if budget is None:
             raise HTTPException(

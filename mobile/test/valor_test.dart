@@ -98,4 +98,47 @@ void main() {
 
     expect(api.previstosCreados.single, {'descripcion': 'Matrícula', 'monto': 850000.0});
   });
+
+  group('"Ya lo pagué" no registra nada sin confirmación', () {
+    FakeApi conMatricula() => FakeApi()
+      ..previstos.add({
+        'id': 5, 'descripcion': 'Matrícula', 'monto': '900000', 'fecha': '2030-01-20', 'hecho': false,
+        'dias': 30, 'por_semana': '210000', 'margen_semanal': '10000',
+      });
+
+    testWidgets('si ya estaba registrado, solo lo marca', (tester) async {
+      final api = conMatricula();
+      await tester.pumpWidget(await pantallaDePrueba(api, const PlannedScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Ya lo pagué'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Ya registraste este pago?'), findsOneWidget);
+      await tester.tap(find.text('Ya está registrado'));
+      await tester.pumpAndSettle();
+
+      expect(api.previstosPagados, [5]);
+      expect(api.gastosCreados, isEmpty);
+    });
+
+    testWidgets('"Registrarlo ahora" abre el gasto prellenado y lo marca al guardarlo', (tester) async {
+      final api = conMatricula();
+      await tester.pumpWidget(await pantallaDePrueba(api, const PlannedScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Ya lo pagué'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Registrarlo ahora'));
+      await tester.pumpAndSettle();
+      expect(find.text('900.000'), findsOneWidget);
+      expect(api.previstosPagados, isEmpty); // nada se marca hasta guardar
+
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(api.gastosCreados.single['monto'], 900000.0);
+      expect(api.gastosCreados.single['descripcion'], 'Matrícula');
+      expect(api.previstosPagados, [5]);
+    });
+  });
 }

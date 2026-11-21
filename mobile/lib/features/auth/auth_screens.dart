@@ -6,6 +6,7 @@ import '../../core/config/app_config.dart';
 import '../../core/widgets.dart';
 import '../coach/coach_widgets.dart';
 import '../../data/session.dart';
+import '../../l10n/gen/app_localizations.dart';
 import 'privacy_policy.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -104,6 +105,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final l = context.l;
+    // El login lleva aquí con context.go (reemplaza la pila): sin esto, "atrás" cerraba la app.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go('/login');
+      },
+      child: _registerForm(l),
+    );
+  }
+
+  Widget _registerForm(AppLocalizations l) {
     return _AuthScaffold(
       title: l.registerTitle,
       subtitle: l.registerSubtitle,
@@ -229,7 +241,11 @@ class _PasswordFieldState extends State<_PasswordField> {
           onPressed: () => setState(() => _oculta = !_oculta),
         ),
       ),
-      validator: (v) => (v ?? '').length < widget.minLength ? l.passwordTooShort(widget.minLength) : null,
+      validator: (v) {
+        final clave = v ?? '';
+        if (clave.isEmpty) return l.passwordRequired;
+        return clave.length < widget.minLength ? l.passwordTooShort(widget.minLength) : null;
+      },
     );
   }
 }

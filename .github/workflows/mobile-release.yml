@@ -90,7 +90,8 @@ jobs:
           PRIVACY_CONTACT: ${{ vars.PRIVACY_CONTACT }}
           TAG: ${{ github.ref_name }}
         run: |
-          flutter build apk --release \
+          # Solo ARM: x86_64 es para emuladores y sumaba ~33 MB a un APK que se instala en teléfonos.
+          flutter build apk --release --target-platform android-arm,android-arm64 \
             --build-name="${TAG#v}" --build-number="${{ github.run_number }}" \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID" \

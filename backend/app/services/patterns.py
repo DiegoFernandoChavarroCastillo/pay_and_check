@@ -194,6 +194,10 @@ def _variacion_semanal(idioma, gastos, categorias, today: date) -> Pattern | Non
     )
 
 
+# Historia mínima para proponer un límite por categoría a partir del gasto de los últimos 30 días.
+DIAS_MINIMOS_PARA_LIMITE = 14
+
+
 def _categoria_dominante(idioma, gastos, categorias, limites: dict, today: date) -> Pattern | None:
     desde = today - timedelta(days=29)
     totales: dict[int, Decimal] = defaultdict(Decimal)
@@ -211,8 +215,11 @@ def _categoria_dominante(idioma, gastos, categorias, limites: dict, today: date)
 
     categoria = categorias[category_id]
     pct = int(monto / total * 100)
-    # Se propone un límite si la persona aún no le ha puesto uno (propio o sobre una por defecto).
-    if limite_de(categoria, limites) is None:
+    # Se propone un límite si la persona aún no le ha puesto uno (propio o sobre una por defecto) y hay al menos
+    # dos semanas de historia: el 90 % de lo gastado en "los últimos 30 días" con un solo día de datos daba un
+    # límite menor que lo que ya se había gastado, y la categoría quedaba excedida al aceptarlo.
+    dias_con_datos = (today - min(fecha for fecha, _ in gastos)).days + 1
+    if limite_de(categoria, limites) is None and dias_con_datos >= DIAS_MINIMOS_PARA_LIMITE:
         limite = (monto * Decimal("0.9")).quantize(Decimal("1"))
         accion = {
             "tipo": "poner_limite",

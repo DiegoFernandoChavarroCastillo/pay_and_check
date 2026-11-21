@@ -3,9 +3,11 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.common import Monto
+
 
 class BudgetCreate(BaseModel):
-    monto_total: Decimal
+    monto_total: Monto
     fecha_inicio: date
     fecha_fin: date
 
@@ -17,7 +19,7 @@ class BudgetCreate(BaseModel):
 
 
 class BudgetUpdate(BaseModel):
-    monto_total: Decimal | None = None
+    monto_total: Monto | None = None
     fecha_inicio: date | None = None
     fecha_fin: date | None = None
 

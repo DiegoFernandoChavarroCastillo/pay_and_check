@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="brand">#1F6F5C</color>
+    <!-- Fondo del ícono adaptativo: el isotipo claro está pensado para fondos claros. -->
+    <color name="ic_launcher_background">#F2FAF7</color>
 </resources>

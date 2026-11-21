@@ -3,16 +3,18 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.common import Descripcion, Monto
+
 
 class IncomeCreate(BaseModel):
-    monto: Decimal
-    descripcion: str
+    monto: Monto
+    descripcion: Descripcion
     fecha: date
 
 
 class IncomeUpdate(BaseModel):
-    monto: Decimal | None = None
-    descripcion: str | None = None
+    monto: Monto | None = None
+    descripcion: Descripcion | None = None
     fecha: date | None = None
 
 

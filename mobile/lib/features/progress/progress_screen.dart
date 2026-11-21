@@ -121,9 +121,13 @@ class _LevelHeader extends StatelessWidget {
         BentoRow(
           children: [
             // Gastar más de lo que entró no se muestra como un porcentaje negativo enorme: no hubo ahorro, 0%.
+            // Con menos de una semana de cuenta el ratio sale de uno o dos días de presupuesto ("28 %" el primer
+            // día con gastos): todavía no dice nada, así que se muestra "—" como la mejora mensual.
             _Metric(
               label: l.metricSavings,
-              value: _pct(perfil.ratioAhorro?.clamp(0, 1).toDouble()),
+              value: perfil.diasVentana > 0 && perfil.diasVentana < 7
+                  ? '—'
+                  : _pct(perfil.ratioAhorro?.clamp(0, 1).toDouble()),
               tooltip: l.metricSavingsHint,
             ),
             // Con menos de una semana de cuenta, "1 de 1 días" se entiende; "100 %" el primer día no.
@@ -285,6 +289,16 @@ class _GoalCardState extends ConsumerState<_GoalCard> {
                 tooltip: l.undoContribution,
                 icon: const Icon(Icons.undo),
                 onPressed: () async {
+                  // Un toque devolvía el dinero (y "descumplía" la meta) sin preguntar.
+                  if (!await confirm(
+                    context,
+                    title: l.undoContributionTitle,
+                    body: l.undoContributionBody(money(aporte.monto)),
+                    action: l.undoContribution,
+                  )) {
+                    return;
+                  }
+                  if (!context.mounted) return;
                   final ok = await guarded(context, () => api.deleteContribution(meta.id, aporte.id));
                   if (ok) refreshData(ref);
                 },
