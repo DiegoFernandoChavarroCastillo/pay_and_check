@@ -56,6 +56,11 @@ android {
         release {
             signingConfig = signingConfigs.getByName(if (hasReleaseKeystore) "release" else "debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // R8 rompe google_mlkit_text_recognition en release: ofusca clases que ML Kit usa por
+            // reflexión y el plugin lanza NullPointerException al leer un recibo (PS-123).
+            // Sin minify ni shrink el APK pesa más, pero el OCR funciona.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
