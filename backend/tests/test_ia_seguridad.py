@@ -1,4 +1,4 @@
-"""PS-101: capas anti prompt injection (planFinal §4.1). Cliente de Groq falso: nada sale a la red."""
+"""PS-101: capas anti prompt injection (ADR-009). Cliente de Groq falso: nada sale a la red."""
 
 import json
 import re

@@ -1,9 +1,11 @@
-# Análisis financiero y decisiones de planes (19 de noviembre de 2026)
+# Análisis financiero y decisiones de planes
 
-> Cierra las decisiones que quedaron abiertas en `docs/iteracion-jurado-nov-2026.md` §9. Fuentes: el consumo real
+_Actualizado el 19 de noviembre de 2026._
+
+> Fuentes: el consumo real
 > de IA medido en la tabla `ai_usage`, precios públicos de proveedores (noviembre de 2026) y una réplica en Python
 > del plan a 36 meses del Excel. El libro actualizado es
-> `docs/negocio/Plantilla_Finanzas_SWNT_PayCheck_36M.xlsx` (reemplaza la versión anterior; el documento `Modelo_Financiero_PayCheck_SWNT(1).docx` usa estas cifras).
+> `docs/negocio/Plantilla_Finanzas_SWNT_PayCheck_36M.xlsx` (el documento `Modelo_Financiero_PayCheck_SWNT.docx` usa estas cifras).
 
 ## 1. Resumen ejecutivo
 
@@ -85,7 +87,7 @@ TRM: $3.300 (TRM certificada del 13 de noviembre: $3.301,91).
 
 | Opción | USD/mes aprox. | Comentario |
 |---|---|---|
-| **Render Starter + Neon Launch** (elegida) | **~30** | Gestionado, sin dormirse (el plan gratis de Render tarda ~1 minuto en despertar: inaceptable en la demo y en el piloto); Neon cobra por uso y escala a cero |
+| **Render Starter + Neon Launch** (elegida) | **~30** | Gestionado, sin dormirse (el plan gratis de Render tarda ~1 minuto en despertar: inaceptable en el piloto); Neon cobra por uso y escala a cero |
 | Render Starter + DigitalOcean Managed Postgres | ~22–30 | Base de datos de precio fijo; buena alternativa si Neon sube |
 | Railway | ~26–57 | Cobra por uso; más caro para servicios siempre encendidos |
 | Fly.io | ~9–19 (sin Postgres gestionado) | El Postgres gestionado parte de USD 38 |
@@ -115,7 +117,7 @@ código.
 ## 5. Escenarios a 36 meses
 
 Réplica en Python del `Plan_36M` del Excel; reproduce exactamente el libro original (equilibrio en el mes 16,
-utilidad de $82,8 M). Detalle también en la hoja `Ajuste_Nov2026` del Excel v2.
+utilidad de $82,8 M). Detalle también en la hoja `Ajuste_Nov2026` del Excel.
 
 | Escenario | Equilibrio | Pérdida máxima | Ronda necesaria | Utilidad 36 meses | Margen año 1 / 2 / 3 |
 |---|---|---|---|---|---|
@@ -134,7 +136,7 @@ Lectura:
 
 ---
 
-## 6. La ronda
+## 6. Ronda de financiación
 
 **Decisión: pedir $150 M (antes $163 M).** El mínimo del plan base es $105 M (pérdida acumulada máxima de $77,6 M
 más dos meses de costos fijos, $27,2 M). La primera propuesta era $115 M, pero suponía la licencia de plataforma,
@@ -150,8 +152,8 @@ queda como *upside*: con ella el equilibrio llega en el mes 12.
 
 En el Excel: `Ajuste_Nov2026` tiene los escenarios G y H y la ronda recomendada (`C25`); `Supuestos_PayCheck!B75`
 toma el mayor entre el mínimo del plan base y esa ronda, y `Inputs!B15` coincide. Con $150 M la caja del plan base
-nunca baja de $72,4 M y termina el mes 36 en $278,2 M. Esta decisión salió al fusionar con la rama de Sebastián
-(PS-52), que pedía $165 M con el mismo criterio de colchón.
+nunca baja de $72,4 M y termina el mes 36 en $278,2 M. Una versión anterior del modelo (PS-52) pedía $165 M con el
+mismo criterio de colchón.
 
 ---
 
@@ -173,7 +175,7 @@ nunca baja de $72,4 M y termina el mes 36 en $278,2 M. Esta decisión salió al 
 | `READ_SMS` | Solo para la app de SMS por defecto, salvo excepciones con declaración. Existe una excepción de "gestión de dinero basada en SMS" (aparece como vista previa) | **No pedir `READ_SMS` en la versión de Play.** Además, Play Protect marca como de alto riesgo las apps que combinan SMS con acceso a notificaciones |
 | Acceso a notificaciones | No hay formulario de declaración específico, pero exige divulgación destacada y consentimiento antes de pedirlo, y que sea una función central | **Es el canal de captura de la versión de Play.** La app ya muestra el consentimiento antes de abrir los ajustes |
 
-**Para publicar** (fuera del alcance de la demo): quitar `READ_SMS` del `AndroidManifest.xml` de la versión de Play
+**Para publicar en Google Play:** quitar `READ_SMS` del `AndroidManifest.xml` de la versión de Play
 y ocultar el botón de SMS. Los SMS quedan solo en el APK del piloto. Llenar la sección de Seguridad de los datos con
 lo que dice `docs/privacidad.md`.
 
@@ -183,11 +185,12 @@ lo que dice `docs/privacidad.md`.
 
 1. Medir el uso real con más personas en el piloto (`ai_usage`) y, con 200 o más llamadas por tarea, bajar el
    factor de seguridad de ×1,5 a ×1,2.
-2. Crear la cuenta de DeepInfra y configurar `AI_FALLBACK_*` en Render.
-3. Pasar Render a Starter antes del piloto (hoy está en el plan gratis, que se duerme).
+2. Crear la cuenta de DeepInfra y configurar `AI_FALLBACK_*` en el backend de producción.
+3. ~~Pasar Render a Starter antes del piloto.~~ El backend de producción pasó a AWS EC2
+   ([ADR-011](../decisiones/011-backend-aws-ec2.md)); conviene revisar el costo de infraestructura de §3 con esa cifra.
 4. Negociar la licencia de plataforma con la ECI en el primer convenio (contrato semestral).
-5. Actualizar el documento `Modelo_Financiero_PayCheck_SWNT(1).docx` con estas cifras (este análisis y el Excel v2
-   son la fuente).
+5. Actualizar el documento `Modelo_Financiero_PayCheck_SWNT.docx` con estas cifras (este análisis y el Excel son
+   la fuente).
 
 ## Fuentes
 

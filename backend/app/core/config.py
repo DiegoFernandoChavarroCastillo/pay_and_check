@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # GOOGLE_CLIENT_ID el login con Google queda deshabilitado (401).
     GROQ_API_KEY: str = ""
     # Proveedor de respaldo con el mismo modelo (gpt-oss-20b) y API compatible con OpenAI, para cuando Groq
-    # falla o llega a su límite (docs/analisis-financiero-nov-2026.md). Vacío = sin respaldo: el coach usa sus
+    # falla o llega a su límite (docs/negocio/analisis-financiero.md). Vacío = sin respaldo: el coach usa sus
     # textos fijos. Ej.: DeepInfra, https://api.deepinfra.com/v1/openai con el modelo openai/gpt-oss-20b.
     AI_FALLBACK_URL: str = ""
     AI_FALLBACK_API_KEY: str = ""

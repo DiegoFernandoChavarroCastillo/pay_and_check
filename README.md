@@ -71,7 +71,7 @@ registro con IA responde 503 (la app lleva al formulario manual) y el coach usa 
 ¿Sin Postgres instalado? `docker compose up --build` dentro de `backend/` levanta la API y una base de datos;
 luego `docker compose exec api sh -c "alembic upgrade head && python -m app.db.seed_demo"`.
 
-### Semilla de la demo y cuentas de prueba
+### Datos de demostración y cuentas de prueba
 
 `app.db.seed_demo` siembra las categorías por defecto, la universidad (Escuela Colombiana de Ingeniería) con el
 código de convenio **`ECI-2026`**, sus apoyos y el token de su panel, y una cuenta por plan. Se puede correr las
@@ -80,7 +80,7 @@ universidad, así la URL del panel no cambia. Al terminar imprime las cuentas y 
 
 | Correo | Contraseña | Plan |
 |---|---|---|
-| `valentina@demo.payandcheck.app` | `Demo2026!` | Institucional (canjeó `ECI-2026`). **La cuenta del guion:** ocho semanas de historia, gastos fijos, meta, gastos que vienen, una vaca, suscripciones y gastos hormiga; el mes va justo y aparecen la alerta y los apoyos |
+| `valentina@demo.payandcheck.app` | `Demo2026!` | Institucional (canjeó `ECI-2026`). **Cuenta principal:** ocho semanas de historia, gastos fijos, meta, gastos que vienen, una vaca, suscripciones y gastos hormiga; el mes va justo y aparecen la alerta y los apoyos |
 | `laura@demo.payandcheck.app` | `Demo2026!` | Premium, con presupuesto a mitad de periodo, dos gastos fijos, movimientos, una meta y una alerta de riesgo |
 | `andres@demo.payandcheck.app` | `Demo2026!` | Gratis, sin datos (muestra el bloqueo de la captura automática) |
 | `papa@demo.payandcheck.app` | `Demo2026!` | Familiar, titular (código `FAM-DEMO-2026`); ve el progreso de Camilo |
@@ -130,7 +130,7 @@ La app se distribuye como un APK firmado adjunto a un GitHub Release (ver
 instalación desde "orígenes desconocidos".
 
 1. En el teléfono, abrir la página del último release
-   (<https://github.com/PAY-CHECK-SWNT/pay_and_check/releases/latest>, o escanear el QR de la presentación) y
+   (<https://github.com/PAY-CHECK-SWNT/pay_and_check/releases/latest>, o escanear el código QR) y
    descargar `pay-and-check-<versión>.apk`.
 2. Abrir el archivo descargado desde la notificación o desde la app *Archivos*.
 3. Android avisa que esa app no tiene permiso para instalar apps desconocidas. Tocar **Configuración**,
@@ -140,7 +140,7 @@ instalación desde "orígenes desconocidos".
      Instalar apps desconocidas*.
 4. Tocar **Instalar**. Si Google Play Protect muestra una advertencia, elegir **Más detalles → Instalar de
    todas formas**.
-5. Abrir Pay&Check y entrar con una de las [cuentas de prueba](#semilla-de-la-demo-y-cuentas-de-prueba) o
+5. Abrir Pay&Check y entrar con una de las [cuentas de prueba](#datos-de-demostración-y-cuentas-de-prueba) o
    crear una cuenta.
 
 Una vez instalada se puede volver a desactivar el permiso del paso 3. Las versiones nuevas se instalan
@@ -157,7 +157,7 @@ que desinstalar la versión vieja primero. Para compilar el APK uno mismo, ver
 | App Android | GitHub Releases | `git tag vX.Y.Z && git push origin vX.Y.Z` |
 | Versión web | Vercel | Sola, en cada push a `main` que toque `mobile/` |
 
-Detalle, variables, Google Sign-In y checklist antes de una demo en [docs/despliegue.md](docs/despliegue.md);
+Detalle, variables, Google Sign-In y verificación en [docs/despliegue.md](docs/despliegue.md);
 puesta en marcha local y CI en [docs/setup.md](docs/setup.md).
 
 ## Documentación
@@ -165,11 +165,9 @@ puesta en marcha local y CI en [docs/setup.md](docs/setup.md).
 | Documento | Qué contiene |
 |---|---|
 | [docs/README.md](docs/README.md) | Índice de toda la documentación técnica |
-| [docs/despliegue.md](docs/despliegue.md) | **Producción hoy:** AWS, Vercel, Releases y Google Sign-In |
-| [docs/pendientes.md](docs/pendientes.md) | **Lo que falta** antes de la presentación y después |
-| [docs/iteracion-jurado-nov-2026.md](docs/iteracion-jurado-nov-2026.md) | Auditoría como inversor, correcciones, análisis de competidores, funciones añadidas, análisis financiero y ajustes tras probar en el teléfono (nov 2026) |
-| [docs/demo-guion.md](docs/demo-guion.md) | Guion de la demo, preguntas difíciles del jurado y checklist |
-| [docs/analisis-financiero-nov-2026.md](docs/analisis-financiero-nov-2026.md) | Costos medidos de IA, proveedores comparados, escenarios a 36 meses y decisiones de planes y precios |
+| [docs/despliegue.md](docs/despliegue.md) | Producción: AWS, Vercel, Releases y Google Sign-In |
+| [docs/pendientes.md](docs/pendientes.md) | Trabajo pendiente y deuda técnica |
+| [docs/negocio/analisis-financiero.md](docs/negocio/analisis-financiero.md) | Costos medidos de IA, proveedores comparados, escenarios a 36 meses y decisiones de planes y precios |
 | [docs/api.md](docs/api.md) | Endpoints HTTP, autenticación y errores |
 | [docs/ia.md](docs/ia.md) | Cómo se usa la IA: modelo, prompts, guardrails, textos de respaldo y lo que sale a Groq |
 | [docs/decisiones/](docs/decisiones/) | Registro de decisiones de arquitectura (ADR) |
@@ -177,6 +175,5 @@ puesta en marcha local y CI en [docs/setup.md](docs/setup.md).
 | [docs/reglas-calculo.md](docs/reglas-calculo.md) | Fórmulas del presupuesto, casos especiales y ejemplos a mano |
 | [docs/informe-adversarial.md](docs/informe-adversarial.md) | Resultados de la suite adversarial de *prompt injection* |
 | [docs/planes.md](docs/planes.md) | Planes y cupo de IA |
-| [docs/negocio/](docs/negocio/) | Modelo financiero (documento) y plantilla de finanzas a 36 meses, con costos de IA medidos |
 | [docs/setup.md](docs/setup.md) | Puesta en marcha, variables de entorno y CI |
 | [mobile/README.md](mobile/README.md) | App: pantallas, diseño (también para pantallas anchas), SMS simulados, APK y versión web |

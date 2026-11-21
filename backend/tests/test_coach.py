@@ -1,4 +1,4 @@
-"""Fases 3 y 4 de plan-app-movil.md: recibos por OCR, check-ins, patrones y coach."""
+"""Recibos por OCR, check-ins, patrones y coach."""
 
 import json
 from datetime import date, timedelta

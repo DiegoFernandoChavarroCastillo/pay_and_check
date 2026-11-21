@@ -1,4 +1,4 @@
-"""Ajustes del backend para la app móvil (Fase 0 de plan-app-movil.md):
+"""Ajustes del backend para la app móvil:
 refresh token, perfil, borrado de cuenta, "hoy" por zona horaria y origen del gasto."""
 
 from datetime import date, datetime, timedelta

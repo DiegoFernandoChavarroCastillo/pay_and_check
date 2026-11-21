@@ -1,6 +1,6 @@
 # Despliegue en producción
 
-Cómo quedó montado Pay&Check para el piloto y la presentación ante el jurado (21 nov 2026). Cuenta qué corre en
+Cómo está montado Pay&Check en producción (actualizado el 21 nov 2026). Cuenta qué corre en
 cada sitio, cómo se actualiza cada pieza y qué hay que tocar si algo cambia. **Aquí no hay secretos**: los
 valores privados viven en las variables de entorno del servidor y en *Settings → Secrets and variables* de
 GitHub.
@@ -84,7 +84,7 @@ Sigue el camino original (`render.yaml`, ver [setup.md](setup.md#desplegar)). Ya
 
 ## Versión web en Vercel
 
-Respaldo para quien no tiene Android: los jurados con iPhone y la presentación desde un computador. Decisión y
+Para quien no tiene Android: usuarios de iPhone y de computador. Decisión y
 límites en [ADR-010](decisiones/010-version-web-respaldo.md).
 
 - Vercel no compila Flutter: `.github/workflows/web-deploy.yml` corre `flutter build web` en GitHub Actions y
@@ -135,9 +135,9 @@ Proyecto de Google Cloud con número `360030321900`. Hacen falta dos credenciale
   lista de usuarios de prueba.
 - Existe un segundo cliente web (`360030321900-iauvmenob…`) que no se usa.
 
-## Antes de una demo
+## Verificación después de desplegar
 
 1. `curl https://paycheck-swnt.duckdns.org/health` responde `{"status":"ok"}`.
 2. La web abre y entra con correo y con Google (recargar con Ctrl+Shift+R si se ve la versión anterior).
 3. El APK instalado es el del último Release (Perfil no lo muestra; comparar con la fecha de instalación).
-4. Si se usa Render, despertarlo unos minutos antes (`/health`).
+4. Si se usa Render, despertarlo antes de usarlo (`/health`); tarda cerca de un minuto.

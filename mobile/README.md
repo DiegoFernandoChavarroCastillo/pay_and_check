@@ -1,9 +1,8 @@
 # Pay & Check — app móvil
 
-App Flutter para Android, con una versión web de respaldo (iPhone y computador), que consume el backend de
-`../backend`. El plan de construcción,
-fase por fase, está en `../docs/historico/plan-app-movil.md`; el estado actual, los problemas y las decisiones técnicas, en
-`../docs/historico/notas-iteracion-app-movil.md`.
+App Flutter para Android y para la web (iPhone y computador) que consume el backend de `../backend`.
+Arquitectura y decisiones en `../docs/` ([architecture.md](../docs/architecture.md),
+[decisiones/](../docs/decisiones/)).
 
 ## Pantallas
 
@@ -59,7 +58,7 @@ flutter analyze
 flutter test
 ```
 
-Son 42 tests y no necesitan backend ni teléfono: `test/fakes.dart` trae un backend de mentira (`FakeApi`) y
+Las pruebas no necesitan backend ni teléfono: `test/fakes.dart` trae un backend de mentira (`FakeApi`) y
 SMS de mentira (`FakeSmsSource`). Si el PC anda corto de memoria y `flutter test` falla con "Connection closed
 before test suite loaded", usa `flutter test -j 1`.
 
@@ -149,10 +148,8 @@ llave de depuración, que solo sirve para probar en tu propio teléfono. El keys
 `android/upload-keystore.jks`: **guarda una copia de ese archivo y de `key.properties` fuera del PC**. Si se
 pierden, las personas que ya instalaron la app tendrán que desinstalarla para poder actualizar.
 
-> La app se ha probado en un teléfono (Moto G6, Android 9) en modo depuración con `flutter run`. El build de
-> **release** todavía no se ha completado en un PC de 12 GB de RAM; ver `../docs/historico/notas-iteracion-app-movil.md`.
-
-**Si el build muere por memoria** ("Out of Memory" / "Exhausted heap space"): cierra Docker Desktop y
+Los releases se compilan en GitHub Actions (abajo). Compilar en local un APK de release necesita bastante memoria:
+**si el build muere por memoria** ("Out of Memory" / "Exhausted heap space"): cierra Docker Desktop y
 detén los procesos de Gradle que hayan quedado (`cd android && ./gradlew --stop`) antes de reintentar.
 
 ### Publicar una versión para probadores
@@ -172,7 +169,7 @@ Antes hay que cargar en GitHub (Settings → Secrets and variables → Actions):
 
 ## Versión web (Vercel)
 
-La misma app compilada para el navegador, para quien no tiene Android (los iPhone del jurado, por ejemplo). En
+La misma app compilada para el navegador, para quien no tiene Android (iPhone o computador). En
 un iPhone, Safari → Compartir → "Agregar a pantalla de inicio" la abre a pantalla completa con el ícono.
 
 **Pantallas anchas** (`lib/core/responsive.dart`). Depende del ancho, no de la plataforma, así que también aplica a

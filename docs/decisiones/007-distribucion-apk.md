@@ -2,7 +2,6 @@
 
 - **Estado:** aceptada
 - **Fecha:** 2026-11-18
-- **Fuente:** `docs/planFinal.md` §4.3 (N-20)
 
 ## Contexto
 
@@ -10,7 +9,7 @@ La app es Flutter para Android. Publicar en Google Play exige cuenta de desarrol
 tienda y, en particular, justificar el permiso `READ_SMS`, que la app declara para leer los SMS del banco
 ([`mobile/android/app/src/main/AndroidManifest.xml`](../../mobile/android/app/src/main/AndroidManifest.xml)).
 Google restringe ese permiso y su aprobación no se controla en los tiempos del piloto
-(`docs/jira_planning.md`, HU-038).
+(HU-038 en Jira).
 
 ## Decisión
 

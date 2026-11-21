@@ -2,7 +2,6 @@
 
 - **Estado:** aceptada
 - **Fecha:** 2026-11-18
-- **Fuente:** `docs/planFinal.md` §4.3 (N-20)
 
 ## Contexto
 
@@ -49,7 +48,7 @@ manuales. Si se quiere afirmar algo más que lo anterior, hay que hacer y versio
 
 ## Sobre "modelo único por tarea"
 
-`planFinal.md` habla de "modelo único por tarea". En el código **hoy hay un solo modelo para todas las tareas**:
+El diseño original habla de "modelo único por tarea". En el código **hoy hay un solo modelo para todas las tareas**:
 `COACH_MODEL = MODEL`. La separación existe como constante para poder subir el coach a uno más capaz (el
 comentario sugiere `openai/gpt-oss-120b`) sin encarecer la extracción, pero no está en uso.
 
@@ -62,7 +61,7 @@ comentario sugiere `openai/gpt-oss-120b`) sin encarecer la extracción, pero no 
   `groq_client._chat_respaldo` repite la solicitud con gpt-oss-20b en un proveedor compatible con OpenAI
   (DeepInfra, a la mitad del precio). Se activa con `AI_FALLBACK_URL`, `AI_FALLBACK_API_KEY` y
   `AI_FALLBACK_MODEL`; sin ellas, el respaldo sigue siendo el texto determinista. Comparación de proveedores en
-  [`docs/analisis-financiero-nov-2026.md`](../analisis-financiero-nov-2026.md).
+  [`docs/negocio/analisis-financiero.md`](../negocio/analisis-financiero.md).
 - **Modelo en el teléfono.** No se evaluó. Voz y OCR sí corren en el teléfono y no llegan como audio ni imagen al
   backend (solo texto: `texto` y `texto_ocr` en [`routers/expenses.py`](../../backend/app/routers/expenses.py)).
 

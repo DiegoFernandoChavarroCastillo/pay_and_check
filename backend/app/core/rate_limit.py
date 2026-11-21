@@ -1,4 +1,4 @@
-"""Límites de tasa (planFinal §3.2, N-13). Acotan el abuso económico de la IA ("denial of wallet") y el
+"""Límites de tasa (docs/seguridad.md, A2 y A6). Acotan el abuso económico de la IA ("denial of wallet") y el
 adivinar contraseñas.
 
 Viven en la memoria del proceso: se reinician con cada despliegue y, con más de una instancia, cada una

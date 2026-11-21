@@ -2,7 +2,6 @@
 
 - **Estado:** aceptada
 - **Fecha:** 2026-11-18
-- **Fuente:** `docs/planFinal.md` §4.3 (N-20)
 
 ## Contexto
 

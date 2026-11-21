@@ -1,4 +1,4 @@
-"""Fases 5 y 7 de plan-app-movil.md: metas verificadas, puntos, rachas, retos, insignias y wrapped."""
+"""Metas verificadas, puntos, rachas, retos, insignias y wrapped."""
 
 from datetime import date, timedelta
 from decimal import Decimal

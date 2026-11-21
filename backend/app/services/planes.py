@@ -30,7 +30,7 @@ class Plan:
 
 
 # Gratis cubre el hábito completo: registrar, saber cuánto queda, decidir antes de gastar, el coach con chat y
-# los reportes. El chat y los reportes cuestan menos de un peso por solicitud (docs/analisis-financiero-nov-2026.md)
+# los reportes. El chat y los reportes cuestan menos de un peso por solicitud (docs/negocio/analisis-financiero.md)
 # y son los que crean el hábito y la viralidad, así que no se cierran. Los planes pagos añaden lo que ahorra
 # tiempo (la captura automática), más IA y lo propio de cada uno: el progreso familiar o los apoyos de la
 # universidad.

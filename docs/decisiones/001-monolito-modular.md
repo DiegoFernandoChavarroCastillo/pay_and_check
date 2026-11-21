@@ -2,11 +2,10 @@
 
 - **Estado:** aceptada
 - **Fecha:** 2026-11-18
-- **Fuente:** `docs/planFinal.md` §4.3 (N-20, N-21)
 
 ## Contexto
 
-Pay&Check es un MVP con 5 personas, un solo equipo de despliegue y pocos días para entregar. El backend es una
+Pay&Check es un producto en fase piloto con un equipo de 5 personas y un solo equipo de despliegue. El backend es una
 sola API FastAPI ([`backend/app/main.py`](../../backend/app/main.py)) que monta 12 routers y se despliega como un
 único servicio web Docker en Render ([`render.yaml`](../../render.yaml), `plan: free`, región `ohio`) contra una
 base PostgreSQL externa en Neon (ver [ADR-006](006-postgres-neon-alembic.md)).
@@ -63,7 +62,7 @@ Lo que se rompe primero no es el monolito sino sus dependencias externas.
 
 ### Lo que NO es *stateless*: el rate limit vive en memoria
 
-`planFinal.md` §4.3 dice que la API es *stateless* y que basta con poner N instancias detrás de un balanceador
+El diseño original dice que la API es *stateless* y que basta con poner N instancias detrás de un balanceador
 "sin cambiar código". **El código no cumple eso del todo:** los límites de tasa (20 solicitudes de IA por minuto
 por persona; 10 fallos de login por IP o email en 5 minutos) se guardan en un diccionario del proceso
 ([`backend/app/core/rate_limit.py`](../../backend/app/core/rate_limit.py), clase `LimiteDeTasa`, instancias

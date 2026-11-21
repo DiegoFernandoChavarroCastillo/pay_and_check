@@ -2,7 +2,7 @@
 
 Cada archivo es una decisión técnica de Pay&Check con el formato **contexto / decisión / alternativas /
 consecuencias** y cita los archivos del repo donde se ve. Lo que el plan pedía y el código no hace está dicho en
-cada ADR, no se da por hecho. Origen: `docs/planFinal.md` §4.3 (ticket N-20 / PS-106).
+cada ADR, no se da por hecho. Ticket de origen: PS-106.
 
 | # | Decisión | Estado |
 |---|---|---|
@@ -20,7 +20,7 @@ cada ADR, no se da por hecho. Origen: `docs/planFinal.md` §4.3 (ticket N-20 / P
 
 ## Diferencias entre el plan y el código
 
-Las encontré al verificar cada ADR contra el código:
+Encontradas al verificar cada ADR contra el código:
 
 - **La API no es del todo *stateless*:** el rate limit vive en la memoria del proceso
   (`backend/app/core/rate_limit.py`). Con más de una instancia hay que moverlo a Redis (ADR-001).

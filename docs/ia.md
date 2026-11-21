@@ -1,15 +1,13 @@
 # IA en Pay&Check
 
-Qué hace la IA en la app, con qué modelo, qué datos salen a Groq, cómo se protege y cómo se mide (N-15,
-`docs/planFinal.md` §4.4). Cada afirmación cita el archivo y la función donde se puede comprobar. Lo que el
+Qué hace la IA en la app, con qué modelo, qué datos salen a Groq, cómo se protege y cómo se mide. Cada afirmación cita el archivo y la función donde se puede comprobar. Lo que el
 código todavía no hace está marcado **pendiente**.
 
-Rutas relativas a `backend/app/`. Revisado contra el código de `feature/plan-final` (PS-104).
+Rutas relativas a `backend/app/`. Revisado contra el código (PS-104).
 
-Relacionados: [planFinal.md §4.1 y §4.4](planFinal.md), [planes.md](planes.md),
-[informe-adversarial.md](informe-adversarial.md), diagrama de secuencia
-[diagramas/diagramaSecuencia.png](diagramas/diagramaSecuencia.png) y documentos anteriores en
-[historico/](historico/).
+Relacionados: [planes.md](planes.md), [seguridad.md](seguridad.md),
+[informe-adversarial.md](informe-adversarial.md), [ADR-009](decisiones/009-capas-seguridad-ia.md) y el diagrama de
+secuencia [diagramas/diagramaSecuencia.png](diagramas/diagramaSecuencia.png).
 
 ## 1. Resumen
 
@@ -126,7 +124,7 @@ Comprobado porque ningún constructor de prompt ni `_chat` los recibe:
 | 2 · Prompt | Alcance explícito, "datos ≠ instrucciones", no revelar ni cambiar de rol. Contrato `{"en_alcance", "respuesta"}` en el chat: con `false` la app muestra su propia frase | `prompts.COACH_REGLAS`, `COACH_CHAT_PROMPT`, `EXPENSE_PARSE_SYSTEM_PROMPT`, `RECEIPT_PARSE_SYSTEM_PROMPT`; `coach._leer_turno` |
 | 3 · Salida | `filtra_salida` busca fragmentos de las reglas (fuga), URL, código o HTML y textos de más de 1.200 caracteres. `rompe_guardrails` añade culpa e inversión. `inventa_cifras` descarta cifras que no están en los datos | `ia_seguridad.filtra_salida`; `coach.rompe_guardrails`, `coach.inventa_cifras` |
 | 4 · Mínimo privilegio | Sin herramientas ni acceso a la base. Borrador JSON con topes de monto, fecha, categoría y descripción | `groq_client._chat`, `groq_client._validar_gasto` |
-| 5 · Operación | Registro de cada llamada sin texto, suite adversarial en CI, cupo mensual y límite por minuto | `ia_uso.registrar`, `tests/test_adversarial.py` (en `feature/PS-102-adversarial`), §5 abajo |
+| 5 · Operación | Registro de cada llamada sin texto, suite adversarial en CI, cupo mensual y límite por minuto | `ia_uso.registrar`, `tests/test_adversarial.py`, §5 abajo |
 
 **Pendientes de seguridad encontrados al revisar el código:**
 
@@ -142,10 +140,10 @@ Comprobado porque ningún constructor de prompt ni `_chat` los recibe:
 
 ### Suite adversarial
 
-[informe-adversarial.md](informe-adversarial.md) (rama `feature/PS-102-adversarial`, PS-102) prueba 50 ataques
+[informe-adversarial.md](informe-adversarial.md) (PS-102) prueba 50 ataques
 por 7 superficies con un modelo falso que siempre obedece. El saneo y los delimitadores contienen los 50 casos,
-ninguna fuga literal del prompt llega a la persona y el parseo rechaza los 12 casos hostiles con 422. La meta de
-N-12 todavía no se cumple: 14 salidas comprometidas llegan a la persona (11 de cambio de rol, 2 de tema ajeno y
+ninguna fuga literal del prompt llega a la persona y el parseo rechaza los 12 casos hostiles con 422. La meta de cero
+salidas comprometidas todavía no se cumple: 14 salidas comprometidas llegan a la persona (11 de cambio de rol, 2 de tema ajeno y
 1 fuga parafraseada) y la heurística de entrada no marca 7 ataques. Están como `xfail` estrictos, con mejoras
 propuestas para `filtra_salida` y `marca_inyeccion`. La corrida contra Groq real está **pendiente**.
 

@@ -665,7 +665,7 @@ def responder_chat(session: Session, user: User, mensaje: str, today: date) -> t
     turno. El historial se reenvía al modelo y no debe llevar textos de respaldo; el mensaje devuelto trae
     `id` = SIN_GUARDAR.
 
-    Capas (planFinal §4.1):
+    Capas (ADR-009):
     1. Un pedido claramente ajeno (código, juegos, poemas, tareas…) se rechaza aquí, sin llamar a Groq.
     2. El modelo devuelve {"en_alcance", "respuesta"}: si el tema es ajeno la `respuesta` se ignora y se
        muestra la frase fija de redirección, así el rechazo no depende de que el modelo se porte bien.

@@ -676,7 +676,7 @@ def insignia_texto(codigo: str, idioma: str) -> tuple[str, str]:
 
 
 def metricas(session: Session, user: User, today: date, actividad: set[date]) -> dict:
-    """Las tres métricas de `mejoras.md`: ratio de ahorro, consistencia y mejora mensual."""
+    """Las tres métricas de progreso: ratio de ahorro, consistencia y mejora mensual."""
     inicio_mes = today.replace(day=1)
     ratio_actual = ratio_ahorro(session, user.id, inicio_mes, today)
     ratio_previo = ratio_ahorro(session, user.id, *_mes_anterior(inicio_mes))

@@ -9,7 +9,7 @@ BLOQUEOS = ("ninguno", "cupo", "alcance", "inyeccion")
 
 
 class AiUsage(SQLModel, table=True):
-    """Una fila por llamada a Groq (planFinal §5, PS-21). Sin ninguna columna de texto: lo que la persona
+    """Una fila por llamada a Groq (PS-21, docs/ia.md). Sin ninguna columna de texto: lo que la persona
     escribe o dicta nunca se guarda aquí, solo cuánto costó y cómo terminó.
 
     - `exito`: Groq respondió. Solo estas llamadas cuentan para el tope mensual.

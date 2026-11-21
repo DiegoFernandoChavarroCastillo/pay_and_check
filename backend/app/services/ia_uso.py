@@ -19,7 +19,7 @@ from app.services import planes
 
 logger = logging.getLogger(__name__)
 
-# Las siete tareas de IA del inventario (planFinal §4.4, CU-IA-01 a CU-IA-07).
+# Las siete tareas de IA del inventario (docs/ia.md, CU-IA-01 a CU-IA-07).
 TAREAS = ("registro", "recibo", "reaccion", "consejos", "chat", "reporte", "wrapped")
 
 

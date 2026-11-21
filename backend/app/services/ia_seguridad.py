@@ -1,4 +1,4 @@
-"""Defensas contra prompt injection (planFinal §4.1). Todo lo que escribe la persona, o un tercero que le
+"""Defensas contra prompt injection (ADR-009, docs/seguridad.md A5). Todo lo que escribe la persona, o un tercero que le
 manda un SMS o un recibo, es un dato y nunca una instrucción: aquí se sanea antes de entrar a un prompt, se
 marca si parece un ataque y se revisa lo que el modelo devuelve."""
 

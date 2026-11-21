@@ -1,4 +1,4 @@
-"""Semilla de la demo (PS-35 + iteración para el jurado, docs/demo-guion.md). Se puede correr las veces que haga
+"""Datos de demostración (PS-35). Se puede correr las veces que haga
 falta: borra y vuelve a crear las cuentas @demo.payandcheck.app con fechas relativas a "hoy", y conserva la
 universidad, su código de convenio y el token de su panel (la URL del panel no cambia entre corridas).
 
@@ -7,7 +7,7 @@ universidad, su código de convenio y el token de su panel (la URL del panel no 
 Crea una cuenta por plan, todas con la clave Demo2026!:
 - valentina@ (Institucional, canjeó ECI-2026): ocho semanas de historia realista, gastos fijos, mesada y monitoría,
   la meta "Viaje a Santa Marta", gastos que vienen, una vaca, suscripciones y gastos hormiga. Este mes va justa:
-  aparecen la alerta, el consejo y los apoyos de la universidad. Es la cuenta del guion.
+  aparecen la alerta, el consejo y los apoyos de la universidad. Es la cuenta de demostración principal.
 - laura@ (Premium): presupuesto a mitad de periodo con dos gastos fijos, una docena de movimientos, la meta
   "Portátil para la U" y una alerta de riesgo activa.
 - andres@ (Gratis): sin datos, para mostrar el plan Gratis y el bloqueo de la captura automática.
@@ -49,7 +49,7 @@ from app.services.groq_client import MODEL
 
 DOMINIO = "@demo.payandcheck.app"
 CLAVE_DEMO = "Demo2026!"
-EMAIL_DEMO = f"valentina{DOMINIO}"  # la cuenta del guion
+EMAIL_DEMO = f"valentina{DOMINIO}"  # la cuenta de demostración principal
 UNIVERSIDAD = "Escuela Colombiana de Ingeniería"
 CODIGO_CONVENIO = "ECI-2026"
 VENCE_CONVENIO = date(2026, 12, 31)
@@ -432,7 +432,7 @@ def sembrar_demo(session: Session, hoy: date | None = None) -> tuple[list[tuple[
     session.commit()
 
     cuentas = [
-        (EMAIL_DEMO, f"Institucional (canjeó {CODIGO_CONVENIO}); la cuenta del guion"),
+        (EMAIL_DEMO, f"Institucional (canjeó {CODIGO_CONVENIO}); cuenta principal"),
         (laura.email, "Premium, a mitad de periodo y con alerta de riesgo"),
         (andres.email, "Gratis"),
         (f"papa{DOMINIO}", f"Familiar, titular (código {CODIGO_FAMILIAR}; ve el progreso de Camilo)"),

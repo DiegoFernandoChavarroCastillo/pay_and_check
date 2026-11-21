@@ -2,7 +2,6 @@
 
 - **Estado:** aceptada
 - **Fecha:** 2026-11-18
-- **Fuente:** `docs/planFinal.md` §4.2 y §4.3 (N-20); [`docs/planes.md`](../planes.md) (D1–D3)
 
 ## Contexto
 
@@ -14,7 +13,7 @@ integrar una pasarela de pago no cabe en los tiempos.
 
 - **Catálogo en código**, `CATALOGO` en [`backend/app/services/planes.py`](../../backend/app/services/planes.py):
 
-  | Plan | Precio COP (IVA incl.) | Cupo IA/mes | Estado en la demo |
+  | Plan | Precio COP (IVA incl.) | Cupo IA/mes | Estado en el piloto |
   |---|---|---|---|
   | `gratis` | 0 | 50 | real |
   | `institucional` | 4.998 por estudiante | 300 | se activa con código de convenio |
@@ -38,7 +37,7 @@ integrar una pasarela de pago no cabe en los tiempos.
 
 ## Cómo se enchufaría Google Play Billing
 
-`planFinal.md` §4.2 pide dejar registrado cómo se agregaría: la app compra con Google Play Billing, el backend
+Queda registrado cómo se agregaría: la app compra con Google Play Billing, el backend
 **verifica el recibo** de la compra contra Google y, si es válido, aplica el mismo cambio que hoy hace
 `PUT /me/subscription`. **Nada de esto está implementado**: no hay verificación de recibos, *webhooks* de
 Google ni campos de vencimiento o renovación en `subscriptions`
@@ -52,7 +51,7 @@ Google ni campos de vencimiento o renovación en `subscriptions`
 
 ## Consecuencias
 
-- La demo muestra el flujo completo de planes, cupo y familia sin mover dinero.
+- El piloto permite recorrer el flujo completo de planes, cupo y familia sin mover dinero.
 - Cualquiera puede ponerse Premium gratis en el piloto: el cupo de 300 no protege el costo hasta que haya cobro.
 - El cupo Gratis empezó en 50 y **subió a 150** el 18 nov 2026: con una reacción del coach por gasto, 50 se
   agotaban en la primera semana. El modelo financiero ya lo refleja (D2 en `docs/planes.md`).

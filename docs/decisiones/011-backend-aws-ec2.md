@@ -8,7 +8,7 @@
 
 El backend corría en Render, plan free ([ADR-006](006-postgres-neon-alembic.md), `render.yaml`). El plan
 gratuito duerme el servicio tras unos 15 minutos sin tráfico: la primera petición tardó 52,5 s (medido el 20 nov
-2026), y la tarea `keep-alive.yml` solo lo mitiga. Para el piloto y la presentación el equipo quería un servidor
+2026), y la tarea `keep-alive.yml` solo lo mitiga. Para el piloto el equipo quería un servidor
 encendido todo el tiempo y bajo su control.
 
 ## Decisión

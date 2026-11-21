@@ -1,6 +1,6 @@
 # Planes y cupo de IA
 
-> Fuente: `docs/planFinal.md` §3.1 y §4.2, y el modelo financiero de `docs/negocio/`. Este documento es la
+> Fuente: el modelo financiero de `docs/negocio/` y [ADR-008](decisiones/008-planes-simulados-cupo-ia.md). Este documento es la
 > referencia de qué incluye cada plan y qué cuenta como una "solicitud" de IA. Lo que el código aplica sale de
 > aquí (`backend/app/services/planes.py`).
 
@@ -31,7 +31,7 @@ Precios en pesos colombianos, con IVA.
 ### 2.1 Qué incluye cada plan
 
 Lo que muestra la pantalla "Mi plan" sale de `Plan.funciones` (`backend/app/services/planes.py`). Decisión del
-19 nov 2026 (`docs/analisis-financiero-nov-2026.md`): el chat y los reportes **no** se cierran en Gratis porque
+19 nov 2026 (`docs/negocio/analisis-financiero.md`): el chat y los reportes **no** se cierran en Gratis porque
 cuestan menos de un peso por solicitud y son los que crean el hábito y la viralidad.
 
 | Función | Código | Gratis | Premium | Familiar | Institucional |
@@ -123,7 +123,7 @@ Institucional **solo** se activa con un código de convenio: `PUT` lo rechaza.
 ## 6. Convenios
 
 No hay un endpoint para crear convenios: no existe el rol de administrador. Se crean con un script (y, más
-adelante, con la semilla de demostración, PS-35):
+adelante, con los datos de demostración, PS-35):
 
 ```
 uv run python -m app.db.crear_convenio --org ECI --codigo ECI-2026 --vence 2026-12-31 --max-usos 460
@@ -135,6 +135,6 @@ tiene tope de usos). El código se guarda en mayúsculas y al canjear no disting
 ## 7. Pendiente fuera del código
 
 - ~~Reflejar el cupo gratis en el modelo financiero~~ **Hecho** (19 nov 2026): `Costo_IA` usa el cupo de 150 con un
-  uso típico de 80 y los tokens medidos en `ai_usage` (`docs/analisis-financiero-nov-2026.md`).
+  uso típico de 80 y los tokens medidos en `ai_usage` (`docs/negocio/analisis-financiero.md`).
 - Con los datos del piloto (`uv run python -m app.db.reporte_ia`), ajustar el margen de seguridad de 1,5 que
   hoy se aplica sobre la muestra medida.

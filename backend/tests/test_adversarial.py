@@ -1,4 +1,4 @@
-"""PS-102 (N-12): suite adversarial de prompt injection (planFinal §3.2 y §4.1).
+"""PS-102 (N-12): suite adversarial de prompt injection (docs/informe-adversarial.md, ADR-009).
 
 Cada ataque entra por una superficie real de la app (chat, dictado, SMS, OCR de recibo, nombre de la persona,
 meta, categoría o descripción de un gasto). Un cliente falso de Groq —sin red— graba lo que recibiría el modelo

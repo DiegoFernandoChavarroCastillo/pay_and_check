@@ -5,13 +5,12 @@ Neon; IA vía Groq) y de sus dos clientes (APK Android y versión web en Vercel)
 control que **existe hoy en el código**, citado por archivo y función. Lo que no está resuelto se marca como
 **riesgo aceptado** (decisión consciente para el piloto) o **riesgo abierto** (hallazgo pendiente de arreglo).
 
-Documentos relacionados (algunos viven todavía en otras ramas):
+Documentos relacionados:
 
-- [docs/ia.md](ia.md) — inventario de las tareas de IA y qué datos usa cada una (rama `feature/PS-105-docs-ia`).
-- [docs/informe-adversarial.md](informe-adversarial.md) — resultados de la suite de prompt injection
-  (rama `feature/PS-102-adversarial`).
+- [docs/ia.md](ia.md) — inventario de las tareas de IA y qué datos usa cada una.
+- [docs/informe-adversarial.md](informe-adversarial.md) — resultados de la suite de prompt injection.
 - [docs/decisiones/009-capas-seguridad-ia.md](decisiones/009-capas-seguridad-ia.md) — ADR de las capas de
-  defensa de la IA (rama `feature/PS-106-adr`).
+  defensa de la IA.
 
 ## Activos
 
@@ -181,8 +180,7 @@ Documentos relacionados (algunos viven todavía en otras ramas):
 
 ## Riesgos abiertos (hallazgos de otros tickets)
 
-Verificados en el código de `origin/feature/plan-final` y, para R3, en `backend/tests/test_adversarial.py` de
-`origin/feature/PS-102-adversarial`.
+Verificados en el código y, para R3, en `backend/tests/test_adversarial.py`.
 
 ### R1. El reporte semanal mete nombres de categoría sin sanear y fuera de `<datos_usuario>`
 

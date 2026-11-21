@@ -1,6 +1,6 @@
 # Diagramas
 
-PNG listos para presentaciones. Cada uno tiene su versión en el documento donde se explica (en Mermaid, que
+PNG para documentos y presentaciones. Cada uno tiene su versión en el documento donde se explica (en Mermaid, que
 GitHub dibuja solo) y su fuente para regenerar la imagen en [`fuentes/`](fuentes/).
 
 | Imagen | Qué muestra | Dónde se explica | Fuente |

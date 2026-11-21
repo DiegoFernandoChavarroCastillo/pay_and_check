@@ -4,7 +4,7 @@ Revision ID: c6f2a8d91e57
 Revises: b3d7e1f04a26
 Create Date: 2026-11-19
 
-Tablas de las funciones añadidas tras el análisis de competidores (docs/iteracion-jurado-nov-2026.md):
+Tablas de las funciones añadidas tras el análisis de competidores:
 apoyos que ofrece la universidad y el interés anónimo en ellos, gastos grandes previstos, cuentas por cobrar
 de las vacas y el permiso de compartir el progreso con la familia.
 """

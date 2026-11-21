@@ -6,9 +6,9 @@
 
 ## Contexto
 
-La app es Flutter solo para Android y se distribuye como APK ([ADR-007](007-distribucion-apk.md)). Es probable
-que varios jurados de la presentación tengan iPhone: no pueden instalar el APK y una app de iOS exige cuenta de
-Apple Developer, Xcode y revisión, que no caben en el plazo.
+La app es Flutter solo para Android y se distribuye como APK ([ADR-007](007-distribucion-apk.md)). Las personas
+con iPhone, y quienes quieren usarla desde un computador, no pueden instalar el APK. Una app de iOS exige cuenta
+de Apple Developer, Xcode y la revisión de Apple, que no caben en el plazo del piloto.
 
 ## Decisión
 
