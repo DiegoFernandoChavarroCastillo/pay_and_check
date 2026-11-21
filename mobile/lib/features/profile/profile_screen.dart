@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -150,14 +151,15 @@ class ProfileScreen extends ConsumerWidget {
             }
           },
         ),
-        SwitchListTile(
+        // Los recordatorios son notificaciones locales del teléfono: en la versión web no existen.
+        if (!kIsWeb) SwitchListTile(
           secondary: const Icon(Icons.notifications_outlined),
           title: Text(l.reminder),
           subtitle: Text(ajustes.reminderEnabled ? ajustes.reminderTime.format(context) : l.reminderOff),
           value: ajustes.reminderEnabled,
           onChanged: (v) => _recordatorio(context, ref, activar: v),
         ),
-        if (ajustes.reminderEnabled)
+        if (!kIsWeb && ajustes.reminderEnabled)
           ListTile(
             leading: const Icon(Icons.schedule),
             title: Text(l.reminderTime),
@@ -193,7 +195,7 @@ class ProfileScreen extends ConsumerWidget {
           title: Text(l.recurringExpenses),
           onTap: () => _abrir(context, const RecurringScreen()),
         ),
-        ListTile(
+        if (!kIsWeb) ListTile(
           leading: const Icon(Icons.sms_outlined),
           title: Text(l.smsTitle),
           subtitle: Text(l.smsSubtitle),
@@ -406,9 +408,9 @@ class PrivacyScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final puntos = [
       (Icons.receipt_long_outlined, l.privacyExpensesTitle, l.privacyExpensesBody),
-      (Icons.photo_camera_outlined, l.privacyReceiptsTitle, l.privacyReceiptsBody),
+      if (!kIsWeb) (Icons.photo_camera_outlined, l.privacyReceiptsTitle, l.privacyReceiptsBody),
       (Icons.mic_none, l.privacyVoiceTitle, l.privacyVoiceBody),
-      (Icons.sms_outlined, l.privacySmsTitle, l.privacySmsBody),
+      if (!kIsWeb) (Icons.sms_outlined, l.privacySmsTitle, l.privacySmsBody),
       (Icons.auto_awesome_outlined, l.privacyAiTitle, l.privacyAiBody),
       (Icons.delete_forever_outlined, l.privacyDeleteTitle, l.privacyDeleteBody),
     ];

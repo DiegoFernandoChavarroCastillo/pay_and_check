@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,7 +54,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _PasswordField(controller: _password, onSubmitted: _login),
         const SizedBox(height: 20),
         SaveButton(saving: _busy, onPressed: _login, label: l.loginAction),
-        if (googleServerClientId.isNotEmpty) ...[
+        // En web, Google exige su propio botón (otro flujo y otra credencial): por ahora solo correo.
+        if (googleServerClientId.isNotEmpty && !kIsWeb) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _busy ? null : () => _run(() => ref.read(sessionProvider.notifier).loginWithGoogle()),

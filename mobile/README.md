@@ -1,6 +1,7 @@
 # Pay & Check — app móvil
 
-App Flutter (solo Android por ahora) que consume el backend de `../backend`. El plan de construcción,
+App Flutter para Android, con una versión web de respaldo (iPhone y computador), que consume el backend de
+`../backend`. El plan de construcción,
 fase por fase, está en `../docs/historico/plan-app-movil.md`; el estado actual, los problemas y las decisiones técnicas, en
 `../docs/historico/notas-iteracion-app-movil.md`.
 
@@ -24,8 +25,8 @@ detectados en SMS del banco.
 - Android SDK con `platform-tools`, la plataforma 36 y build-tools 36.0.0 (`ANDROID_HOME` apuntando a él). Sin
   Android Studio basta con las *command-line tools* y `sdkmanager`.
 
-`flutter doctor` debe marcar en verde "Android toolchain". Que marque Chrome, CMake o el canal de Flutter no
-importa: son para web y escritorio, que la app no usa.
+`flutter doctor` debe marcar en verde "Android toolchain". Chrome solo hace falta para `flutter run -d chrome`
+(la versión web se puede compilar sin él); CMake y el canal de Flutter no importan.
 
 ## Correr en desarrollo
 
@@ -168,6 +169,31 @@ Antes hay que cargar en GitHub (Settings → Secrets and variables → Actions):
 - Secretos `ANDROID_KEYSTORE_BASE64` (`base64 -w0 android/upload-keystore.jks`), `ANDROID_KEYSTORE_PASSWORD`,
   `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD` (los tres últimos están en `android/key.properties`).
 - Variables `API_BASE_URL` y, si hay login con Google, `GOOGLE_SERVER_CLIENT_ID`.
+
+## Versión web (Vercel)
+
+La misma app compilada para el navegador, para quien no tiene Android (los iPhone del jurado, por ejemplo). En
+un iPhone, Safari → Compartir → "Agregar a pantalla de inicio" la abre a pantalla completa con el ícono. En un
+computador se ve como una columna del ancho de un celular (`WebFrame` en `lib/app.dart`).
+
+Lo que solo existe en Android se oculta con `kIsWeb`: foto y galería de recibos (ML Kit), captura de SMS y
+notificaciones del banco, recordatorios (notificaciones locales), widget, botones para abrir Nequi/Daviplata y
+"Continuar con Google" (en web Google exige otro botón y otra credencial). Notificaciones queda solo con los
+gastos fijos por pagar. El dictado por voz depende del navegador: bien en Chrome, irregular en Safari.
+
+```bash
+flutter build web --release --dart-define=API_BASE_URL=https://pay-and-check-api.onrender.com
+cd build/web && python3 -m http.server 5173   # probar en http://localhost:5173
+```
+
+El backend tiene que estar en **HTTPS** (el navegador bloquea llamadas `http://` desde una página `https://`) y
+tener el dominio de la web en `CORS_ORIGINS`. El puerto 5173 sirve para probar en local porque ya está en
+`CORS_ORIGINS` por defecto.
+
+**Despliegue.** `.github/workflows/web-deploy.yml` compila y publica en Vercel en cada push a `main` que toque
+`mobile/` (o a mano, desde Actions → Web deploy → Run workflow). Necesita el secreto `VERCEL_TOKEN` y las
+variables `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`; `WEB_API_BASE_URL` es opcional (por defecto, Render). El
+`vercel.json` vive en `web/` para que `flutter build web` lo copie junto a la app.
 
 ## Login con Google
 

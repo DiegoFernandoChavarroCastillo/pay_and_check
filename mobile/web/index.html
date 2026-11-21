@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!-- `flutter build web --base-href` reemplaza este valor; en Vercel la app vive en la raíz. -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Pay&Check: tu coach de plata. Sabe cuánto puedes gastar hoy y te ayuda a llegar a fin de mes.">
+  <meta name="theme-color" content="#F2FAF7">
+
+  <!-- iPhone: "Agregar a pantalla de inicio" la abre a pantalla completa, con su nombre e ícono. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pay&amp;Check">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Pay&amp;Check</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #F2FAF7; }
+    @media (prefers-color-scheme: dark) { html, body { background: #0F1513; } }
+    /* Mientras carga el motor de Flutter (unos segundos la primera vez) se ve el logo, no una página en blanco. */
+    #arranque {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      transition: opacity .3s ease;
+    }
+    #arranque img { width: 96px; height: 96px; animation: latido 1.4s ease-in-out infinite; }
+    @keyframes latido { 50% { transform: scale(.92); opacity: .75; } }
+    @media (prefers-reduced-motion: reduce) { #arranque img { animation: none; } }
+  </style>
+</head>
+<body>
+  <div id="arranque" aria-label="Cargando Pay&amp;Check"><img src="icons/logo.svg" alt=""></div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var a = document.getElementById('arranque');
+      if (!a) return;
+      a.style.opacity = '0';
+      setTimeout(function () { a.remove(); }, 300);
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
